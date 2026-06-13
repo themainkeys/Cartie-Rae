@@ -382,6 +382,14 @@ const Homepage: React.FC<{
         className="bg-brand-beige/25 border-y border-brand-warm-tan/10 py-20"
       >
         <div className="max-w-3xl mx-auto px-6 text-center space-y-6">
+          <motion.div variants={revealItemScale} className="mx-auto mb-2 w-full max-w-sm aspect-[4/5] overflow-hidden bg-brand-cream border border-brand-warm-tan/25 shadow-sm">
+            <img
+              src="/our-story.jpeg"
+              alt="Cartiae Rae hair story"
+              referrerPolicy="no-referrer"
+              className="w-full h-full object-cover select-none"
+            />
+          </motion.div>
           <motion.span variants={revealItem} className="text-[10px] uppercase tracking-widest text-[#B11B41] font-semibold block">Our Approach</motion.span>
           <motion.h2 
             variants={revealItem}
