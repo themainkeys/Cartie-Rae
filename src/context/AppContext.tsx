@@ -137,67 +137,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [orders, setOrders] = useState<Order[]>(() => {
     const local = localStorage.getItem('cartiae_orders');
-    return local ? JSON.parse(local) : [
-      {
-        id: 'ORD-4029',
-        customerName: 'Aria Carter',
-        customerEmail: 'aria.carter@gmail.com',
-        customerPhone: '+1 (555) 728-1923',
-        shippingAddress: '435 Peachtree St, Atlanta, GA 30308',
-        items: [
-          { id: 'ebook-1', type: 'ebook', name: 'The 4C Growth Blueprint', price: 24.99, image: 'https://images.unsplash.com/photo-1618673747378-7e0af319150f?auto=format&fit=crop&q=80&w=800', quantity: 1 }
-        ],
-        subtotal: 24.99,
-        discountAmount: 0,
-        total: 24.99,
-        date: '2026-06-08',
-        status: 'Fulfilled'
-      },
-      {
-        id: 'ORD-4030',
-        customerName: 'Shayla Jenkins',
-        customerEmail: 'shayla.j@yahoo.com',
-        customerPhone: '+1 (555) 381-8109',
-        shippingAddress: '128 Crown Heights Blvd, Brooklyn, NY 11213',
-        items: [
-          { id: 'prod-1', type: 'product', name: 'Botanical Growth Oil', price: 38.00, image: 'https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&q=80&w=800', quantity: 1 },
-          { id: 'prod-2', type: 'product', name: 'Silk Sleep Cap', price: 25.00, image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=800', quantity: 1 }
-        ],
-        subtotal: 63.00,
-        discountAmount: 9.45,
-        total: 53.55,
-        discountCodeApplied: 'GROW4C',
-        date: '2026-06-10',
-        status: 'Pending'
-      }
-    ];
+    return local ? JSON.parse(local) : [];
   });
 
   const [contactRequests, setContactRequests] = useState<ContactRequest[]>(() => {
     const local = localStorage.getItem('cartiae_contacts');
     if (local) return JSON.parse(local);
-    return [
-      {
-        id: 'CON-101',
-        name: 'Tiffany Adams',
-        email: 'tiff.adams@gmail.com',
-        porosity: 'Low Porosity 4C',
-        message: 'Hi Cartiae! I bought your organic oils last week, and I am struggling with severe breakage around my Crown region. How often should I apply the oil under my steam cap? Attached is a photo of my hair condition.',
-        photoAttachment: 'https://images.unsplash.com/photo-1595959183075-c1d0a5113cc3?auto=format&fit=crop&q=80&w=600',
-        date: '2026-06-11',
-        status: 'Pending'
-      },
-      {
-        id: 'CON-102',
-        name: 'Nailah Vance',
-        email: 'nailah.v@outlook.com',
-        porosity: 'High Porosity 4C',
-        message: 'My hair is extremely dry and absorbs water within five minutes, then gets flaky again. I attached a photo of my natural curls. Please advise if the Botanical formula will build up on my locs.',
-        photoAttachment: 'https://images.unsplash.com/photo-1605980776566-0486c3ac7617?auto=format&fit=crop&q=80&w=600',
-        date: '2026-06-12',
-        status: 'Pending'
-      }
-    ];
+    return [];
   });
 
   const [appliedDiscount, setAppliedDiscount] = useState<DiscountCode | null>(() => {
@@ -529,8 +475,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // --- Admin Auth ---
   const loginAdmin = (password: string): boolean => {
-    // Elegant hardcoded administrative password for this beautiful standalone app
-    if (password === 'cartiae123' || password === 'admin') {
+    // Private administrative password for the live storefront owner
+    const ADMIN_PASSWORD = 'CartiaeRae2026!';
+    if (password === ADMIN_PASSWORD) {
       setIsAdminLoggedIn(true);
       localStorage.setItem('cartiae_admin_auth', 'true');
       return true;

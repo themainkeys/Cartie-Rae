@@ -277,8 +277,8 @@ export const AdminPortal: React.FC = () => {
           {authError && <p className="text-brand-rose text-xs mt-4 font-bold bg-[#FDF1F2] border border-brand-rose/10 p-2.5 rounded-xl">{authError}</p>}
           
           <div className="mt-8 pt-6 border-t border-[#E5D5C8]/50 text-[10.5px] text-[#A67E6B] font-medium leading-relaxed">
-            🔒 Standalone Sandbox Simulation Mode Active.<br />
-            Use <strong className="font-bold underline text-brand-rose">any email</strong> and password <strong className="font-bold underline text-brand-rose">admin</strong> to login.
+            <Lock className="w-3 h-3 inline-block mr-1 -mt-0.5 text-brand-rose" />
+            Private staff area. Authorized personnel only.
           </div>
         </div>
       ) : (
@@ -354,7 +354,7 @@ export const AdminPortal: React.FC = () => {
                 <p className="text-[10px] uppercase font-extrabold text-[#8C6D62] tracking-wider">Newsletter Subs</p>
                 <Mail className="w-4 h-4 text-brand-berry animate-pulse" />
               </div>
-              <p className="text-lg font-bold font-mono text-brand-dark mt-1">{newsletterSignups.length + 42}</p>
+              <p className="text-lg font-bold font-mono text-brand-dark mt-1">{newsletterSignups.length}</p>
               <span className="text-[9px] text-brand-berry bg-brand-pink-light font-bold px-1.5 py-0.5 rounded-md mt-1.5 inline-block">Growth List Hits</span>
             </div>
           </div>
@@ -450,49 +450,49 @@ export const AdminPortal: React.FC = () => {
               </h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* sales summary info */}
+                {/* live store summary */}
                 <div className="bg-[#FAF7F2] p-5.5 rounded-2xl border border-[#E5D5C8]/30 space-y-4">
                   <h3 className="font-serif text-sm font-bold text-brand-chocolate tracking-tight flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 bg-brand-rose rounded-full"></span>
-                    Conversion Funnels
+                    Store Activity
                   </h3>
                   <div className="space-y-3.5 text-xs">
                     <div className="flex justify-between border-b border-[#E5D5C8]/35 pb-2 text-[#8C6D62]">
-                      <span className="font-medium">Live Site Traffic Hits (Weekly)</span>
-                      <span className="font-mono font-bold text-brand-dark">4,281 hits</span>
+                      <span className="font-medium">Total Orders</span>
+                      <span className="font-mono font-bold text-brand-dark">{orders.length}</span>
                     </div>
                     <div className="flex justify-between border-b border-[#E5D5C8]/35 pb-2 text-[#8C6D62]">
-                      <span className="font-medium">Newsletter Conversion Rate</span>
-                      <span className="font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded">4.82%</span>
+                      <span className="font-medium">Awaiting Shipment</span>
+                      <span className="font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded">{pendingOrdersCount}</span>
                     </div>
                     <div className="flex justify-between border-b border-[#E5D5C8]/35 pb-2 text-[#8C6D62]">
-                      <span className="font-medium">Digital eBook Downloads (All Time)</span>
-                      <span className="font-mono font-bold text-brand-dark">1,029 units</span>
+                      <span className="font-medium">Newsletter Subscribers</span>
+                      <span className="font-mono font-bold text-brand-dark">{newsletterSignups.length}</span>
                     </div>
                     <div className="flex justify-between text-[#8C6D62] pt-0.5">
-                      <span className="font-medium">Botanical Oil Retail Stock Rate</span>
-                      <span className="font-mono font-black text-brand-rose bg-brand-pink-light px-2 py-0.5 rounded">84% packed</span>
+                      <span className="font-medium">Active Discount Codes</span>
+                      <span className="font-mono font-black text-brand-rose bg-brand-pink-light px-2 py-0.5 rounded">{discountCodes.filter(c => c.isActive).length}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* sandbox explanation */}
+                {/* live status */}
                 <div className="bg-brand-dark text-white p-6 rounded-2xl border border-brand-chocolate/40 relative overflow-hidden flex flex-col justify-between shadow-md">
                   <div className="absolute -right-16 -bottom-16 w-32 h-32 bg-brand-chocolate opacity-20 rounded-full blur-2xl"></div>
                   <div>
                     <h3 className="font-serif text-sm font-bold text-brand-pink flex items-center gap-1.5">
-                      <Sparkles className="w-4 h-4 fill-brand-pink text-brand-pink animate-pulse" /> 
-                      100% Client-Side Persistence
+                      <Sparkles className="w-4 h-4 fill-brand-pink text-brand-pink animate-pulse" />
+                      Live Storefront
                     </h3>
                     <p className="text-[11.5px] text-brand-beige/85 mt-3 leading-relaxed font-sans">
-                      Changes made in these tabs commit instantly to local storage structures. Add objects, fulfill physical order lists, modify discount cards, or rewrite copy — and check the live storefront tabs to witness your updates!
+                      Edits to your catalog, orders, discount codes and homepage copy save instantly and appear on the live storefront. Manage products, fulfill orders and respond to consultations all from here.
                     </p>
                   </div>
                   <div className="flex justify-between items-center mt-5 pt-3 border-t border-white/5">
-                    <span className="text-[10px] text-[#C5A880] font-mono uppercase tracking-wider">System Sandbox Mode</span>
+                    <span className="text-[10px] text-[#C5A880] font-mono uppercase tracking-wider">Store Status</span>
                     <span className="text-[10px] text-emerald-400 font-mono font-bold flex items-center gap-1 bg-white/5 px-2.5 py-0.5 rounded">
                       <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping"></span>
-                      ONLINE
+                      LIVE
                     </span>
                   </div>
                 </div>
