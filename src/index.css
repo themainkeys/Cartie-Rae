@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Playfair Display", "Bodoni Moda", Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  
+  --color-brand-cream: #FAF6F0;
+  --color-brand-beige: #F3EAE1;
+  --color-brand-warm-tan: #E5D5C8;
+  --color-brand-pink-light: #FCEBEA;
+  --color-brand-pink: #ECA2A2;
+  --color-brand-rose: #C2395A;
+  --color-brand-berry: #B11B41;
+  --color-brand-chocolate: #4A2B20;
+  --color-brand-dark: #25130D;
+}
+
+/* Base resets & custom smooth behaviors */
+html {
+  font-family: var(--font-sans);
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background-color: #FAF6F0;
+  color: #25130D;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #FAF6F0;
+}
+::-webkit-scrollbar-thumb {
+  background: #E5D5C8;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #C2395A;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}

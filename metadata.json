@@ -1,0 +1,8 @@
+{
+  "name": "Cartiae Rae",
+  "description": "An interactive online store, hair education hub, and media CMS portfolio for natural 4C hair care creator Cartiae Rae.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
