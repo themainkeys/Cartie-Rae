@@ -175,7 +175,7 @@ const Homepage: React.FC<{
                 className="aspect-[4/5] overflow-hidden bg-brand-cream border border-brand-warm-tan/25 shadow-sm"
               >
                 <img
-                  src="https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&q=80&w=800"
+                  src="/hero-home.jpeg"
                   alt="Cartiae Rae portrait"
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-cover select-none"
