@@ -2369,40 +2369,109 @@ export const AdminPortal: React.FC = () => {
 
                       {/* Video Player Live Preview */}
                       {vidUrl && (
-                        <div className="border border-brand-warm-tan/25 p-3 rounded-2xl bg-[#FAF6F0] space-y-2 flex flex-col items-center select-none">
-                          <span className="text-[10px] uppercase font-bold text-[#8C6D62] tracking-wider">Live Video Player Preview</span>
-                          <div className="w-[140px] h-[248px] rounded-xl overflow-hidden border border-brand-warm-tan/30 relative bg-black flex items-center justify-center shadow-md">
-                            {(() => {
-                              const res = resolveVideoSource(vidUrl);
-                              if (res.type === 'youtube' && res.id) {
-                                return (
-                                  <iframe
-                                    title="Youtube Preview"
-                                    src={`${res.url}?controls=0&modestbranding=1`}
-                                    className="absolute inset-0 w-full h-full scale-[1.3] pointer-events-none object-cover"
-                                  />
-                                );
-                              }
-                              if (res.type === 'tiktok' && res.id) {
-                                return (
-                                  <iframe
-                                    title="TikTok Preview"
-                                    src={res.url}
-                                    className="absolute inset-0 w-full h-full scale-[1.1] pointer-events-none object-cover"
-                                  />
-                                );
-                              }
-                              if (res.type === 'direct' && res.url) {
-                                return (
-                                  <video
-                                    src={res.url}
-                                    controls
-                                    className="absolute inset-0 w-full h-full object-cover"
-                                  />
-                                );
-                              }
-                              return <span className="text-[9px] text-zinc-400 p-2 text-center">Invalid Link. Enter a valid YouTube, TikTok, or MP4 URL.</span>;
-                            })()}
+                        <div className="border border-brand-warm-tan/25 p-4 rounded-3xl bg-[#FAF6F0] space-y-3.5 flex flex-col items-center select-none w-full max-w-[270px] mx-auto">
+                          <span className="text-[10px] uppercase font-bold text-[#8C6D62] tracking-[0.15em] text-center block">Live Mobile Preview</span>
+                          
+                          {/* Premium Smartphone Frame Mockup */}
+                          <div className="w-[200px] h-[356px] rounded-[36px] border-[6px] border-[#2C221E] bg-black relative shadow-xl overflow-hidden flex flex-col group transition-transform duration-300 hover:scale-[1.02]">
+                            
+                            {/* Bezel Notch / Dynamic Island */}
+                            <div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-16 h-3.5 bg-[#2C221E] rounded-full z-40 flex items-center justify-between px-2">
+                              <span className="w-1 h-1 bg-[#1a1a1a] rounded-full" />
+                              <span className="w-1.5 h-1.5 bg-[#0d0d0d] rounded-full" />
+                            </div>
+
+                            {/* Top Status Bar */}
+                            <div className="absolute top-1 left-0 right-0 px-4 flex justify-between items-center text-[7px] text-white/90 font-sans font-bold z-30 select-none pointer-events-none">
+                              <span>9:41</span>
+                              <div className="flex items-center gap-1">
+                                <svg className="w-1.5 h-1.5 fill-white" viewBox="0 0 24 24"><path d="M12 21l-12-18h24z"/></svg>
+                                <div className="w-2.5 h-1.5 border border-white/80 rounded-[2px] p-[0.5px] flex items-center"><div className="w-1.5 h-full bg-white rounded-[1px]"></div></div>
+                              </div>
+                            </div>
+
+                            {/* Video Display Stage */}
+                            <div className="absolute inset-0 w-full h-full bg-zinc-950 overflow-hidden flex items-center justify-center">
+                              {(() => {
+                                const res = resolveVideoSource(vidUrl);
+                                if (res.type === 'youtube' && res.id) {
+                                  return (
+                                    <iframe
+                                      title="Youtube Preview"
+                                      src={`${res.url}?controls=0&modestbranding=1&autoplay=1&mute=1&playlist=${res.id}&loop=1`}
+                                      className="absolute inset-0 w-full h-full scale-[1.3] pointer-events-none object-cover"
+                                    />
+                                  );
+                                }
+                                if (res.type === 'tiktok' && res.id) {
+                                  return (
+                                    <iframe
+                                      title="TikTok Preview"
+                                      src={`${res.url}?autoplay=1&mute=1`}
+                                      className="absolute inset-0 w-full h-full scale-[1.1] pointer-events-none object-cover"
+                                    />
+                                  );
+                                }
+                                if (res.type === 'direct' && res.url) {
+                                  return (
+                                    <video
+                                      src={res.url}
+                                      autoPlay
+                                      loop
+                                      muted
+                                      playsInline
+                                      className="absolute inset-0 w-full h-full object-cover"
+                                    />
+                                  );
+                                }
+                                return <span className="text-[9px] text-zinc-400 p-3 text-center">Invalid Link. Enter a valid YouTube, TikTok, or MP4 URL.</span>;
+                              })()}
+                            </div>
+
+                            {/* Transparent click shield to prevent iframe hijacking */}
+                            <div className="absolute inset-0 bg-transparent z-10" />
+
+                            {/* Phone bottom swipe home indicator */}
+                            <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-16 h-0.5 bg-white/70 rounded-full z-30" />
+
+                            {/* TikTok / Reels Style User-facing Overlay Elements */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/25 z-20 pointer-events-none flex flex-col justify-end p-2.5 text-white">
+                              {/* Preview Watermark Badge */}
+                              <div className="absolute top-6 left-1/2 -translate-x-1/2 bg-brand-rose/90 text-white text-[5.5px] font-extrabold uppercase tracking-[0.2em] px-2 py-0.5 rounded-full shadow-xs">
+                                Live Preview
+                              </div>
+
+                              {/* Sidebar Actions */}
+                              <div className="absolute right-2 bottom-10 flex flex-col gap-2.5 items-center">
+                                {/* Profile circle */}
+                                <div className="w-5 h-5 rounded-full border border-white/85 overflow-hidden bg-brand-beige shadow-sm">
+                                  <img src="/about-portrait.jpg" className="w-full h-full object-cover" alt="" />
+                                </div>
+                                <div className="flex flex-col items-center">
+                                  <svg className="w-3.5 h-3.5 text-white/95 fill-white/10" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                                  <span className="text-[6px] font-semibold mt-0.5">1.2k</span>
+                                </div>
+                                <div className="flex flex-col items-center">
+                                  <svg className="w-3.5 h-3.5 text-white/95 fill-white/10" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                                  <span className="text-[6px] font-semibold mt-0.5">84</span>
+                                </div>
+                                <svg className="w-3.5 h-3.5 text-white/95" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" fill="none"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8m-4-6-4-4-4 4m4-4v13"/></svg>
+                              </div>
+
+                              {/* Details text */}
+                              <div className="space-y-1 max-w-[140px] text-left">
+                                <p className="text-[8px] font-bold tracking-wide">@cartiae_rae</p>
+                                <p className="text-[7.5px] leading-tight text-white/90 font-sans font-medium line-clamp-2 font-sans">
+                                  {vidTitle || "Untitled Video Masterclass"}
+                                </p>
+                                <div className="pt-0.5">
+                                  <span className="inline-block bg-[#FAF6F0]/25 text-white border border-white/10 text-[5.5px] uppercase tracking-widest font-extrabold px-1 rounded-sm">
+                                    {vidCategory}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
                           </div>
                         </div>
                       )}
