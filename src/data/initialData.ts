@@ -352,7 +352,7 @@ export const initialGallery: PhotoGalleryItem[] = [
   },
   {
     id: 'gal-5',
-    image: 'https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&q=80&w=600',
+    image: '/hero-portrait.jpg',
     caption: 'Healthy, fluffy 4C shape styled on a sunny autumn weekend.',
     category: 'Lifestyle'
   },

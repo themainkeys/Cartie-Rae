@@ -110,7 +110,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [gallery, setGallery] = useState<PhotoGalleryItem[]>(() => {
     const local = localStorage.getItem('cartiae_gallery');
-    return local ? JSON.parse(local) : initialGallery;
+    if (local) {
+      try {
+        const parsed = JSON.parse(local) as PhotoGalleryItem[];
+        return parsed.map(item => {
+          if (item.id === 'gal-5' && item.image.includes('photo-1509967419530-da38b4704bc6')) {
+            return { ...item, image: '/hero-portrait.jpg' };
+          }
+          return item;
+        });
+      } catch (e) {
+        return initialGallery;
+      }
+    }
+    return initialGallery;
   });
 
   const [blogs, setBlogs] = useState<BlogPost[]>(() => {
