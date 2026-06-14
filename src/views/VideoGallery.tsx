@@ -77,6 +77,8 @@ const resolveVideoSource = (url: string) => {
     let videoId = '';
     if (cleanUrl.includes('/embed/')) {
       videoId = cleanUrl.split('/embed/')[1]?.split('?')[0] || '';
+    } else if (cleanUrl.includes('/shorts/')) {
+      videoId = cleanUrl.split('/shorts/')[1]?.split('?')[0] || '';
     } else if (cleanUrl.includes('watch?v=')) {
       videoId = cleanUrl.split('watch?v=')[1]?.split('&')[0] || '';
     } else if (cleanUrl.includes('youtu.be/')) {
@@ -591,8 +593,10 @@ export const VideoGallery: React.FC = () => {
         return orderA - orderB;
       }
 
-      // Default sorting: newest ID first
-      return b.id.localeCompare(a.id);
+      // Default sorting: newest ID first (numeric sorting)
+      const numA = parseInt(a.id.replace('vid-', ''), 10) || 0;
+      const numB = parseInt(b.id.replace('vid-', ''), 10) || 0;
+      return numB - numA;
     });
   }, [videos, activeCategory]);
 

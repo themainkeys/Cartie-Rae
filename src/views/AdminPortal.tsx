@@ -27,6 +27,8 @@ const resolveVideoSource = (url: string) => {
     let videoId = '';
     if (cleanUrl.includes('/embed/')) {
       videoId = cleanUrl.split('/embed/')[1]?.split('?')[0] || '';
+    } else if (cleanUrl.includes('/shorts/')) {
+      videoId = cleanUrl.split('/shorts/')[1]?.split('?')[0] || '';
     } else if (cleanUrl.includes('watch?v=')) {
       videoId = cleanUrl.split('watch?v=')[1]?.split('&')[0] || '';
     } else if (cleanUrl.includes('youtu.be/')) {
@@ -2524,7 +2526,11 @@ export const AdminPortal: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-brand-warm-tan/10 text-brand-dark/80">
-                      {videos.map((vid) => (
+                      {[...videos].sort((a, b) => {
+                        const numA = parseInt(a.id.replace('vid-', ''), 10) || 0;
+                        const numB = parseInt(b.id.replace('vid-', ''), 10) || 0;
+                        return numB - numA;
+                      }).map((vid) => (
                         <tr key={vid.id} className="hover:bg-brand-cream/30">
                           <td className="p-3">
                             <img src={vid.thumbnailUrl || vidThumb} referrerPolicy="no-referrer" alt="" className="w-12 h-14 object-cover rounded border border-brand-warm-tan/20 shadow-xs" />
