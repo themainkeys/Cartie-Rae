@@ -202,7 +202,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
   return (
     <div 
       data-video-id={video.id}
-      className="w-full aspect-[9/16] max-w-[320px] rounded-[32px] border border-brand-warm-tan/20 relative flex flex-col justify-end overflow-hidden bg-brand-beige shadow-md hover:shadow-lg hover:scale-[1.01] transition-all duration-300"
+      className="snap-start snap-always w-full h-full shrink-0 relative flex flex-col justify-end overflow-hidden bg-brand-beige"
     >
       {/* Video Stage Frame */}
       <div 
@@ -534,12 +534,114 @@ const VideoCard: React.FC<VideoCardProps> = ({
   );
 };
 
+interface VideoGridCardProps {
+  video: TikTokVideo;
+  onClick: () => void;
+  prefersReducedMotion: boolean;
+}
+
+const VideoGridCard: React.FC<VideoGridCardProps> = ({ video, onClick, prefersReducedMotion }) => {
+  const [isHovered, setIsHovered] = useState(false);
+  const resolved = useMemo(() => resolveVideoSource(video.videoUrl), [video.videoUrl]);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const handleTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const vid = e.currentTarget;
+    if (vid.currentTime >= 2) {
+      vid.currentTime = 0;
+    }
+  };
+
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => {
+        setIsHovered(false);
+        if (videoRef.current) {
+          videoRef.current.pause();
+          videoRef.current.currentTime = 0;
+        }
+      }}
+      className="w-full aspect-[9/16] max-w-[280px] rounded-[24px] border border-brand-warm-tan/15 relative flex flex-col justify-end overflow-hidden bg-brand-beige shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 cursor-pointer select-none"
+    >
+      {/* Video / Thumbnail stage */}
+      <div className="absolute inset-0 w-full h-full bg-black flex items-center justify-center">
+        {isHovered ? (
+          <div className="w-full h-full relative">
+            {resolved.type === 'youtube' && (
+              <iframe
+                title={video.title}
+                src={`${resolved.url}?autoplay=1&mute=1&controls=0&loop=1&playlist=${resolved.id}&start=0&end=2&modestbranding=1&iv_load_policy=3&showinfo=0&rel=0`}
+                className="absolute inset-0 w-full h-full scale-[1.35] pointer-events-none object-cover"
+                allow="autoplay; encrypted-media"
+              />
+            )}
+            {resolved.type === 'tiktok' && (
+              <iframe
+                title={video.title}
+                src={`${resolved.url}?autoplay=1&mute=1`}
+                className="absolute inset-0 w-full h-full scale-[1.15] pointer-events-none object-cover"
+                allow="autoplay; encrypted-media"
+              />
+            )}
+            {resolved.type === 'direct' && (
+              <video
+                ref={videoRef}
+                src={resolved.url}
+                autoPlay
+                muted
+                playsInline
+                controls={false}
+                onTimeUpdate={handleTimeUpdate}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            )}
+            {/* Click shield */}
+            <div className="absolute inset-0 bg-transparent z-10" />
+          </div>
+        ) : (
+          <div className="w-full h-full relative">
+            <img
+              src={video.thumbnailUrl}
+              alt={video.title}
+              referrerPolicy="no-referrer"
+              className="w-full h-full object-cover"
+            />
+            {/* Play overlay hover indicator */}
+            <div className="absolute inset-0 flex items-center justify-center bg-brand-dark/10 hover:bg-brand-dark/20 transition-all duration-300">
+              <span className="p-3 bg-[#FAF6F0]/90 backdrop-blur-sm text-brand-rose rounded-full shadow-md">
+                <Play className="w-4.5 h-4.5 fill-brand-rose ml-0.5" />
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Info overlay (category and title) */}
+      <div className="absolute inset-x-0 bottom-0 h-[120px] bg-gradient-to-t from-brand-dark/85 via-brand-dark/30 to-transparent pointer-events-none z-10" />
+      <div className="absolute left-3.5 bottom-4 right-3.5 z-20 text-white text-left flex flex-col gap-0.5 pointer-events-none">
+        <span className="bg-brand-rose/90 backdrop-blur-xs text-[#FAF6F0] text-[8px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded w-fit">
+          {video.category}
+        </span>
+        <h3 className="font-serif text-[11px] sm:text-xs font-bold text-[#FAF6F0] line-clamp-2 leading-snug tracking-wide mt-1">
+          {video.title}
+        </h3>
+        <span className="text-[9px] text-[#EDE3DE]/80 font-semibold font-mono mt-0.5">
+          {video.views} Views
+        </span>
+      </div>
+    </div>
+  );
+};
+
 export const VideoGallery: React.FC = () => {
   const { videos, products, ebooks, addToCart, triggerToast, prefersReducedMotion } = useApp();
   const [activeCategory, setActiveCategory] = useState<'All' | 'Wash Day' | 'Styling' | 'Growth Tips' | 'Protective Styles' | 'Cornrows'>('All');
   
   // Interactive Feed states
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [activePlaybackVideoId, setActivePlaybackVideoId] = useState<string | null>(null);
   const [isManuallyPaused, setIsManuallyPaused] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   
@@ -620,10 +722,56 @@ export const VideoGallery: React.FC = () => {
     setCommentsMap(seedComments);
   }, [videos]);
 
-  // Autoplay/Pause observer for snap-scrolling (disabled for grid layout)
+  // Autoplay/Pause observer for snap-scrolling
   useEffect(() => {
-    // Scroll autoplay disabled
-  }, [filteredVideos]);
+    const container = feedContainerRef.current;
+    if (!container || filteredVideos.length === 0 || !activePlaybackVideoId) return;
+
+    const observerOptions = {
+      root: container,
+      rootMargin: '0px',
+      threshold: 0.6,
+    };
+
+    const handleIntersection = (entries: IntersectionObserverEntry[]) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const videoId = entry.target.getAttribute('data-video-id');
+          if (videoId) {
+            setPlayingId(videoId);
+            setIsManuallyPaused(false); // Play immediately on scroll focus
+          }
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(handleIntersection, observerOptions);
+
+    const targets = container.querySelectorAll('[data-video-id]');
+    targets.forEach((target) => observer.observe(target));
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [filteredVideos, activePlaybackVideoId]);
+
+  // Scroll to active video on modal mount
+  useEffect(() => {
+    if (activePlaybackVideoId) {
+      const timer = setTimeout(() => {
+        const container = feedContainerRef.current;
+        if (container) {
+          const element = container.querySelector(`[data-video-id="${activePlaybackVideoId}"]`);
+          if (element) {
+            element.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+            setPlayingId(activePlaybackVideoId);
+            setIsManuallyPaused(false);
+          }
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [activePlaybackVideoId]);
 
   // Resolve related items from video metadata (with static fallback)
   const resolveRelatedItems = (video: TikTokVideo) => {
@@ -767,64 +915,22 @@ export const VideoGallery: React.FC = () => {
         ))}
       </div>
 
-      {/* Main Reels Grid Container */}
+      {/* Video Grid Timeline */}
       <div className="w-full flex justify-center py-4">
         {filteredVideos.length > 0 ? (
           <div 
-            ref={feedContainerRef}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 w-full max-w-7xl justify-items-center px-4"
+            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-8 w-full max-w-7xl justify-items-center px-4 pb-16"
           >
-            {filteredVideos.map((video) => {
-              const isActive = playingId === video.id;
-              const isLiked = !!likedMap[video.id];
-              const isSaved = !!savedMap[video.id];
-              const likes = likesCount[video.id] || 0;
-              const relatedItems = resolveRelatedItems(video);
-
-              return (
-                <VideoCard
-                  key={video.id}
-                  video={video}
-                  isActive={isActive}
-                  isManuallyPaused={isManuallyPaused}
-                  isMuted={isMuted}
-                  onTogglePlay={() => {
-                    if (isActive) {
-                      setIsManuallyPaused(!isManuallyPaused);
-                    } else {
-                      setPlayingId(video.id);
-                      setIsManuallyPaused(false);
-                    }
-                  }}
-                  onMuteToggle={(e) => {
-                    e.stopPropagation();
-                    setIsMuted(!isMuted);
-                  }}
-                  likes={likes}
-                  isLiked={isLiked}
-                  onLike={() => handleLike(video.id)}
-                  isSaved={isSaved}
-                  onSave={() => handleSave(video.id)}
-                  onShare={() => handleShare(video.title, video.id)}
-                  onOpenComments={() => openComments(video.id)}
-                  onOpenProducts={() => openProducts(video.id)}
-                  commentsCount={(commentsMap[video.id] || []).length}
-                  relatedItemsCount={relatedItems.length}
-                  prefersReducedMotion={prefersReducedMotion}
-                  commentsOpen={commentsOpen}
-                  productsOpen={productsOpen}
-                  activeDrawerVideoId={activeDrawerVideoId}
-                  setCommentsOpen={setCommentsOpen}
-                  setProductsOpen={setProductsOpen}
-                  commentsMap={commentsMap}
-                  submitComment={submitComment}
-                  newCommentText={newCommentText}
-                  setNewCommentText={setNewCommentText}
-                  relatedItems={relatedItems}
-                  handleAddProduct={handleAddProduct}
-                />
-              );
-            })}
+            {filteredVideos.map((video) => (
+              <VideoGridCard
+                key={video.id}
+                video={video}
+                onClick={() => {
+                  setActivePlaybackVideoId(video.id);
+                }}
+                prefersReducedMotion={prefersReducedMotion}
+              />
+            ))}
           </div>
         ) : (
           <div className="py-20 text-center bg-brand-cream border border-brand-warm-tan/25 rounded-[32px] w-full max-w-[370px]">
@@ -834,6 +940,105 @@ export const VideoGallery: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Immersive Full-Screen TikTok Player Modal */}
+      <AnimatePresence>
+        {activePlaybackVideoId && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-[#FAF7F2]/95 sm:bg-brand-dark/95 backdrop-blur-xs flex items-center justify-center animate-none"
+          >
+            {/* Top Bar / Close Header */}
+            <div className="absolute top-4 right-4 z-50 flex items-center gap-3">
+              <button
+                onClick={() => {
+                  setActivePlaybackVideoId(null);
+                  setPlayingId(null);
+                }}
+                className="p-3 rounded-full bg-brand-dark/20 sm:bg-white/10 hover:bg-brand-rose text-brand-dark sm:text-white hover:text-white transition-all cursor-pointer shadow-md border border-brand-warm-tan/10 sm:border-white/10 flex items-center justify-center"
+                title="Close Feed"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Mobile Close Back Button (floating top-left for native feel) */}
+            <div className="absolute top-4 left-4 z-50 sm:hidden">
+              <button
+                onClick={() => {
+                  setActivePlaybackVideoId(null);
+                  setPlayingId(null);
+                }}
+                className="flex items-center gap-1 text-xs uppercase tracking-wider font-bold text-brand-dark py-2 px-3 bg-brand-beige/80 rounded-full border border-brand-warm-tan/20"
+              >
+                ← Back
+              </button>
+            </div>
+
+            {/* Immersive Phone Frame Viewport */}
+            <div className="w-full h-full sm:h-[680px] sm:aspect-[9/16] relative flex items-center justify-center">
+              <div 
+                ref={feedContainerRef}
+                className="w-full sm:w-auto h-full sm:h-[680px] sm:aspect-[9/16] overflow-y-scroll snap-y snap-mandatory scroll-smooth scrollbar-none rounded-none sm:rounded-[36px] border-y sm:border border-brand-warm-tan/30 bg-brand-beige relative shadow-2xl flex flex-col items-center"
+              >
+                {filteredVideos.map((video) => {
+                  const isActive = playingId === video.id;
+                  const isLiked = !!likedMap[video.id];
+                  const isSaved = !!savedMap[video.id];
+                  const likes = likesCount[video.id] || 0;
+                  const relatedItems = resolveRelatedItems(video);
+
+                  return (
+                    <VideoCard
+                      key={video.id}
+                      video={video}
+                      isActive={isActive}
+                      isManuallyPaused={isManuallyPaused}
+                      isMuted={isMuted}
+                      onTogglePlay={() => {
+                        if (isActive) {
+                          setIsManuallyPaused(!isManuallyPaused);
+                        } else {
+                          setPlayingId(video.id);
+                          setIsManuallyPaused(false);
+                        }
+                      }}
+                      onMuteToggle={(e) => {
+                        e.stopPropagation();
+                        setIsMuted(!isMuted);
+                      }}
+                      likes={likes}
+                      isLiked={isLiked}
+                      onLike={() => handleLike(video.id)}
+                      isSaved={isSaved}
+                      onSave={() => handleSave(video.id)}
+                      onShare={() => handleShare(video.title, video.id)}
+                      onOpenComments={() => openComments(video.id)}
+                      onOpenProducts={() => openProducts(video.id)}
+                      commentsCount={(commentsMap[video.id] || []).length}
+                      relatedItemsCount={relatedItems.length}
+                      prefersReducedMotion={prefersReducedMotion}
+                      commentsOpen={commentsOpen}
+                      productsOpen={productsOpen}
+                      activeDrawerVideoId={activeDrawerVideoId}
+                      setCommentsOpen={setCommentsOpen}
+                      setProductsOpen={setProductsOpen}
+                      commentsMap={commentsMap}
+                      submitComment={submitComment}
+                      newCommentText={newCommentText}
+                      setNewCommentText={setNewCommentText}
+                      relatedItems={relatedItems}
+                      handleAddProduct={handleAddProduct}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
