@@ -63,7 +63,16 @@ const getVideoDescription = (videoId: string) => {
 const resolveVideoSource = (url: string) => {
   const cleanUrl = url.trim();
   
-  // 1. YouTube
+  // 1. Raw TikTok video ID check (18-20 digits)
+  if (/^\d{18,20}$/.test(cleanUrl)) {
+    return {
+      type: 'tiktok' as const,
+      id: cleanUrl,
+      url: `https://www.tiktok.com/embed/v2/${cleanUrl}`
+    };
+  }
+
+  // 2. YouTube
   if (cleanUrl.includes('youtube.com') || cleanUrl.includes('youtu.be')) {
     let videoId = '';
     if (cleanUrl.includes('/embed/')) {
@@ -80,15 +89,12 @@ const resolveVideoSource = (url: string) => {
     };
   }
 
-  // 2. TikTok
+  // 3. TikTok
   if (cleanUrl.includes('tiktok.com')) {
     let videoId = '';
-    if (cleanUrl.includes('/video/')) {
-      videoId = cleanUrl.split('/video/')[1]?.split('?')[0] || '';
-    } else if (cleanUrl.includes('/embed/v2/')) {
-      videoId = cleanUrl.split('/embed/v2/')[1]?.split('?')[0] || '';
-    } else if (cleanUrl.includes('/embed/')) {
-      videoId = cleanUrl.split('/embed/')[1]?.split('?')[0] || '';
+    const idMatch = cleanUrl.match(/\/video\/(\d+)/) || cleanUrl.match(/\/embed\/v2\/(\d+)/) || cleanUrl.match(/\/embed\/(\d+)/) || cleanUrl.match(/(\d{18,20})/);
+    if (idMatch) {
+      videoId = idMatch[1] || idMatch[0];
     }
     return {
       type: 'tiktok' as const,
@@ -97,7 +103,7 @@ const resolveVideoSource = (url: string) => {
     };
   }
 
-  // 3. Direct Video
+  // 4. Direct Video
   return {
     type: 'direct' as const,
     id: '',

@@ -13,6 +13,16 @@ import {
 const resolveVideoSource = (url: string) => {
   const cleanUrl = url.trim();
   
+  // 1. Raw TikTok video ID check (18-20 digits)
+  if (/^\d{18,20}$/.test(cleanUrl)) {
+    return {
+      type: 'tiktok' as const,
+      id: cleanUrl,
+      url: `https://www.tiktok.com/embed/v2/${cleanUrl}`
+    };
+  }
+
+  // 2. YouTube
   if (cleanUrl.includes('youtube.com') || cleanUrl.includes('youtu.be')) {
     let videoId = '';
     if (cleanUrl.includes('/embed/')) {
@@ -29,14 +39,12 @@ const resolveVideoSource = (url: string) => {
     };
   }
 
+  // 3. TikTok
   if (cleanUrl.includes('tiktok.com')) {
     let videoId = '';
-    if (cleanUrl.includes('/video/')) {
-      videoId = cleanUrl.split('/video/')[1]?.split('?')[0] || '';
-    } else if (cleanUrl.includes('/embed/v2/')) {
-      videoId = cleanUrl.split('/embed/v2/')[1]?.split('?')[0] || '';
-    } else if (cleanUrl.includes('/embed/')) {
-      videoId = cleanUrl.split('/embed/')[1]?.split('?')[0] || '';
+    const idMatch = cleanUrl.match(/\/video\/(\d+)/) || cleanUrl.match(/\/embed\/v2\/(\d+)/) || cleanUrl.match(/\/embed\/(\d+)/) || cleanUrl.match(/(\d{18,20})/);
+    if (idMatch) {
+      videoId = idMatch[1] || idMatch[0];
     }
     return {
       type: 'tiktok' as const,
@@ -45,6 +53,7 @@ const resolveVideoSource = (url: string) => {
     };
   }
 
+  // 4. Direct Video
   return {
     type: 'direct' as const,
     id: '',
@@ -603,6 +612,10 @@ export const AdminPortal: React.FC = () => {
     }
     if (!vidUrl) {
       triggerToast('Please upload a video file or paste a video link.', 'error');
+      return;
+    }
+    if (vidUrl.includes('vm.tiktok.com') || vidUrl.includes('vt.tiktok.com')) {
+      triggerToast('Mobile TikTok links (vm.tiktok.com) are shortened and blocked from embedding by TikTok. Please paste a desktop video link or enter the 19-digit Video ID directly.', 'error');
       return;
     }
     if (!checkPermission(['super_admin', 'content_manager'])) return;
