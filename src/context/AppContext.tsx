@@ -105,7 +105,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [videos, setVideos] = useState<TikTokVideo[]>(() => {
     const local = localStorage.getItem('cartiae_videos');
-    return local ? JSON.parse(local) : initialVideos;
+    if (local) {
+      try {
+        const parsed = JSON.parse(local) as TikTokVideo[];
+        return parsed.map(item => {
+          if (item.thumbnailUrl && item.thumbnailUrl.includes('photo-1608139556157-196be06511fc')) {
+            return { ...item, thumbnailUrl: '/about-portrait.jpg' };
+          }
+          return item;
+        });
+      } catch (e) {
+        return initialVideos;
+      }
+    }
+    return initialVideos;
   });
 
   const [gallery, setGallery] = useState<PhotoGalleryItem[]>(() => {
@@ -128,7 +141,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [blogs, setBlogs] = useState<BlogPost[]>(() => {
     const local = localStorage.getItem('cartiae_blogs');
-    return local ? JSON.parse(local) : initialBlogPosts;
+    if (local) {
+      try {
+        const parsed = JSON.parse(local) as BlogPost[];
+        return parsed.map(item => {
+          if (item.image && item.image.includes('photo-1608139556157-196be06511fc')) {
+            return { ...item, image: '/about-portrait.jpg' };
+          }
+          return item;
+        });
+      } catch (e) {
+        return initialBlogPosts;
+      }
+    }
+    return initialBlogPosts;
   });
 
   const [discountCodes, setDiscountCodes] = useState<DiscountCode[]>(() => {

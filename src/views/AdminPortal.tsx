@@ -372,7 +372,7 @@ export const AdminPortal: React.FC = () => {
     } else if (resolved.type === 'tiktok' && resolved.id) {
       // For TikTok, direct client-side oEmbed thumbnail extraction is blocked by CORS.
       // So we fallback to a beautiful coily hair placeholder or keep the current one.
-      const tiktokPlaceholder = 'https://images.unsplash.com/photo-1608139556157-196be06511fc?auto=format&fit=crop&q=80&w=400';
+      const tiktokPlaceholder = '/about-portrait.jpg';
       if (!vidThumb || vidThumb === 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&q=80&w=800') {
         setVidThumb(tiktokPlaceholder);
       }

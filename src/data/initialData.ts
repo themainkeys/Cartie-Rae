@@ -212,7 +212,7 @@ export const initialVideos: TikTokVideo[] = [
     views: '12.5k',
     category: 'Wash Day',
     videoUrl: 'https://www.youtube.com/embed/l89A48GZJ7c',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1608139556157-196be06511fc?auto=format&fit=crop&q=80&w=400',
+    thumbnailUrl: '/about-portrait.jpg',
     status: 'published',
     isFeatured: true,
     featuredOrder: 1,
@@ -379,7 +379,7 @@ In this article, we dive deep into the real reasons for active breakage:
 ### The Optimal Recovery Routine:
 Start applying are Botanical Growth Oil to damp strands. Damp hair holds water molecules, which are then enveloped and locked in by the lipid acids in Rosehip and Argan oils inside the bottle. Repeat this sequence every two days!`,
     readTime: '4 min read',
-    image: 'https://images.unsplash.com/photo-1608139556157-196be06511fc?auto=format&fit=crop&q=80&w=800',
+    image: '/about-portrait.jpg',
     date: '2026-06-02',
     category: 'Growth Tips',
     likes: 247
