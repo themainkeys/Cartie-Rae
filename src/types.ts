@@ -42,6 +42,21 @@ export interface TikTokVideo {
   category: 'Wash Day' | 'Styling' | 'Protective Styles' | 'Growth Tips' | 'Cornrows' | 'Product Reviews' | 'Tutorials';
   videoUrl: string; // Embed source or simulated link
   thumbnailUrl: string;
+  description?: string;
+  relatedIds?: string[];
+  isFeatured?: boolean;
+  status?: 'draft' | 'published' | 'scheduled';
+  scheduledAt?: string;
+  featuredOrder?: number;
+  viewsCount?: number;
+  likesCount?: number;
+  savesCount?: number;
+  sharesCount?: number;
+  commentsCount?: number;
+  shopClicks?: number;
+  productAddClicks?: number;
+  ebookAddClicks?: number;
+  conversionCount?: number;
 }
 
 export interface PhotoGalleryItem {
@@ -128,3 +143,21 @@ export interface HomepageContent {
   promoQuote: string;
   promoAuthor: string;
 }
+
+export type AdminRole = 'super_admin' | 'store_manager' | 'content_manager';
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  role: AdminRole;
+}
+
+export interface SecureDownloadToken {
+  orderId: string;
+  email: string;
+  ebookId: string;
+  expiresAt: string; // ISO string
+  token: string; // signature
+}
+

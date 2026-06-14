@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from './context/AppContext';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
@@ -10,48 +10,79 @@ import { AboutAndBlog } from './views/AboutAndBlog';
 import { ContactPage } from './views/ContactPage';
 import { AdminPortal } from './views/AdminPortal';
 import { CartDrawer } from './components/CartDrawer';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useInView } from 'motion/react';
 import { 
   ArrowRight, ArrowUp, Sparkles, BookOpen, Droplet, Star, ShieldCheck, 
   Clock, Heart, Compass, CheckCircle2, Check, Send, ShoppingBag
 } from 'lucide-react';
 
-const transitionRefined = {
-  duration: 0.9,
-  ease: [0.16, 1, 0.3, 1] as const
-};
-
-const revealContainer = {
+const getRevealContainer = (prefersReducedMotion: boolean) => ({
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.12,
-      delayChildren: 0.05
+      staggerChildren: prefersReducedMotion ? 0 : 0.08,
+      delayChildren: prefersReducedMotion ? 0 : 0.05
     }
   }
-};
+});
 
-const revealItem = {
-  hidden: { opacity: 0, y: 30 },
+const getRevealItem = (prefersReducedMotion: boolean) => ({
+  hidden: { opacity: 0, y: prefersReducedMotion ? 0 : 15 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: transitionRefined
+    transition: {
+      duration: prefersReducedMotion ? 0 : 0.4,
+      ease: [0.16, 1, 0.3, 1] as const
+    }
   }
-};
+});
 
-const revealItemScale = {
-  hidden: { opacity: 0, scale: 0.95, y: 15 },
+const getRevealItemScale = (prefersReducedMotion: boolean) => ({
+  hidden: { opacity: 0, scale: prefersReducedMotion ? 1 : 0.97, y: prefersReducedMotion ? 0 : 10 },
   visible: {
     opacity: 1,
     scale: 1,
     y: 0,
     transition: {
-      duration: 1.1,
+      duration: prefersReducedMotion ? 0 : 0.5,
       ease: [0.16, 1, 0.3, 1] as const
     }
   }
+});
+
+export const AnimatedCounter: React.FC<{ value: number; suffix?: string; prefix?: string; duration?: number }> = ({ value, suffix = '', prefix = '', duration = 1.2 }) => {
+  const [count, setCount] = useState(0);
+  const ref = useRef<HTMLSpanElement>(null);
+  const isInView = useInView(ref, { once: true, margin: "-100px" });
+
+  useEffect(() => {
+    if (!isInView) return;
+    let start = 0;
+    const end = value;
+    if (start === end) {
+      setCount(end);
+      return;
+    }
+
+    const totalMiliseconds = duration * 1000;
+    const incrementTime = Math.max(Math.floor(totalMiliseconds / end), 16);
+    
+    const timer = setInterval(() => {
+      start += Math.ceil(end / (totalMiliseconds / incrementTime));
+      if (start >= end) {
+        clearInterval(timer);
+        setCount(end);
+      } else {
+        setCount(start);
+      }
+    }, incrementTime);
+
+    return () => clearInterval(timer);
+  }, [value, duration, isInView]);
+
+  return <span ref={ref}>{prefix}{count.toLocaleString()}{suffix}</span>;
 };
 
 const Homepage: React.FC<{ 
@@ -59,9 +90,36 @@ const Homepage: React.FC<{
   setShopFilter: (filter: string) => void;
   openCart: () => void;
 }> = ({ setActivePart, setShopFilter, openCart }) => {
-  const { homepageContent, signupNewsletter, addToCart } = useApp();
+  const { homepageContent, signupNewsletter, addToCart, prefersReducedMotion } = useApp();
   const [emailInput, setEmailInput] = useState('');
   const [success, setSuccess] = useState(false);
+  const [testimonialIndex, setTestimonialIndex] = useState(0);
+
+  const testimonials = [
+    {
+      quote: homepageContent.promoQuote,
+      author: homepageContent.promoAuthor
+    },
+    {
+      quote: "Botanical Growth Oil literally changed my edges in 3 weeks. The peppermint scent is so refreshing!",
+      author: "Nia J., Edges Reborn"
+    },
+    {
+      quote: "Wash Day Mastery book helped me cut down my shampoo session from 6 hours to 90 minutes. A true blueprint!",
+      author: "Brianna S., Wash Day Survivor"
+    },
+    {
+      quote: "Mulberry silk cap doesn't slide off my head at night! My hair stays perfectly moisturized.",
+      author: "Tamera W., Satin Convert"
+    }
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTestimonialIndex((prev) => (prev + 1) % testimonials.length);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [testimonials.length]);
 
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,7 +133,6 @@ const Homepage: React.FC<{
   };
 
   const handleQuickBuyBlueprint = () => {
-    // Quick add main eBook to cart
     addToCart({
       id: 'ebook-1',
       type: 'ebook',
@@ -87,7 +144,7 @@ const Homepage: React.FC<{
   };
 
   return (
-    <div className="space-y-24 pb-16 overflow-hidden">
+    <div className="space-y-20 pb-16 overflow-hidden">
       
       {/* ======================================= */}
       {/* 🌸 1. EDITORIAL MINIMALIST HERO LAYOUT */}
@@ -95,23 +152,23 @@ const Homepage: React.FC<{
       <motion.section 
         initial="hidden"
         animate="visible"
-        variants={revealContainer}
+        variants={getRevealContainer(prefersReducedMotion)}
         className="relative bg-brand-cream pt-8 pb-16 lg:pt-12 lg:pb-20 border-b border-brand-warm-tan/10"
       >
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
             
             {/* Left Column texts */}
-            <div className="lg:col-span-7 space-y-8 text-left">
-              <div className="space-y-4">
+            <div className="lg:col-span-7 space-y-6 text-left">
+              <div className="space-y-3">
                 <motion.span 
-                  variants={revealItem}
-                  className="font-sans text-[10px] uppercase tracking-[0.3em] text-brand-rose font-semibold block animate-pulse"
+                  variants={getRevealItem(prefersReducedMotion)}
+                  className="font-sans text-[10px] uppercase tracking-[0.3em] text-brand-rose font-semibold block"
                 >
                   Natural 4C Hair Science
                 </motion.span>
                 <motion.h1 
-                  variants={revealItem}
+                  variants={getRevealItem(prefersReducedMotion)}
                   className="font-serif text-4xl sm:text-5xl lg:text-6xl text-brand-dark tracking-tight leading-[1.1] font-normal"
                 >
                   {homepageContent.heroHeadline}
@@ -119,7 +176,7 @@ const Homepage: React.FC<{
               </div>
 
               <motion.p 
-                variants={revealItem}
+                variants={getRevealItem(prefersReducedMotion)}
                 className="font-sans text-xs sm:text-sm text-[#5C453C]/80 leading-relaxed max-w-xl"
               >
                 {homepageContent.heroSubheadline}
@@ -127,30 +184,34 @@ const Homepage: React.FC<{
 
               {/* Action Buttons */}
               <motion.div 
-                variants={revealItem}
+                variants={getRevealItem(prefersReducedMotion)}
                 className="flex flex-col sm:flex-row gap-4 pt-2"
               >
-                <button
+                <motion.button
                   id="hero-buy-blueprint"
                   onClick={handleQuickBuyBlueprint}
-                  className="bg-brand-dark hover:bg-[#3d1a10] text-[#FAF6F0] px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.15em] transition-colors duration-300 flex items-center justify-center cursor-pointer"
+                  whileHover={{ scale: prefersReducedMotion ? 1 : 1.01 }}
+                  whileTap={{ scale: prefersReducedMotion ? 1 : 0.99 }}
+                  className="bg-brand-dark hover:bg-[#3d1a10] text-[#FAF6F0] px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.15em] transition-colors duration-300 flex items-center justify-center cursor-pointer shadow-sm hover:shadow-md rounded-xl"
                 >
                   <span>eBook Blueprint — $24.99</span>
-                </button>
+                </motion.button>
 
-                <button
+                <motion.button
                   id="hero-view-tutorials"
                   onClick={() => setActivePart('tutorials')}
-                  className="bg-transparent border border-brand-dark/20 hover:border-brand-dark text-brand-dark px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.15em] transition-colors duration-300 flex items-center justify-center cursor-pointer"
+                  whileHover={{ scale: prefersReducedMotion ? 1 : 1.01 }}
+                  whileTap={{ scale: prefersReducedMotion ? 1 : 0.99 }}
+                  className="bg-transparent border border-brand-dark/20 hover:border-brand-dark hover:bg-brand-dark/5 text-brand-dark px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.15em] transition-all duration-300 flex items-center justify-center cursor-pointer rounded-xl"
                 >
                   <span>Watch Free Tutorials</span>
-                </button>
+                </motion.button>
               </motion.div>
 
               {/* Trust triggers ribbon */}
               <motion.div 
-                variants={revealItem}
-                className="pt-8 border-t border-brand-warm-tan/20 flex flex-wrap gap-x-6 gap-y-2 text-[11px] text-brand-dark/60 font-sans tracking-wide"
+                variants={getRevealItem(prefersReducedMotion)}
+                className="pt-6 border-t border-brand-warm-tan/20 flex flex-wrap gap-x-6 gap-y-2 text-[10px] text-brand-dark/60 font-sans tracking-wide"
               >
                 <span>✓ Instant digital downloads</span>
                 <span>•</span>
@@ -162,17 +223,17 @@ const Homepage: React.FC<{
 
             {/* Right Column Portrait - Extremely clean with subtle editorial float */}
             <motion.div 
-              variants={revealItemScale}
+              variants={getRevealItemScale(prefersReducedMotion)}
               className="lg:col-span-5 relative font-sans"
             >
               <motion.div 
-                animate={{ y: [0, -8, 0] }}
+                animate={prefersReducedMotion ? {} : { y: [0, -6, 0] }}
                 transition={{
                   duration: 6,
                   repeat: Infinity,
                   ease: "easeInOut"
                 }}
-                className="aspect-[4/5] overflow-hidden bg-brand-cream border border-brand-warm-tan/25 shadow-sm"
+                className="aspect-[4/5] overflow-hidden bg-brand-cream border border-brand-warm-tan/25 shadow-sm rounded-2xl"
               >
                 <img
                   src="https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&q=80&w=800"
@@ -181,13 +242,25 @@ const Homepage: React.FC<{
                   className="w-full h-full object-cover select-none"
                 />
               </motion.div>
-              <div className="mt-4 text-center sm:text-left space-y-1">
-                <p className="font-serif italic text-xs text-brand-dark/80 leading-relaxed">
-                  &ldquo;{homepageContent.promoQuote}&rdquo;
-                </p>
-                <p className="font-sans text-[10px] uppercase tracking-widest text-[#B11B41] font-semibold block">
-                  — {homepageContent.promoAuthor}
-                </p>
+              
+              {/* Testimonials Carousel inside Hero right-hand side */}
+              <div className="mt-4 text-center sm:text-left space-y-1 min-h-[72px] relative overflow-hidden flex flex-col justify-center border-l-2 border-brand-rose/25 pl-4 py-1">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={testimonialIndex}
+                    initial={{ opacity: 0, x: prefersReducedMotion ? 0 : 8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: prefersReducedMotion ? 0 : -8 }}
+                    transition={{ duration: 0.3, ease: "easeOut" }}
+                  >
+                    <p className="font-serif italic text-xs text-brand-dark/80 leading-relaxed">
+                      &ldquo;{testimonials[testimonialIndex].quote}&rdquo;
+                    </p>
+                    <p className="font-sans text-[10px] uppercase tracking-widest text-[#B11B41] font-semibold block mt-1">
+                      — {testimonials[testimonialIndex].author}
+                    </p>
+                  </motion.div>
+                </AnimatePresence>
               </div>
             </motion.div>
 
@@ -202,11 +275,11 @@ const Homepage: React.FC<{
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, margin: "-100px" }}
-        variants={revealContainer}
+        variants={getRevealContainer(prefersReducedMotion)}
         className="max-w-7xl mx-auto px-6 lg:px-8"
       >
         <motion.div 
-          variants={revealItem}
+          variants={getRevealItem(prefersReducedMotion)}
           className="flex justify-between items-end border-b border-brand-warm-tan/20 pb-4 mb-8"
         >
           <div>
@@ -228,35 +301,25 @@ const Homepage: React.FC<{
 
         {/* Minimal Lookbook Product Grid */}
         <motion.div 
-          variants={{
-            hidden: { opacity: 0 },
-            visible: {
-              opacity: 1,
-              transition: {
-                staggerChildren: 0.15,
-                delayChildren: 0.05
-              }
-            }
-          }}
+          variants={getRevealContainer(prefersReducedMotion)}
           className="grid grid-cols-1 sm:grid-cols-3 gap-8"
         >
           {/* Item 1 Oil */}
           <motion.div 
-            variants={revealItemScale}
+            variants={getRevealItemScale(prefersReducedMotion)}
             onClick={() => {
               setShopFilter('Products');
               setActivePart('shop');
             }}
             className="group cursor-pointer space-y-3 pl-0"
           >
-            <div className="aspect-[4/5] overflow-hidden bg-brand-beige border border-brand-warm-tan/15 relative">
+            <div className="aspect-[4/5] overflow-hidden bg-brand-beige border border-brand-warm-tan/15 relative rounded-2xl shadow-sm group-hover:shadow-md transition-shadow duration-300">
               <img
                 src="https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&q=80&w=400"
                 alt="Oil dropper"
                 referrerPolicy="no-referrer"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out select-none"
+                className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-700 ease-out select-none"
               />
-              {/* Floating Quick Add Shopping Bag Icon */}
               <button
                 type="button"
                 id="quick-add-overlay-oil"
@@ -285,21 +348,20 @@ const Homepage: React.FC<{
 
           {/* Item 2 Cap */}
           <motion.div 
-            variants={revealItemScale}
+            variants={getRevealItemScale(prefersReducedMotion)}
             onClick={() => {
               setShopFilter('Products');
               setActivePart('shop');
             }}
             className="group cursor-pointer space-y-3"
           >
-            <div className="aspect-[4/5] overflow-hidden bg-brand-beige border border-brand-warm-tan/15 relative">
+            <div className="aspect-[4/5] overflow-hidden bg-brand-beige border border-brand-warm-tan/15 relative rounded-2xl shadow-sm group-hover:shadow-md transition-shadow duration-300">
               <img
                 src="https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=400"
                 alt="Sleep Bonnet"
                 referrerPolicy="no-referrer"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out select-none"
+                className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-700 ease-out select-none"
               />
-              {/* Floating Quick Add Shopping Bag Icon */}
               <button
                 type="button"
                 id="quick-add-overlay-cap"
@@ -328,21 +390,20 @@ const Homepage: React.FC<{
 
           {/* Item 3 Detangling Comb */}
           <motion.div 
-            variants={revealItemScale}
+            variants={getRevealItemScale(prefersReducedMotion)}
             onClick={() => {
               setShopFilter('Products');
               setActivePart('shop');
             }}
             className="group cursor-pointer space-y-3"
           >
-            <div className="aspect-[4/5] overflow-hidden bg-brand-beige border border-brand-warm-tan/15 relative">
+            <div className="aspect-[4/5] overflow-hidden bg-brand-beige border border-brand-warm-tan/15 relative rounded-2xl shadow-sm group-hover:shadow-md transition-shadow duration-300">
               <img
                 src="https://images.unsplash.com/photo-1590156546746-c2330dd3327c?auto=format&fit=crop&q=80&w=400"
                 alt="Sandalwood comb"
                 referrerPolicy="no-referrer"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out select-none"
+                className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-700 ease-out select-none"
               />
-              {/* Floating Quick Add Shopping Bag Icon */}
               <button
                 type="button"
                 id="quick-add-overlay-comb"
@@ -372,40 +433,80 @@ const Homepage: React.FC<{
       </motion.section>
 
       {/* ======================================= */}
+      {/* 📊 2.5 STATS SECTION */}
+      {/* ======================================= */}
+      <motion.section
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-100px" }}
+        variants={getRevealContainer(prefersReducedMotion)}
+        className="bg-brand-beige/15 py-14 border-y border-brand-warm-tan/10"
+      >
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+          <motion.div variants={getRevealItem(prefersReducedMotion)} className="space-y-1">
+            <span className="font-serif text-3xl sm:text-4xl text-brand-dark block font-medium">
+              {prefersReducedMotion ? "10,000+" : <AnimatedCounter value={10000} suffix="+" />}
+            </span>
+            <span className="font-sans text-[9px] uppercase tracking-widest text-[#B11B41] font-bold block">Edges Restored</span>
+          </motion.div>
+          <motion.div variants={getRevealItem(prefersReducedMotion)} className="space-y-1">
+            <span className="font-serif text-3xl sm:text-4xl text-brand-dark block font-medium">
+              {prefersReducedMotion ? "90 Min" : <AnimatedCounter value={90} suffix=" Min" />}
+            </span>
+            <span className="font-sans text-[9px] uppercase tracking-widest text-[#B11B41] font-bold block">Cleanse Routine</span>
+          </motion.div>
+          <motion.div variants={getRevealItem(prefersReducedMotion)} className="space-y-1">
+            <span className="font-serif text-3xl sm:text-4xl text-brand-dark block font-medium">
+              {prefersReducedMotion ? "15,000+" : <AnimatedCounter value={15000} suffix="+" />}
+            </span>
+            <span className="font-sans text-[9px] uppercase tracking-widest text-[#B11B41] font-bold block">Coily Clients</span>
+          </motion.div>
+          <motion.div variants={getRevealItem(prefersReducedMotion)} className="space-y-1">
+            <span className="font-serif text-3xl sm:text-4xl text-brand-dark block font-medium">
+              {prefersReducedMotion ? "99%" : <AnimatedCounter value={99} suffix="%" />}
+            </span>
+            <span className="font-sans text-[9px] uppercase tracking-widest text-[#B11B41] font-bold block">Organic Formulas</span>
+          </motion.div>
+        </div>
+      </motion.section>
+
+      {/* ======================================= */}
       {/* 🚪 3. SIMPLE & REFINED HAIR STORY BIO   */}
       {/* ======================================= */}
       <motion.section 
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, margin: "-100px" }}
-        variants={revealContainer}
-        className="bg-brand-beige/25 border-y border-brand-warm-tan/10 py-20"
+        variants={getRevealContainer(prefersReducedMotion)}
+        className="bg-brand-beige/25 py-20"
       >
         <div className="max-w-3xl mx-auto px-6 text-center space-y-6">
-          <motion.span variants={revealItem} className="text-[10px] uppercase tracking-widest text-[#B11B41] font-semibold block">Our Approach</motion.span>
+          <motion.span variants={getRevealItem(prefersReducedMotion)} className="text-[10px] uppercase tracking-widest text-[#B11B41] font-semibold block">Our Approach</motion.span>
           <motion.h2 
-            variants={revealItem}
+            variants={getRevealItem(prefersReducedMotion)}
             className="font-serif text-3xl font-medium text-brand-dark leading-tight"
           >
             {homepageContent.aboutHeadline}
           </motion.h2>
-          <motion.div variants={revealItem} className="h-[1px] w-12 bg-brand-rose/40 mx-auto" />
+          <motion.div variants={getRevealItem(prefersReducedMotion)} className="h-[1px] w-12 bg-brand-rose/40 mx-auto" />
           
           <motion.p 
-            variants={revealItem}
+            variants={getRevealItem(prefersReducedMotion)}
             className="font-sans text-sm text-[#5C453C]/85 leading-relaxed text-center"
           >
             {homepageContent.aboutStory.split('.').slice(0, 4).join('.') + '.'}
           </motion.p>
 
-          <motion.div variants={revealItem} className="pt-4">
-            <button
+          <motion.div variants={getRevealItem(prefersReducedMotion)} className="pt-4">
+            <motion.button
               id="read-bio-story-btn"
               onClick={() => setActivePart('story')}
-              className="px-8 py-3 bg-brand-dark hover:bg-brand-rose text-[#FAF6F0] text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer"
+              whileHover={{ scale: prefersReducedMotion ? 1 : 1.02 }}
+              whileTap={{ scale: prefersReducedMotion ? 1 : 0.98 }}
+              className="px-8 py-3 bg-brand-dark hover:bg-brand-rose text-[#FAF6F0] text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer rounded-xl"
             >
               Read Our Full Story
-            </button>
+            </motion.button>
           </motion.div>
         </div>
       </motion.section>
@@ -417,7 +518,7 @@ const Homepage: React.FC<{
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, margin: "-100px" }}
-        variants={revealContainer}
+        variants={getRevealContainer(prefersReducedMotion)}
       >
         <FAQ />
       </motion.section>
@@ -429,26 +530,26 @@ const Homepage: React.FC<{
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, margin: "-100px" }}
-        variants={revealContainer}
+        variants={getRevealContainer(prefersReducedMotion)}
         className="max-w-4xl mx-auto px-6"
       >
         <motion.div 
-          variants={revealItemScale}
-          className="border border-brand-warm-tan/35 bg-[#FAF6F0] p-8 sm:p-12 text-center space-y-6"
+          variants={getRevealItemScale(prefersReducedMotion)}
+          className="border border-brand-warm-tan/35 bg-[#FAF6F0] p-8 sm:p-12 text-center space-y-6 rounded-3xl"
         >
           <div className="space-y-2">
-            <motion.span variants={revealItem} className="text-[9px] uppercase tracking-[0.25em] text-[#B11B41] font-bold block">Exclusive Access</motion.span>
-            <motion.h2 variants={revealItem} className="font-serif text-2xl sm:text-3xl font-normal text-brand-dark">
+            <motion.span variants={getRevealItem(prefersReducedMotion)} className="text-[9px] uppercase tracking-[0.25em] text-[#B11B41] font-bold block">Exclusive Access</motion.span>
+            <motion.h2 variants={getRevealItem(prefersReducedMotion)} className="font-serif text-2xl sm:text-3xl font-normal text-brand-dark">
               Join &apos;The Growth List&apos;
             </motion.h2>
           </div>
           
-          <motion.p variants={revealItem} className="font-sans text-xs text-[#6D5448]/90 max-w-lg mx-auto leading-relaxed">
+          <motion.p variants={getRevealItem(prefersReducedMotion)} className="font-sans text-xs text-[#6D5448]/90 max-w-lg mx-auto leading-relaxed">
             Register your email to obtain Cartiae Rae&apos;s moisturizing cheat-sheet, masterclass ebooks, pre-order updates, and special promotions.
           </motion.p>
 
           <motion.form 
-            variants={revealItem}
+            variants={getRevealItem(prefersReducedMotion)}
             onSubmit={handleSubscribe} 
             className="max-w-md mx-auto flex flex-col sm:flex-row gap-2 pt-2"
           >
@@ -459,20 +560,22 @@ const Homepage: React.FC<{
               placeholder="Your email address"
               value={emailInput}
               onChange={(e) => setEmailInput(e.target.value)}
-              className="w-full px-4 py-3 bg-white border border-brand-warm-tan/30 text-brand-dark placeholder-brand-dark/40 text-xs focus:outline-none focus:border-brand-dark transition-colors"
+              className="w-full px-4 py-3 bg-white border border-brand-warm-tan/30 text-brand-dark placeholder-brand-dark/40 text-xs focus:outline-none focus:ring-1 focus:ring-brand-rose focus:border-brand-rose transition-all rounded-xl"
             />
-            <button
+            <motion.button
               id="hero-newsletter-submit"
               type="submit"
-              className="px-6 py-3 bg-brand-dark hover:bg-[#32170f] text-white text-xs font-semibold uppercase tracking-wider transition-colors shrink-0 cursor-pointer"
+              whileHover={{ scale: prefersReducedMotion ? 1 : 1.02 }}
+              whileTap={{ scale: prefersReducedMotion ? 1 : 0.98 }}
+              className="px-6 py-3 bg-brand-dark hover:bg-brand-rose text-white text-xs font-semibold uppercase tracking-wider transition-colors shrink-0 cursor-pointer rounded-xl"
             >
               Subscribe
-            </button>
+            </motion.button>
           </motion.form>
 
           {success && (
             <motion.p 
-              variants={revealItem}
+              variants={getRevealItem(prefersReducedMotion)}
               className="text-emerald-700 text-xs font-mono py-2 font-medium"
             >
               ✓ Study Cheat-sheet transmitted to your inbox!
@@ -486,7 +589,7 @@ const Homepage: React.FC<{
 };
 
 export const AppContent: React.FC = () => {
-  const { toast } = useApp();
+  const { toast, prefersReducedMotion } = useApp();
   const [activePart, setActivePart] = useState('home');
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [shopFilter, setShopFilter] = useState('All');
@@ -527,44 +630,54 @@ export const AppContent: React.FC = () => {
         openCart={openCart} 
       />
 
-      {/* Main core pages router layouts */}
+      {/* Main core pages router layouts with Framer Motion Page Transitions */}
       <main className="flex-1">
-        {activePart === 'home' && (
-          <Homepage 
-            setActivePart={setActivePart} 
-            setShopFilter={setShopFilter} 
-            openCart={openCart} 
-          />
-        )}
-        
-        {activePart === 'shop' && (
-          <MainStore 
-            initialFilter={shopFilter}
-            isCartOpen={isCartOpen}
-            closeCart={closeCart}
-            openCart={openCart}
-          />
-        )}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activePart}
+            initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: prefersReducedMotion ? 0 : -10 }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {activePart === 'home' && (
+              <Homepage 
+                setActivePart={setActivePart} 
+                setShopFilter={setShopFilter} 
+                openCart={openCart} 
+              />
+            )}
+            
+            {activePart === 'shop' && (
+              <MainStore 
+                initialFilter={shopFilter}
+                isCartOpen={isCartOpen}
+                closeCart={closeCart}
+                openCart={openCart}
+              />
+            )}
 
-        {activePart === 'tutorials' && (
-          <VideoGallery />
-        )}
+            {activePart === 'tutorials' && (
+              <VideoGallery />
+            )}
 
-        {activePart === 'gallery' && (
-          <PhotoGallery />
-        )}
+            {activePart === 'gallery' && (
+              <PhotoGallery />
+            )}
 
-        {activePart === 'story' && (
-          <AboutAndBlog />
-        )}
+            {activePart === 'story' && (
+              <AboutAndBlog />
+            )}
 
-        {activePart === 'contact' && (
-          <ContactPage />
-        )}
+            {activePart === 'contact' && (
+              <ContactPage />
+            )}
 
-        {activePart === 'admin' && (
-          <AdminPortal />
-        )}
+            {activePart === 'admin' && (
+              <AdminPortal />
+            )}
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       {/* Luxury Footer */}
@@ -578,14 +691,14 @@ export const AppContent: React.FC = () => {
         {toast && (
           <motion.div
             id="global-app-toast"
-            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 30, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            transition={{ duration: 0.35, ease: "easeOut" }}
-            className="fixed bottom-6 left-6 z-50 flex items-center gap-3 bg-brand-dark text-[#FAF6F0] px-5 py-3.5 shadow-2xl border border-[#FAF6F0]/10 rounded-sm w-auto max-w-sm"
+            exit={{ opacity: 0, y: prefersReducedMotion ? 0 : 15, scale: 0.95 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="fixed bottom-6 left-6 z-50 flex items-center gap-3 bg-brand-dark text-[#FAF6F0] px-5 py-3.5 shadow-2xl border border-[#FAF6F0]/10 rounded-xl w-auto max-w-sm"
           >
             <span className="font-serif text-[10px] uppercase tracking-[0.2em] block font-bold text-brand-rose">
-              {toast.type === 'info' ? 'ℹ Info' : '✔ Saved'}
+              {toast.type === 'info' ? 'ℹ Info' : toast.type === 'error' ? '⚠ Error' : '✔ Saved'}
             </span>
             <span className="h-3.5 w-[1px] bg-[#FAF6F0]/20 select-none" />
             <p className="font-sans text-[11px] font-medium leading-normal tracking-wide text-[#FAF6F0]/90 flex-1">
@@ -601,10 +714,10 @@ export const AppContent: React.FC = () => {
           <motion.button
             id="back-to-top-btn"
             onClick={scrollToTop}
-            initial={{ opacity: 0, scale: 0.8, y: 15 }}
+            initial={{ opacity: 0, scale: 0.8, y: prefersReducedMotion ? 0 : 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: 15 }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
+            exit={{ opacity: 0, scale: 0.8, y: prefersReducedMotion ? 0 : 15 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
             className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-40 bg-brand-dark hover:bg-brand-rose text-[#FAF6F0] p-3 rounded-full shadow-md hover:shadow-lg transition-colors border border-brand-warm-tan/30 flex items-center justify-center cursor-pointer group focus:outline-none focus:ring-2 focus:ring-brand-rose focus:ring-offset-2 focus:ring-[#FAF7F2]"
             title="Back to Top"
             aria-label="Back to Top"

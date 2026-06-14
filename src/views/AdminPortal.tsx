@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../context/AppContext';
-import { Product, EBook, DiscountCode, TikTokVideo, PhotoGalleryItem, ContactRequest } from '../types';
+import { Product, EBook, DiscountCode, TikTokVideo, PhotoGalleryItem, ContactRequest, AdminRole } from '../types';
 import { 
   ShieldCheck, Lock, LogOut, CheckCircle2, TrendingUp, ShoppingBag, 
   BookOpen, Mail, BadgePercent, Settings, Book, Package, Plus, 
@@ -8,18 +9,321 @@ import {
   Video, Image, MessageSquare, Phone, MapPin, Camera, Eye, Archive, Inbox, Check
 } from 'lucide-react';
 
+// Resolve video types and parameters for YT, TikTok, or direct video
+const resolveVideoSource = (url: string) => {
+  const cleanUrl = url.trim();
+  
+  if (cleanUrl.includes('youtube.com') || cleanUrl.includes('youtu.be')) {
+    let videoId = '';
+    if (cleanUrl.includes('/embed/')) {
+      videoId = cleanUrl.split('/embed/')[1]?.split('?')[0] || '';
+    } else if (cleanUrl.includes('watch?v=')) {
+      videoId = cleanUrl.split('watch?v=')[1]?.split('&')[0] || '';
+    } else if (cleanUrl.includes('youtu.be/')) {
+      videoId = cleanUrl.split('youtu.be/')[1]?.split('?')[0] || '';
+    }
+    return {
+      type: 'youtube' as const,
+      id: videoId,
+      url: videoId ? `https://www.youtube.com/embed/${videoId}` : cleanUrl
+    };
+  }
+
+  if (cleanUrl.includes('tiktok.com')) {
+    let videoId = '';
+    if (cleanUrl.includes('/video/')) {
+      videoId = cleanUrl.split('/video/')[1]?.split('?')[0] || '';
+    } else if (cleanUrl.includes('/embed/v2/')) {
+      videoId = cleanUrl.split('/embed/v2/')[1]?.split('?')[0] || '';
+    } else if (cleanUrl.includes('/embed/')) {
+      videoId = cleanUrl.split('/embed/')[1]?.split('?')[0] || '';
+    }
+    return {
+      type: 'tiktok' as const,
+      id: videoId,
+      url: videoId ? `https://www.tiktok.com/embed/v2/${videoId}` : cleanUrl
+    };
+  }
+
+  return {
+    type: 'direct' as const,
+    id: '',
+    url: cleanUrl
+  };
+};
+
+interface ImageDropzoneProps {
+  imageValue: string;
+  onImageChange: (image: string) => void;
+  label: string;
+  prefersReducedMotion?: boolean;
+}
+
+const ImageDropzone: React.FC<ImageDropzoneProps> = ({ imageValue, onImageChange, label, prefersReducedMotion = false }) => {
+  const [isDragActive, setIsDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setIsDragActive(true);
+    } else if (e.type === "dragleave") {
+      setIsDragActive(false);
+    }
+  };
+
+  const processFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      onImageChange(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      processFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    if (e.target.files && e.target.files[0]) {
+      processFile(e.target.files[0]);
+    }
+  };
+
+  return (
+    <div
+      onDragEnter={handleDrag}
+      onDragOver={handleDrag}
+      onDragLeave={handleDrag}
+      onDrop={handleDrop}
+      onClick={() => fileInputRef.current?.click()}
+      className={`border-2 border-dashed rounded-xl p-3.5 flex flex-col items-center justify-center cursor-pointer transition-all duration-200 min-h-[90px] ${
+        isDragActive
+          ? 'border-brand-rose bg-brand-pink-light/35 scale-[1.01]'
+          : 'border-brand-warm-tan/30 bg-[#FAF6F0] hover:border-brand-rose/40 hover:bg-[#FAF6F0]/85'
+      }`}
+    >
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleChange}
+        className="hidden"
+      />
+      {imageValue ? (
+        <div className="flex items-center gap-3 w-full" onClick={(e) => e.stopPropagation()}>
+          <img
+            src={imageValue}
+            alt="Uploaded Preview"
+            className="w-12 h-12 object-cover rounded-lg border border-brand-warm-tan/20 shadow-xs"
+          />
+          <div className="text-left flex-1 min-w-0">
+            <p className="text-[10px] font-bold text-brand-chocolate truncate">{label} Uploaded</p>
+            <p className="text-[9px] text-[#A67E6B] font-medium">Click Replace or drop new file</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="text-[9px] text-brand-rose font-bold bg-brand-pink-light/50 px-2 py-1 rounded hover:bg-brand-rose hover:text-white transition-colors whitespace-nowrap"
+          >
+            Replace
+          </button>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center text-center">
+          <Camera className="w-5 h-5 text-brand-rose mb-1" />
+          <span className="text-[10px] font-bold text-brand-chocolate">{label} Graphic</span>
+          <span className="text-[9px] text-[#8C6D62] mt-0.5">Drag & drop here or click to browse</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
+interface VideoDropzoneProps {
+  videoValue: string;
+  onVideoChange: (videoUrl: string, file?: File) => void;
+  label: string;
+  prefersReducedMotion?: boolean;
+}
+
+const VideoDropzone: React.FC<VideoDropzoneProps> = ({ videoValue, onVideoChange, label, prefersReducedMotion = false }) => {
+  const [isDragActive, setIsDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const processFile = (file: File) => {
+    if (!file.type.startsWith('video/')) {
+      alert('Please select a valid video file (MP4/WebM).');
+      return;
+    }
+    const localUrl = URL.createObjectURL(file);
+    onVideoChange(localUrl, file);
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setIsDragActive(true);
+    } else if (e.type === "dragleave") {
+      setIsDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      processFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    if (e.target.files && e.target.files[0]) {
+      processFile(e.target.files[0]);
+    }
+  };
+
+  return (
+    <div
+      onDragEnter={handleDrag}
+      onDragOver={handleDrag}
+      onDragLeave={handleDrag}
+      onDrop={handleDrop}
+      className={`border-2 border-dashed rounded-xl p-3.5 flex flex-col items-center justify-center cursor-pointer transition-all duration-200 min-h-[90px] ${
+        isDragActive
+          ? 'border-brand-rose bg-brand-pink-light/35 scale-[1.01]'
+          : 'border-brand-warm-tan/30 bg-[#FAF6F0] hover:border-brand-rose/40 hover:bg-[#FAF6F0]/85'
+      }`}
+      onClick={() => fileInputRef.current?.click()}
+    >
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="video/mp4,video/webm"
+        onChange={handleChange}
+        className="hidden"
+      />
+      {videoValue && videoValue.startsWith('blob:') ? (
+        <div className="flex items-center gap-3 w-full" onClick={(e) => e.stopPropagation()}>
+          <div className="w-12 h-12 rounded-lg border border-brand-warm-tan/20 bg-black flex items-center justify-center overflow-hidden shrink-0">
+            <video src={videoValue} className="w-full h-full object-cover" muted playsInline />
+          </div>
+          <div className="text-left flex-1 min-w-0">
+            <p className="text-[10px] font-bold text-brand-chocolate truncate">{label} Loaded</p>
+            <p className="text-[9px] text-[#A67E6B] font-medium">Local blob ready to upload</p>
+          </div>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="text-[9px] text-brand-rose font-bold bg-brand-pink-light/50 px-2 py-1 rounded hover:bg-brand-rose hover:text-white transition-colors"
+          >
+            Replace
+          </button>
+        </div>
+      ) : videoValue ? (
+        <div className="flex items-center gap-3 w-full" onClick={(e) => e.stopPropagation()}>
+          <div className="w-12 h-12 rounded-lg border border-brand-warm-tan/20 bg-black flex items-center justify-center overflow-hidden shrink-0">
+            {videoValue.includes('youtube.com') || videoValue.includes('youtu.be') || videoValue.includes('tiktok.com') ? (
+              <Video className="w-5 h-5 text-brand-rose" />
+            ) : (
+              <video src={videoValue} className="w-full h-full object-cover" muted playsInline />
+            )}
+          </div>
+          <div className="text-left flex-1 min-w-0">
+            <p className="text-[10px] font-bold text-brand-chocolate truncate">Linked Video URL active</p>
+            <p className="text-[9px] text-[#8C6D62] truncate">{videoValue}</p>
+          </div>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="text-[9px] text-brand-rose font-bold bg-brand-pink-light/50 px-2 py-1 rounded hover:bg-brand-rose hover:text-white transition-colors"
+          >
+            Upload file
+          </button>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center text-center">
+          <Video className="w-5 h-5 text-brand-rose mb-1" />
+          <span className="text-[10px] font-bold text-brand-chocolate">{label}</span>
+          <span className="text-[9px] text-[#8C6D62] mt-0.5">Drag & drop MP4/WebM here or click to browse</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const AnimatedAdminCounter: React.FC<{
+  value: number;
+  decimals?: number;
+  prefix?: string;
+  suffix?: string;
+  duration?: number;
+  prefersReducedMotion?: boolean;
+}> = ({ value, decimals = 0, prefix = '', suffix = '', duration = 1.0, prefersReducedMotion = false }) => {
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    if (prefersReducedMotion) {
+      setDisplayValue(value);
+      return;
+    }
+    let startTime: number | null = null;
+    const startValue = 0;
+
+    const animateValue = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / (duration * 1000), 1);
+      // easeOutQuad
+      const easeProgress = progress * (2 - progress);
+      const current = startValue + easeProgress * (value - startValue);
+      setDisplayValue(current);
+
+      if (progress < 1) {
+        requestAnimationFrame(animateValue);
+      } else {
+        setDisplayValue(value);
+      }
+    };
+
+    const animId = requestAnimationFrame(animateValue);
+    return () => cancelAnimationFrame(animId);
+  }, [value, duration, prefersReducedMotion]);
+
+  return (
+    <span>
+      {prefix}
+      {displayValue.toLocaleString(undefined, {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+      })}
+      {suffix}
+    </span>
+  );
+};
+
 export const AdminPortal: React.FC = () => {
   const {
-    ebooks, products, discountCodes, homepageContent, newsletterSignups, orders, isAdminLoggedIn,
+    ebooks, products, discountCodes, homepageContent, newsletterSignups, orders, isAdminLoggedIn, currentAdminUser,
     videos, gallery, contactRequests,
     addEBook, updateEBook, deleteEBook,
     addProduct, updateProduct, deleteProduct,
-    addVideo, deleteVideo,
+    addVideo, updateVideo, deleteVideo,
     addGalleryItem, deleteGalleryItem,
     addDiscountCode, deleteDiscountCode,
     updateHomepageContent, fulfillOrder, loginAdmin, logoutAdmin,
     respondToContactRequest, deleteContactRequest, updateContactRequestStatus,
-    emailNotificationsEnabled, setEmailNotificationsEnabled
+    emailNotificationsEnabled, setEmailNotificationsEnabled, prefersReducedMotion,
+    triggerToast
   } = useApp();
 
   // Auth form states
@@ -40,11 +344,40 @@ export const AdminPortal: React.FC = () => {
 
   // New Content Asset form states
   const [isAddingVideo, setIsAddingVideo] = useState(false);
+  const [editingVideoId, setEditingVideoId] = useState<string | null>(null);
   const [vidTitle, setVidTitle] = useState('');
   const [vidViews, setVidViews] = useState('12.5K views');
   const [vidCategory, setVidCategory] = useState<'Wash Day' | 'Styling' | 'Protective Styles' | 'Growth Tips' | 'Cornrows' | 'Product Reviews' | 'Tutorials'>('Styling');
   const [vidUrl, setVidUrl] = useState('');
-  const [vidThumb, setVidThumb] = useState('https://images.unsplash.com/photo-1522337360788-8b13edd793be?auto=format&fit=crop&q=80&w=800');
+  const [vidThumb, setVidThumb] = useState('https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&q=80&w=800');
+  const [vidDescription, setVidDescription] = useState('');
+  const [vidRelatedIds, setVidRelatedIds] = useState<string[]>([]);
+  const [vidIsFeatured, setVidIsFeatured] = useState(false);
+  const [vidStatus, setVidStatus] = useState<'draft' | 'published' | 'scheduled'>('published');
+  const [vidScheduledAt, setVidScheduledAt] = useState('');
+  const [viewingAnalyticsVideo, setViewingAnalyticsVideo] = useState<TikTokVideo | null>(null);
+  const [uploadedVideoFile, setUploadedVideoFile] = useState<File | null>(null);
+  const [uploadedThumbFile, setUploadedThumbFile] = useState<File | null>(null);
+
+  // Automatic YouTube/TikTok URL detector and thumbnail resolver
+  useEffect(() => {
+    if (!vidUrl) return;
+    const resolved = resolveVideoSource(vidUrl);
+    if (resolved.type === 'youtube' && resolved.id) {
+      const ytThumb = `https://img.youtube.com/vi/${resolved.id}/maxresdefault.jpg`;
+      // Auto-populate thumbnail field if it is empty or the default placeholder
+      if (!vidThumb || vidThumb === 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&q=80&w=800') {
+        setVidThumb(ytThumb);
+      }
+    } else if (resolved.type === 'tiktok' && resolved.id) {
+      // For TikTok, direct client-side oEmbed thumbnail extraction is blocked by CORS.
+      // So we fallback to a beautiful coily hair placeholder or keep the current one.
+      const tiktokPlaceholder = 'https://images.unsplash.com/photo-1608139556157-196be06511fc?auto=format&fit=crop&q=80&w=400';
+      if (!vidThumb || vidThumb === 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&q=80&w=800') {
+        setVidThumb(tiktokPlaceholder);
+      }
+    }
+  }, [vidUrl]);
 
   const [isAddingGallery, setIsAddingGallery] = useState(false);
   const [galCaption, setGalCaption] = useState('');
@@ -59,6 +392,7 @@ export const AdminPortal: React.FC = () => {
   const [cmsPromoQuote, setCmsPromoQuote] = useState(homepageContent.promoQuote);
   const [cmsPromoAuthor, setCmsPromoAuthor] = useState(homepageContent.promoAuthor);
   const [cmsSuccess, setCmsSuccess] = useState(false);
+  const [showLivePreview, setShowLivePreview] = useState(false);
 
   // New catalog item drawers
   const [isAddingProduct, setIsAddingProduct] = useState(false);
@@ -83,9 +417,31 @@ export const AdminPortal: React.FC = () => {
   const [discPercent, setDiscPercent] = useState('20');
   const [discDesc, setDiscDesc] = useState('');
 
+  // Inline editing states
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [editProdName, setEditProdName] = useState('');
+  const [editProdCategory, setEditProdCategory] = useState('Hair Oils');
+  const [editProdStock, setEditProdStock] = useState('0');
+  const [editProdPrice, setEditProdPrice] = useState('0.00');
+
+  const [editingEBookId, setEditingEBookId] = useState<string | null>(null);
+  const [editEbName, setEditEbName] = useState('');
+  const [editEbPages, setEditEbPages] = useState('120');
+  const [editEbPrice, setEditEbPrice] = useState('0.00');
+  const [editEbSize, setEditEbSize] = useState('10 MB');
+
   // --- Calculations ---
   const totalSales = orders.reduce((acc, order) => acc + order.total, 0);
   const pendingOrdersCount = orders.filter(o => o.status === 'Pending').length;
+
+  const checkPermission = (allowedRoles: AdminRole[]): boolean => {
+    if (!currentAdminUser) return false;
+    if (allowedRoles.includes(currentAdminUser.role)) {
+      return true;
+    }
+    triggerToast(`Action denied: Insufficient permissions for role "${currentAdminUser.role.replace('_', ' ')}".`, 'error');
+    return false;
+  };
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,6 +461,7 @@ export const AdminPortal: React.FC = () => {
 
   const handleCmsUpdate = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!checkPermission(['super_admin', 'content_manager'])) return;
     updateHomepageContent({
       heroHeadline: cmsHeroHead,
       heroSubheadline: cmsHeroSub,
@@ -119,6 +476,7 @@ export const AdminPortal: React.FC = () => {
 
   const handleAddProductSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!checkPermission(['super_admin', 'store_manager'])) return;
     addProduct({
       id: `prod-${Date.now()}`,
       name: prodName,
@@ -139,6 +497,7 @@ export const AdminPortal: React.FC = () => {
 
   const handleAddEBookSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!checkPermission(['super_admin', 'store_manager'])) return;
     addEBook({
       id: `ebook-${Date.now()}`,
       name: ebName,
@@ -162,8 +521,54 @@ export const AdminPortal: React.FC = () => {
     setIsAddingEBook(false);
   };
 
+  const handleSaveProduct = (id: string) => {
+    if (!checkPermission(['super_admin', 'store_manager'])) return;
+    const orig = products.find(p => p.id === id);
+    if (!orig) return;
+    updateProduct(id, {
+      name: editProdName,
+      category: editProdCategory,
+      price: parseFloat(editProdPrice) || 0,
+      stockCount: parseInt(editProdStock) || 0,
+      stockStatus: (parseInt(editProdStock) || 0) > 15 ? 'In Stock' : 'Low Stock',
+    });
+    setEditingProductId(null);
+  };
+
+  const handleStartEditProduct = (p: Product) => {
+    if (!checkPermission(['super_admin', 'store_manager'])) return;
+    setEditingProductId(p.id);
+    setEditProdName(p.name);
+    setEditProdCategory(p.category);
+    setEditProdStock(p.stockCount.toString());
+    setEditProdPrice(p.price.toString());
+  };
+
+  const handleSaveEBook = (id: string) => {
+    if (!checkPermission(['super_admin', 'store_manager'])) return;
+    const orig = ebooks.find(e => e.id === id);
+    if (!orig) return;
+    updateEBook(id, {
+      name: editEbName,
+      pages: parseInt(editEbPages) || 120,
+      price: parseFloat(editEbPrice) || 0,
+      fileSize: editEbSize,
+    });
+    setEditingEBookId(null);
+  };
+
+  const handleStartEditEBook = (e: EBook) => {
+    if (!checkPermission(['super_admin', 'store_manager'])) return;
+    setEditingEBookId(e.id);
+    setEditEbName(e.name);
+    setEditEbPages(e.pages.toString());
+    setEditEbPrice(e.price.toString());
+    setEditEbSize(e.fileSize);
+  };
+
   const handleAddDiscountSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!checkPermission(['super_admin'])) return;
     addDiscountCode({
       code: discName.toUpperCase().trim(),
       discountPercent: parseInt(discPercent) || 15,
@@ -176,24 +581,138 @@ export const AdminPortal: React.FC = () => {
     setIsAddingDiscount(false);
   };
 
+  const resetVideoForm = () => {
+    setVidTitle('');
+    setVidUrl('');
+    setVidCategory('Styling');
+    setVidViews('0 views');
+    setVidThumb('https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&q=80&w=800');
+    setVidDescription('');
+    setVidRelatedIds([]);
+    setVidIsFeatured(false);
+    setVidStatus('published');
+    setVidScheduledAt('');
+    setUploadedVideoFile(null);
+    setUploadedThumbFile(null);
+    setIsAddingVideo(false);
+    setEditingVideoId(null);
+  };
+
   const handleAddVideoSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!vidTitle || !vidUrl) return;
-    addVideo({
+    if (!checkPermission(['super_admin', 'content_manager'])) return;
+
+    // Simulate file uploads to cloud storage bucket
+    if (uploadedVideoFile) {
+      console.log(`[Cloud Storage Placeholder] File uploaded: ${uploadedVideoFile.name} (${uploadedVideoFile.size} bytes)`);
+    }
+    if (uploadedThumbFile) {
+      console.log(`[Cloud Storage Placeholder] Thumbnail uploaded: ${uploadedThumbFile.name} (${uploadedThumbFile.size} bytes)`);
+    }
+
+    let fOrder: number | undefined = undefined;
+    if (vidIsFeatured) {
+      if (editingVideoId) {
+        const existing = videos.find(v => v.id === editingVideoId);
+        if (existing && existing.isFeatured && existing.featuredOrder !== undefined) {
+          fOrder = existing.featuredOrder;
+        }
+      }
+      if (fOrder === undefined) {
+        const maxOrder = videos.reduce((max, v) => (v.isFeatured && v.featuredOrder ? Math.max(max, v.featuredOrder) : max), 0);
+        fOrder = maxOrder + 1;
+      }
+    }
+
+    const payload: Partial<TikTokVideo> = {
       title: vidTitle,
-      views: vidViews,
+      views: vidStatus === 'draft' ? 'Draft' : (vidStatus === 'scheduled' ? 'Scheduled' : vidViews === '0 views' ? '0 views' : vidViews),
       category: vidCategory,
       videoUrl: vidUrl,
-      thumbnailUrl: vidThumb
-    });
-    setVidTitle('');
-    setVidUrl('');
-    setIsAddingVideo(false);
+      thumbnailUrl: vidThumb,
+      description: vidDescription,
+      relatedIds: vidRelatedIds,
+      isFeatured: vidIsFeatured,
+      status: vidStatus,
+      scheduledAt: vidStatus === 'scheduled' ? vidScheduledAt : undefined,
+      featuredOrder: fOrder,
+    };
+
+    if (editingVideoId) {
+      // Keep existing analytics on update
+      const existing = videos.find(v => v.id === editingVideoId);
+      if (existing) {
+        payload.viewsCount = existing.viewsCount;
+        payload.likesCount = existing.likesCount;
+        payload.savesCount = existing.savesCount;
+        payload.sharesCount = existing.sharesCount;
+        payload.commentsCount = existing.commentsCount;
+        payload.shopClicks = existing.shopClicks;
+        payload.productAddClicks = existing.productAddClicks;
+        payload.ebookAddClicks = existing.ebookAddClicks;
+        payload.conversionCount = existing.conversionCount;
+      }
+      updateVideo(editingVideoId, payload);
+      triggerToast('Video Masterclass updated! 🎬', 'success');
+    } else {
+      // Initialize analytics for a new video
+      payload.viewsCount = 0;
+      payload.likesCount = 0;
+      payload.savesCount = 0;
+      payload.sharesCount = 0;
+      payload.commentsCount = 0;
+      payload.shopClicks = 0;
+      payload.productAddClicks = 0;
+      payload.ebookAddClicks = 0;
+      payload.conversionCount = 0;
+
+      addVideo(payload as any);
+      triggerToast('Video Masterclass published! 🎬', 'success');
+    }
+
+    resetVideoForm();
+  };
+
+  const moveFeaturedVideo = (id: string, direction: 'up' | 'down') => {
+    if (!checkPermission(['super_admin', 'content_manager'])) return;
+
+    // Get current featured videos, sorted by featuredOrder
+    const featured = videos
+      .filter(v => v.isFeatured)
+      .sort((a, b) => (a.featuredOrder ?? 999) - (b.featuredOrder ?? 999));
+
+    const index = featured.findIndex(v => v.id === id);
+    if (index === -1) return;
+
+    if (direction === 'up' && index > 0) {
+      const current = featured[index];
+      const target = featured[index - 1];
+
+      // Swap featuredOrder
+      const currentOrder = current.featuredOrder ?? index;
+      const targetOrder = target.featuredOrder ?? (index - 1);
+
+      updateVideo(current.id, { featuredOrder: targetOrder });
+      updateVideo(target.id, { featuredOrder: currentOrder });
+      triggerToast('Reordered featured videos!', 'success');
+    } else if (direction === 'down' && index < featured.length - 1) {
+      const current = featured[index];
+      const target = featured[index + 1];
+
+      const currentOrder = current.featuredOrder ?? index;
+      const targetOrder = target.featuredOrder ?? (index + 1);
+
+      updateVideo(current.id, { featuredOrder: targetOrder });
+      updateVideo(target.id, { featuredOrder: currentOrder });
+      triggerToast('Reordered featured videos!', 'success');
+    }
   };
 
   const handleAddGallerySubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!galCaption || !galImage) return;
+    if (!checkPermission(['super_admin', 'content_manager'])) return;
     addGalleryItem({
       image: galImage,
       caption: galCaption,
@@ -278,7 +797,10 @@ export const AdminPortal: React.FC = () => {
           
           <div className="mt-8 pt-6 border-t border-[#E5D5C8]/50 text-[10.5px] text-[#A67E6B] font-medium leading-relaxed">
             🔒 Standalone Sandbox Simulation Mode Active.<br />
-            Use <strong className="font-bold underline text-brand-rose">any email</strong> and password <strong className="font-bold underline text-brand-rose">admin</strong> to login.
+            Use <strong className="font-bold">any email</strong> with one of these passwords to test roles:<br />
+            • <strong className="font-bold text-brand-rose">admin</strong> (Super Admin role)<br />
+            • <strong className="font-bold text-brand-rose">manager</strong> (Store Manager role)<br />
+            • <strong className="font-bold text-brand-rose">content</strong> (Content Manager role)
           </div>
         </div>
       ) : (
@@ -291,12 +813,17 @@ export const AdminPortal: React.FC = () => {
           {/* Header row with logouts */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#E5D5C8]/40 pb-5 gap-4">
             <div>
-              <div className="flex items-center gap-1.5 text-brand-rose text-xs font-extrabold uppercase tracking-widest pl-0.5">
+              <div className="flex items-center flex-wrap gap-1.5 text-brand-rose text-xs font-extrabold uppercase tracking-widest pl-0.5">
                 <ShieldCheck className="w-4 h-4 text-emerald-600 animate-pulse" />
                 <span>Authorized Staff Portal Active</span>
+                {currentAdminUser && (
+                  <span className="ml-1 px-2.5 py-0.5 bg-brand-rose text-[#FAF6F0] rounded-full text-[9px] font-mono font-bold select-none uppercase tracking-wider">
+                    {currentAdminUser.role.replace('_', ' ')}
+                  </span>
+                )}
               </div>
               <h1 className="font-serif text-2xl sm:text-3xl font-extrabold text-brand-dark mt-1 flex items-center gap-2">
-                Cartiae Rae <span className="text-brand-rose font-light italic">CMS Dashboard</span>
+                {currentAdminUser ? currentAdminUser.name : 'Cartiae Rae'} <span className="text-brand-rose font-light italic">CMS Dashboard</span>
               </h1>
             </div>
 
@@ -312,91 +839,153 @@ export const AdminPortal: React.FC = () => {
 
           {/* Quick Stats Metric Cards banner */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div className="bg-white border-l-4 border-l-emerald-600 border border-y-[#E5D5C8]/50 border-r-[#E5D5C8]/50 p-4 rounded-xl shadow-[0_4px_15px_-4px_rgba(74,43,32,0.03)] hover:shadow-md transition duration-200">
+            <motion.div
+              whileHover={prefersReducedMotion ? {} : { y: -3, boxShadow: '0 8px 30px rgba(74, 43, 32, 0.06)' }}
+              transition={{ duration: 0.2 }}
+              className="bg-white border-l-4 border-l-emerald-600 border border-y-[#E5D5C8]/50 border-r-[#E5D5C8]/50 p-4 rounded-xl shadow-[0_4px_15px_-4px_rgba(74,43,32,0.03)] transition-all duration-200"
+            >
               <div className="flex justify-between items-start mb-2">
                 <p className="text-[10px] uppercase font-extrabold text-[#8C6D62] tracking-wider">Total Revenue</p>
                 <TrendingUp className="w-4 h-4 text-emerald-600" />
               </div>
-              <p className="text-lg font-bold font-mono text-brand-dark mt-1">${totalSales.toFixed(2)}</p>
-            </div>
+              <p className="text-lg font-bold font-mono text-brand-dark mt-1">
+                <AnimatedAdminCounter value={totalSales} decimals={2} prefix="$" prefersReducedMotion={prefersReducedMotion} />
+              </p>
+            </motion.div>
             
-            <div className="bg-white border-l-4 border-l-brand-rose border border-y-[#E5D5C8]/50 border-r-[#E5D5C8]/50 p-4 rounded-xl shadow-[0_4px_15px_-4px_rgba(74,43,32,0.03)] hover:shadow-md transition duration-200">
+            <motion.div
+              whileHover={prefersReducedMotion ? {} : { y: -3, boxShadow: '0 8px 30px rgba(74, 43, 32, 0.06)' }}
+              transition={{ duration: 0.2 }}
+              className="bg-white border-l-4 border-l-brand-rose border border-y-[#E5D5C8]/50 border-r-[#E5D5C8]/50 p-4 rounded-xl shadow-[0_4px_15px_-4px_rgba(74,43,32,0.03)] transition-all duration-200"
+            >
               <div className="flex justify-between items-start mb-2">
                 <p className="text-[10px] uppercase font-extrabold text-[#8C6D62] tracking-wider">Total Orders</p>
                 <ShoppingBag className="w-4 h-4 text-brand-rose" />
               </div>
-              <p className="text-lg font-bold font-mono text-brand-dark mt-1">{orders.length}</p>
+              <p className="text-lg font-bold font-mono text-brand-dark mt-1">
+                <AnimatedAdminCounter value={orders.length} decimals={0} prefersReducedMotion={prefersReducedMotion} />
+              </p>
               <span className="text-[9px] text-[#C2395A] bg-brand-pink-light font-extrabold px-1.5 py-0.5 rounded-md mt-1.5 inline-block">
                 {pendingOrdersCount} Awaiting Shipment
               </span>
-            </div>
+            </motion.div>
 
-            <div className="bg-white border-l-4 border-l-[#4A2B20] border border-y-[#E5D5C8]/50 border-r-[#E5D5C8]/50 p-4 rounded-xl shadow-[0_4px_15px_-4px_rgba(74,43,32,0.03)] hover:shadow-md transition duration-200">
+            <motion.div
+              whileHover={prefersReducedMotion ? {} : { y: -3, boxShadow: '0 8px 30px rgba(74, 43, 32, 0.06)' }}
+              transition={{ duration: 0.2 }}
+              className="bg-white border-l-4 border-l-[#4A2B20] border border-y-[#E5D5C8]/50 border-r-[#E5D5C8]/50 p-4 rounded-xl shadow-[0_4px_15px_-4px_rgba(74,43,32,0.03)] transition-all duration-200"
+            >
               <div className="flex justify-between items-start mb-2">
                 <p className="text-[10px] uppercase font-extrabold text-[#8C6D62] tracking-wider">eBooks Catalog</p>
                 <BookOpen className="w-4 h-4 text-[#4A2B20]" />
               </div>
-              <p className="text-lg font-bold font-mono text-brand-dark mt-1">{ebooks.length}</p>
+              <p className="text-lg font-bold font-mono text-brand-dark mt-1">
+                <AnimatedAdminCounter value={ebooks.length} decimals={0} prefersReducedMotion={prefersReducedMotion} />
+              </p>
               <span className="text-[9px] text-[#8C6D62] bg-[#FAF6F0] font-bold px-1.5 py-0.5 rounded-md mt-1.5 inline-block">Guides Published</span>
-            </div>
+            </motion.div>
 
-            <div className="bg-white border-l-4 border-l-brand-pink border border-y-[#E5D5C8]/50 border-r-[#E5D5C8]/50 p-4 rounded-xl shadow-[0_4px_15px_-4px_rgba(74,43,32,0.03)] hover:shadow-md transition duration-200">
+            <motion.div
+              whileHover={prefersReducedMotion ? {} : { y: -3, boxShadow: '0 8px 30px rgba(74, 43, 32, 0.06)' }}
+              transition={{ duration: 0.2 }}
+              className="bg-white border-l-4 border-l-brand-pink border border-y-[#E5D5C8]/50 border-r-[#E5D5C8]/50 p-4 rounded-xl shadow-[0_4px_15px_-4px_rgba(74,43,32,0.03)] transition-all duration-200"
+            >
               <div className="flex justify-between items-start mb-2">
                 <p className="text-[10px] uppercase font-extrabold text-[#8C6D62] tracking-wider">Products Stock</p>
                 <Package className="w-4 h-4 text-brand-pink" />
               </div>
-              <p className="text-lg font-bold font-mono text-brand-dark mt-1">{products.length}</p>
+              <p className="text-lg font-bold font-mono text-brand-dark mt-1">
+                <AnimatedAdminCounter value={products.length} decimals={0} prefersReducedMotion={prefersReducedMotion} />
+              </p>
               <span className="text-[9px] text-emerald-800 bg-emerald-50 font-bold px-1.5 py-0.5 rounded-md mt-1.5 inline-block">Botanical Retail</span>
-            </div>
+            </motion.div>
 
-            <div className="bg-white border-l-4 border-l-brand-berry border border-y-[#E5D5C8]/50 border-r-[#E5D5C8]/50 p-4 rounded-xl shadow-[0_4px_15px_-4px_rgba(74,43,32,0.03)] hover:shadow-md transition duration-200 col-span-2 md:col-span-1">
+            <motion.div
+              whileHover={prefersReducedMotion ? {} : { y: -3, boxShadow: '0 8px 30px rgba(74, 43, 32, 0.06)' }}
+              transition={{ duration: 0.2 }}
+              className="bg-white border-l-4 border-l-brand-berry border border-y-[#E5D5C8]/50 border-r-[#E5D5C8]/50 p-4 rounded-xl shadow-[0_4px_15px_-4px_rgba(74,43,32,0.03)] transition-all duration-200 col-span-2 md:col-span-1"
+            >
               <div className="flex justify-between items-start mb-2">
                 <p className="text-[10px] uppercase font-extrabold text-[#8C6D62] tracking-wider">Newsletter Subs</p>
                 <Mail className="w-4 h-4 text-brand-berry animate-pulse" />
               </div>
-              <p className="text-lg font-bold font-mono text-brand-dark mt-1">{newsletterSignups.length + 42}</p>
+              <p className="text-lg font-bold font-mono text-brand-dark mt-1">
+                <AnimatedAdminCounter value={newsletterSignups.length + 42} decimals={0} prefersReducedMotion={prefersReducedMotion} />
+              </p>
               <span className="text-[9px] text-brand-berry bg-brand-pink-light font-bold px-1.5 py-0.5 rounded-md mt-1.5 inline-block">Growth List Hits</span>
-            </div>
+            </motion.div>
           </div>
 
           {/* Simplified Main Navigation tabs */}
           <div className="flex border-b border-brand-warm-tan/20 pb-2.5 overflow-x-auto gap-6 sm:gap-8 scrollbar-none scroll-smooth">
-            <button
+            <motion.button
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => setActiveTab('overview')}
-              className={`flex items-center gap-1.5 pb-2 text-xs uppercase tracking-wider font-extrabold transition-all duration-200 focus:outline-none whitespace-nowrap ${
-                activeTab === 'overview' ? 'text-brand-rose border-b-2 border-brand-rose' : 'text-brand-chocolate/60 hover:text-brand-rose'
+              className={`relative flex items-center gap-1.5 pb-2 text-xs uppercase tracking-wider font-extrabold transition-all duration-200 focus:outline-none whitespace-nowrap ${
+                activeTab === 'overview' ? 'text-brand-rose' : 'text-brand-chocolate/60 hover:text-brand-rose'
               }`}
             >
-              <TrendingUp className="w-4 h-4" />
+              <TrendingUp className="w-3.5 h-3.5" />
               <span>Overview Dashboard</span>
-            </button>
-            <button
+              {activeTab === 'overview' && !prefersReducedMotion && (
+                <motion.div layoutId="adminActiveTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-rose" />
+              )}
+              {activeTab === 'overview' && prefersReducedMotion && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-rose" />
+              )}
+            </motion.button>
+            <motion.button
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => setActiveTab('catalog')}
-              className={`flex items-center gap-1.5 pb-2 text-xs uppercase tracking-wider font-extrabold transition-all duration-200 focus:outline-none whitespace-nowrap ${
-                activeTab === 'catalog' ? 'text-brand-rose border-b-2 border-brand-rose' : 'text-brand-chocolate/60 hover:text-brand-rose'
+              className={`relative flex items-center gap-1.5 pb-2 text-xs uppercase tracking-wider font-extrabold transition-all duration-200 focus:outline-none whitespace-nowrap ${
+                activeTab === 'catalog' ? 'text-brand-rose' : 'text-brand-chocolate/60 hover:text-brand-rose'
               }`}
             >
-              <ShoppingBag className="w-4 h-4" />
+              <ShoppingBag className="w-3.5 h-3.5" />
               <span>Catalog & Coupons</span>
-            </button>
-            <button
+              {activeTab === 'catalog' && !prefersReducedMotion && (
+                <motion.div layoutId="adminActiveTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-rose" />
+              )}
+              {activeTab === 'catalog' && prefersReducedMotion && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-rose" />
+              )}
+            </motion.button>
+            <motion.button
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => setActiveTab('contacts')}
-              className={`flex items-center gap-1.5 pb-2 text-xs uppercase tracking-wider font-extrabold transition-all duration-200 focus:outline-none whitespace-nowrap ${
-                activeTab === 'contacts' ? 'text-brand-rose border-b-2 border-brand-rose' : 'text-brand-chocolate/60 hover:text-brand-rose'
+              className={`relative flex items-center gap-1.5 pb-2 text-xs uppercase tracking-wider font-extrabold transition-all duration-200 focus:outline-none whitespace-nowrap ${
+                activeTab === 'contacts' ? 'text-brand-rose' : 'text-brand-chocolate/60 hover:text-brand-rose'
               }`}
             >
-              <MessageSquare className="w-4 h-4" />
+              <MessageSquare className="w-3.5 h-3.5" />
               <span>Consult Inquiries ({contactRequests.filter(c => c.status === 'Pending').length})</span>
-            </button>
-            <button
+              {activeTab === 'contacts' && !prefersReducedMotion && (
+                <motion.div layoutId="adminActiveTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-rose" />
+              )}
+              {activeTab === 'contacts' && prefersReducedMotion && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-rose" />
+              )}
+            </motion.button>
+            <motion.button
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => setActiveTab('design')}
-              className={`flex items-center gap-1.5 pb-2 text-xs uppercase tracking-wider font-extrabold transition-all duration-200 focus:outline-none whitespace-nowrap ${
-                activeTab === 'design' ? 'text-brand-rose border-b-2 border-brand-rose' : 'text-brand-chocolate/60 hover:text-brand-rose'
+              className={`relative flex items-center gap-1.5 pb-2 text-xs uppercase tracking-wider font-extrabold transition-all duration-200 focus:outline-none whitespace-nowrap ${
+                activeTab === 'design' ? 'text-brand-rose' : 'text-brand-chocolate/60 hover:text-brand-rose'
               }`}
             >
-              <Settings className="w-4 h-4" />
+              <Settings className="w-3.5 h-3.5" />
               <span>Store Editor</span>
-            </button>
+              {activeTab === 'design' && !prefersReducedMotion && (
+                <motion.div layoutId="adminActiveTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-rose" />
+              )}
+              {activeTab === 'design' && prefersReducedMotion && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-rose" />
+              )}
+            </motion.button>
           </div>
 
           {/* ======================================= */}
@@ -404,41 +993,60 @@ export const AdminPortal: React.FC = () => {
           {/* ======================================= */}
           {activeTab === 'overview' && (
             <div className="flex flex-wrap gap-1.5 p-1 bg-[#E5D5C8]/25 border border-[#E5D5C8]/45 rounded-xl w-fit">
-              <button
+              <motion.button
+                whileTap={{ scale: 0.98 }}
                 onClick={() => setOverviewSub('metrics')}
-                className={`px-4 py-2 rounded-lg text-[10.5px] font-extrabold uppercase tracking-wider transition-all duration-150 focus:outline-none ${
-                  overviewSub === 'metrics'
-                    ? 'bg-brand-rose text-white shadow-[0_2px_8px_rgba(194,57,90,0.2)]'
-                    : 'text-brand-chocolate hover:text-brand-rose hover:bg-white/40'
+                className={`relative px-4 py-2 rounded-lg text-[10.5px] font-extrabold uppercase tracking-wider transition-all duration-150 focus:outline-none ${
+                  overviewSub === 'metrics' ? 'text-white' : 'text-brand-chocolate hover:text-brand-rose'
                 }`}
               >
-                Conversion Metrics
-              </button>
-              <button
-                onClick={() => setOverviewSub('orders')}
-                className={`px-4 py-2 rounded-lg text-[10.5px] font-extrabold uppercase tracking-wider transition-all duration-150 focus:outline-none flex items-center gap-1.5 ${
-                  overviewSub === 'orders'
-                    ? 'bg-brand-rose text-white shadow-[0_2px_8px_rgba(194,57,90,0.2)]'
-                    : 'text-brand-chocolate hover:text-brand-rose hover:bg-white/40'
-                }`}
-              >
-                <span>Orders Tracker</span>
-                {pendingOrdersCount > 0 && (
-                  <span className="bg-brand-berry text-white text-[9.5px] font-mono px-2 py-0.5 rounded-full inline-block font-black">
-                    {pendingOrdersCount}
-                  </span>
+                {overviewSub === 'metrics' && !prefersReducedMotion && (
+                  <motion.div layoutId="overviewActiveSub" className="absolute inset-0 bg-brand-rose rounded-lg shadow-[0_2px_8px_rgba(194,57,90,0.2)]" style={{ zIndex: 0 }} />
                 )}
-              </button>
-              <button
-                onClick={() => setOverviewSub('subscribers')}
-                className={`px-4 py-2 rounded-lg text-[10.5px] font-extrabold uppercase tracking-wider transition-all duration-150 focus:outline-none ${
-                  overviewSub === 'subscribers'
-                    ? 'bg-brand-rose text-white shadow-[0_2px_8px_rgba(194,57,90,0.2)]'
-                    : 'text-brand-chocolate hover:text-brand-rose hover:bg-white/40'
+                {overviewSub === 'metrics' && prefersReducedMotion && (
+                  <div className="absolute inset-0 bg-brand-rose rounded-lg shadow-[0_2px_8px_rgba(194,57,90,0.2)]" />
+                )}
+                <span className="relative z-10">Conversion Metrics</span>
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setOverviewSub('orders')}
+                className={`relative px-4 py-2 rounded-lg text-[10.5px] font-extrabold uppercase tracking-wider transition-all duration-150 focus:outline-none flex items-center gap-1.5 ${
+                  overviewSub === 'orders' ? 'text-white' : 'text-brand-chocolate hover:text-brand-rose'
                 }`}
               >
-                Subscriber Logs
-              </button>
+                {overviewSub === 'orders' && !prefersReducedMotion && (
+                  <motion.div layoutId="overviewActiveSub" className="absolute inset-0 bg-brand-rose rounded-lg shadow-[0_2px_8px_rgba(194,57,90,0.2)]" style={{ zIndex: 0 }} />
+                )}
+                {overviewSub === 'orders' && prefersReducedMotion && (
+                  <div className="absolute inset-0 bg-brand-rose rounded-lg shadow-[0_2px_8px_rgba(194,57,90,0.2)]" />
+                )}
+                <span className="relative z-10 flex items-center gap-1.5">
+                  <span>Orders Tracker</span>
+                  {pendingOrdersCount > 0 && (
+                    <span className={`text-[9.5px] font-mono px-2 py-0.5 rounded-full inline-block font-black ${
+                      overviewSub === 'orders' ? 'bg-white text-brand-rose' : 'bg-brand-berry text-white'
+                    }`}>
+                      {pendingOrdersCount}
+                    </span>
+                  )}
+                </span>
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setOverviewSub('subscribers')}
+                className={`relative px-4 py-2 rounded-lg text-[10.5px] font-extrabold uppercase tracking-wider transition-all duration-150 focus:outline-none ${
+                  overviewSub === 'subscribers' ? 'text-white' : 'text-brand-chocolate hover:text-brand-rose'
+                }`}
+              >
+                {overviewSub === 'subscribers' && !prefersReducedMotion && (
+                  <motion.div layoutId="overviewActiveSub" className="absolute inset-0 bg-brand-rose rounded-lg shadow-[0_2px_8px_rgba(194,57,90,0.2)]" style={{ zIndex: 0 }} />
+                )}
+                {overviewSub === 'subscribers' && prefersReducedMotion && (
+                  <div className="absolute inset-0 bg-brand-rose rounded-lg shadow-[0_2px_8px_rgba(194,57,90,0.2)]" />
+                )}
+                <span className="relative z-10">Subscriber Logs</span>
+              </motion.button>
             </div>
           )}
 
@@ -505,28 +1113,42 @@ export const AdminPortal: React.FC = () => {
           {/* ======================================= */}
           {activeTab === 'catalog' && (
             <div className="flex flex-wrap gap-1.5 p-1 bg-[#E5D5C8]/25 border border-[#E5D5C8]/45 rounded-xl w-fit">
-              <button
+              <motion.button
+                whileTap={{ scale: 0.98 }}
                 onClick={() => setCatalogSub('inventory')}
-                className={`px-4 py-2 rounded-lg text-[10.5px] font-extrabold uppercase tracking-wider transition-all duration-150 focus:outline-none flex items-center gap-1.5 ${
-                  catalogSub === 'inventory'
-                    ? 'bg-brand-rose text-white shadow-[0_2px_8px_rgba(194,57,90,0.2)]'
-                    : 'text-brand-chocolate hover:text-brand-rose hover:bg-white/40'
+                className={`relative px-4 py-2 rounded-lg text-[10.5px] font-extrabold uppercase tracking-wider transition-all duration-150 focus:outline-none flex items-center gap-1.5 ${
+                  catalogSub === 'inventory' ? 'text-white' : 'text-brand-chocolate hover:text-brand-rose'
                 }`}
               >
-                <Package className="w-3.5 h-3.5" />
-                <span>Shop Inventories</span>
-              </button>
-              <button
+                {catalogSub === 'inventory' && !prefersReducedMotion && (
+                  <motion.div layoutId="catalogActiveSub" className="absolute inset-0 bg-brand-rose rounded-lg shadow-[0_2px_8px_rgba(194,57,90,0.2)]" style={{ zIndex: 0 }} />
+                )}
+                {catalogSub === 'inventory' && prefersReducedMotion && (
+                  <div className="absolute inset-0 bg-brand-rose rounded-lg shadow-[0_2px_8px_rgba(194,57,90,0.2)]" />
+                )}
+                <span className="relative z-10 flex items-center gap-1.5">
+                  <Package className="w-3.5 h-3.5" />
+                  <span>Shop Inventories</span>
+                </span>
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.98 }}
                 onClick={() => setCatalogSub('discounts')}
-                className={`px-4 py-2 rounded-lg text-[10.5px] font-extrabold uppercase tracking-wider transition-all duration-150 focus:outline-none flex items-center gap-1.5 ${
-                  catalogSub === 'discounts'
-                    ? 'bg-brand-rose text-white shadow-[0_2px_8px_rgba(194,57,90,0.2)]'
-                    : 'text-brand-chocolate hover:text-brand-rose hover:bg-white/40'
+                className={`relative px-4 py-2 rounded-lg text-[10.5px] font-extrabold uppercase tracking-wider transition-all duration-150 focus:outline-none flex items-center gap-1.5 ${
+                  catalogSub === 'discounts' ? 'text-white' : 'text-brand-chocolate hover:text-brand-rose'
                 }`}
               >
-                <BadgePercent className="w-3.5 h-3.5" />
-                <span>Voucher Coupons</span>
-              </button>
+                {catalogSub === 'discounts' && !prefersReducedMotion && (
+                  <motion.div layoutId="catalogActiveSub" className="absolute inset-0 bg-brand-rose rounded-lg shadow-[0_2px_8px_rgba(194,57,90,0.2)]" style={{ zIndex: 0 }} />
+                )}
+                {catalogSub === 'discounts' && prefersReducedMotion && (
+                  <div className="absolute inset-0 bg-brand-rose rounded-lg shadow-[0_2px_8px_rgba(194,57,90,0.2)]" />
+                )}
+                <span className="relative z-10 flex items-center gap-1.5">
+                  <BadgePercent className="w-3.5 h-3.5" />
+                  <span>Voucher Coupons</span>
+                </span>
+              </motion.button>
             </div>
           )}
 
@@ -563,7 +1185,7 @@ export const AdminPortal: React.FC = () => {
                           value={prodName}
                           onChange={(e) => setProdName(e.target.value)}
                           placeholder="e.g. Aloe Moisture Spray"
-                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none"
+                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose transition-all duration-150"
                         />
                       </div>
                       <div>
@@ -574,7 +1196,7 @@ export const AdminPortal: React.FC = () => {
                           required
                           value={prodPrice}
                           onChange={(e) => setProdPrice(e.target.value)}
-                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none"
+                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose transition-all duration-150"
                         />
                       </div>
                       <div>
@@ -582,7 +1204,7 @@ export const AdminPortal: React.FC = () => {
                         <select
                           value={prodCategory}
                           onChange={(e) => setProdCategory(e.target.value)}
-                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none"
+                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose transition-all duration-150"
                         >
                           <option>Hair Oils</option>
                           <option>Accessories</option>
@@ -600,7 +1222,7 @@ export const AdminPortal: React.FC = () => {
                           value={prodDesc}
                           onChange={(e) => setProdDesc(e.target.value)}
                           placeholder="Potent hydration mist to prevent day-time split ends..."
-                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none"
+                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose transition-all duration-150"
                         />
                       </div>
                       <div>
@@ -610,9 +1232,19 @@ export const AdminPortal: React.FC = () => {
                           required
                           value={prodStock}
                           onChange={(e) => setProdStock(e.target.value)}
-                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none"
+                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose transition-all duration-150"
                         />
                       </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Product Visual Graphic</label>
+                      <ImageDropzone
+                        imageValue={prodImage}
+                        onImageChange={setProdImage}
+                        label="Product Image"
+                        prefersReducedMotion={prefersReducedMotion}
+                      />
                     </div>
 
                     <div className="flex justify-end gap-2 text-[10.5px]">
@@ -647,36 +1279,115 @@ export const AdminPortal: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-brand-warm-tan/10 text-brand-dark/80">
-                      {products.map((p) => (
-                        <tr key={p.id} className="hover:bg-brand-cream/30">
-                          <td className="p-3">
-                            <img src={p.image} referrerPolicy="no-referrer" alt={p.name} className="w-10 h-10 object-cover rounded border border-brand-warm-tan/30" />
-                          </td>
-                          <td className="p-3 font-semibold">{p.name}</td>
-                          <td className="p-3">{p.category}</td>
-                          <td className="p-3 font-mono">
-                            <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-bold ${
-                              p.stockCount === 0 ? 'bg-red-50 text-red-700' : p.stockCount <= 15 ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-800'
-                            }`}>
-                              {p.stockCount} ({p.stockStatus})
-                            </span>
-                          </td>
-                          <td className="p-3 font-mono font-bold">${p.price.toFixed(2)}</td>
-                          <td className="p-3 text-center">
-                            <button
-                              id={`delete-prod-list-${p.id}`}
-                              onClick={() => {
-                                if (confirm(`Delete physical "${p.name}" from catalog?`)) {
-                                  deleteProduct(p.id);
-                                }
-                              }}
-                              className="p-1 px-2.5 bg-brand-pink-light hover:bg-brand-rose text-brand-rose hover:text-white rounded-md font-bold transition duration-250"
-                            >
-                              Delete
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {products.map((p) => {
+                        const isEditing = p.id === editingProductId;
+                        return (
+                          <tr key={p.id} className="hover:bg-brand-cream/30">
+                            <td className="p-3">
+                              <img src={p.image} referrerPolicy="no-referrer" alt={p.name} className="w-10 h-10 object-cover rounded border border-brand-warm-tan/30" />
+                            </td>
+                            <td className="p-3">
+                              {isEditing ? (
+                                <input
+                                  type="text"
+                                  value={editProdName}
+                                  onChange={(e) => setEditProdName(e.target.value)}
+                                  className="w-full px-2 py-1 bg-[#FAF6F0] border border-brand-warm-tan/35 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-xs font-semibold"
+                                />
+                              ) : (
+                                <span className="font-semibold">{p.name}</span>
+                              )}
+                            </td>
+                            <td className="p-3">
+                              {isEditing ? (
+                                <select
+                                  value={editProdCategory}
+                                  onChange={(e) => setEditProdCategory(e.target.value)}
+                                  className="w-full px-2 py-1 bg-[#FAF6F0] border border-brand-warm-tan/35 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-xs"
+                                >
+                                  <option>Hair Oils</option>
+                                  <option>Accessories</option>
+                                  <option>Treatments</option>
+                                </select>
+                              ) : (
+                                <span>{p.category}</span>
+                              )}
+                            </td>
+                            <td className="p-3 font-mono">
+                              {isEditing ? (
+                                <input
+                                  type="number"
+                                  value={editProdStock}
+                                  onChange={(e) => setEditProdStock(e.target.value)}
+                                  className="w-20 px-2 py-1 bg-[#FAF6F0] border border-brand-warm-tan/35 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-xs"
+                                />
+                              ) : (
+                                <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-bold ${
+                                  p.stockCount === 0 ? 'bg-red-50 text-red-700' : p.stockCount <= 15 ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-800'
+                                }`}>
+                                  {p.stockCount} ({p.stockStatus})
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-3 font-mono font-bold">
+                              {isEditing ? (
+                                <div className="flex items-center gap-0.5">
+                                  <span>$</span>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    value={editProdPrice}
+                                    onChange={(e) => setEditProdPrice(e.target.value)}
+                                    className="w-20 px-2 py-1 bg-[#FAF6F0] border border-brand-warm-tan/35 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-xs font-bold"
+                                  />
+                                </div>
+                              ) : (
+                                <span>${p.price.toFixed(2)}</span>
+                              )}
+                            </td>
+                            <td className="p-3 text-center">
+                              {isEditing ? (
+                                <div className="flex justify-center gap-1.5">
+                                  <button
+                                    onClick={() => handleSaveProduct(p.id)}
+                                    className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-bold"
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingProductId(null)}
+                                    className="px-2.5 py-1 bg-brand-cream border border-[#E5D5C8] text-brand-chocolate rounded text-[11px] font-bold"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex justify-center gap-1.5">
+                                  <button
+                                    onClick={() => handleStartEditProduct(p)}
+                                    className="p-1 px-2.5 bg-brand-cream hover:bg-brand-beige text-brand-chocolate rounded-md font-bold transition duration-250 border border-brand-warm-tan/30"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    id={`delete-prod-list-${p.id}`}
+                                    onClick={() => {
+                                      if (confirm(`Delete physical "${p.name}" from catalog?`)) {
+                                        if (checkPermission(['super_admin', 'store_manager'])) {
+                                          deleteProduct(p.id);
+                                        }
+                                      }
+                                    }}
+                                    className="p-1 px-2.5 bg-brand-pink-light hover:bg-brand-rose text-brand-rose hover:text-white rounded-md font-bold transition duration-250"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -712,7 +1423,7 @@ export const AdminPortal: React.FC = () => {
                           value={ebName}
                           onChange={(e) => setEbName(e.target.value)}
                           placeholder="e.g. Scalp Massage Masterclass"
-                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none"
+                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose transition-all duration-150"
                         />
                       </div>
                       <div>
@@ -723,7 +1434,7 @@ export const AdminPortal: React.FC = () => {
                           required
                           value={ebPrice}
                           onChange={(e) => setEbPrice(e.target.value)}
-                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none"
+                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose transition-all duration-150"
                         />
                       </div>
                       <div>
@@ -733,7 +1444,7 @@ export const AdminPortal: React.FC = () => {
                           required
                           value={ebPages}
                           onChange={(e) => setEbPages(e.target.value)}
-                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none"
+                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose transition-all duration-150"
                         />
                       </div>
                     </div>
@@ -747,7 +1458,7 @@ export const AdminPortal: React.FC = () => {
                           value={ebDesc}
                           onChange={(e) => setEbDesc(e.target.value)}
                           placeholder="Learn precise hand-stimulation frequencies that promote..."
-                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none"
+                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose transition-all duration-150"
                         />
                       </div>
                       <div>
@@ -757,16 +1468,26 @@ export const AdminPortal: React.FC = () => {
                           required
                           value={ebSize}
                           onChange={(e) => setEbSize(e.target.value)}
-                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none"
+                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose transition-all duration-150"
                         />
                       </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">eBook Cover Graphic</label>
+                      <ImageDropzone
+                        imageValue={ebImage}
+                        onImageChange={setEbImage}
+                        label="eBook Cover"
+                        prefersReducedMotion={prefersReducedMotion}
+                      />
                     </div>
 
                     <div className="flex justify-end gap-2 text-[10.5px]">
                       <button
                         type="button"
                         onClick={() => setIsAddingEBook(false)}
-                        className="px-4 py-2 border border-brand-warm-tan hover:bg-brand-cream rounded"
+                        className="px-4 py-2 border border-[#E5D5C8] hover:bg-brand-cream rounded"
                       >
                         Cancel
                       </button>
@@ -794,30 +1515,108 @@ export const AdminPortal: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-brand-warm-tan/10 text-brand-dark/80">
-                      {ebooks.map((e) => (
-                        <tr key={e.id} className="hover:bg-brand-cream/30">
-                          <td className="p-3">
-                            <img src={e.image} referrerPolicy="no-referrer" alt={e.name} className="w-9 h-11 object-cover rounded border border-brand-warm-tan/30" />
-                          </td>
-                          <td className="p-3 font-semibold">{e.name}</td>
-                          <td className="p-3 font-mono">{e.pages} pages</td>
-                          <td className="p-3 font-mono">{e.fileSize}</td>
-                          <td className="p-3 font-mono font-bold">${e.price.toFixed(2)}</td>
-                          <td className="p-3 text-center">
-                            <button
-                              id={`delete-ebook-list-${e.id}`}
-                              onClick={() => {
-                                if (confirm(`Remove digital textbook "${e.name}" from catalog?`)) {
-                                  deleteEBook(e.id);
-                                }
-                              }}
-                              className="p-1 px-2.5 bg-brand-pink-light hover:bg-brand-rose text-brand-rose hover:text-white rounded-md font-bold transition duration-250"
-                            >
-                              Delete
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {ebooks.map((e) => {
+                        const isEditing = e.id === editingEBookId;
+                        return (
+                          <tr key={e.id} className="hover:bg-brand-cream/30">
+                            <td className="p-3">
+                              <img src={e.image} referrerPolicy="no-referrer" alt={e.name} className="w-9 h-11 object-cover rounded border border-brand-warm-tan/30" />
+                            </td>
+                            <td className="p-3">
+                              {isEditing ? (
+                                <input
+                                  type="text"
+                                  value={editEbName}
+                                  onChange={(e) => setEditEbName(e.target.value)}
+                                  className="w-full px-2 py-1 bg-[#FAF6F0] border border-brand-warm-tan/35 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-xs font-semibold"
+                                />
+                              ) : (
+                                <span className="font-semibold">{e.name}</span>
+                              )}
+                            </td>
+                            <td className="p-3 font-mono">
+                              {isEditing ? (
+                                <input
+                                  type="number"
+                                  value={editEbPages}
+                                  onChange={(e) => setEditEbPages(e.target.value)}
+                                  className="w-20 px-2 py-1 bg-[#FAF6F0] border border-brand-warm-tan/35 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-xs"
+                                />
+                              ) : (
+                                <span>{e.pages} pages</span>
+                              )}
+                            </td>
+                            <td className="p-3 font-mono">
+                              {isEditing ? (
+                                <input
+                                  type="text"
+                                  value={editEbSize}
+                                  onChange={(e) => setEditEbSize(e.target.value)}
+                                  className="w-24 px-2 py-1 bg-[#FAF6F0] border border-brand-warm-tan/35 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-xs"
+                                />
+                              ) : (
+                                <span>{e.fileSize}</span>
+                              )}
+                            </td>
+                            <td className="p-3 font-mono font-bold">
+                              {isEditing ? (
+                                <div className="flex items-center gap-0.5">
+                                  <span>$</span>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    value={editEbPrice}
+                                    onChange={(e) => setEditEbPrice(e.target.value)}
+                                    className="w-20 px-2 py-1 bg-[#FAF6F0] border border-brand-warm-tan/35 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-xs font-bold"
+                                  />
+                                </div>
+                              ) : (
+                                <span>${e.price.toFixed(2)}</span>
+                              )}
+                            </td>
+                            <td className="p-3 text-center">
+                              {isEditing ? (
+                                <div className="flex justify-center gap-1.5">
+                                  <button
+                                    onClick={() => handleSaveEBook(e.id)}
+                                    className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-bold"
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingEBookId(null)}
+                                    className="px-2.5 py-1 bg-brand-cream border border-[#E5D5C8] text-brand-chocolate rounded text-[11px] font-bold"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex justify-center gap-1.5">
+                                  <button
+                                    onClick={() => handleStartEditEBook(e)}
+                                    className="p-1 px-2.5 bg-brand-cream hover:bg-brand-beige text-brand-chocolate rounded-md font-bold transition duration-250 border border-brand-warm-tan/30"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    id={`delete-ebook-list-${e.id}`}
+                                    onClick={() => {
+                                      if (confirm(`Remove digital textbook "${e.name}" from catalog?`)) {
+                                        if (checkPermission(['super_admin', 'store_manager'])) {
+                                          deleteEBook(e.id);
+                                        }
+                                      }
+                                    }}
+                                    className="p-1 px-2.5 bg-brand-pink-light hover:bg-brand-rose text-brand-rose hover:text-white rounded-md font-bold transition duration-250"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -896,7 +1695,9 @@ export const AdminPortal: React.FC = () => {
                             <button
                               id={`fulfill-btn-${o.id}`}
                               onClick={() => {
-                                fulfillOrder(o.id);
+                                if (checkPermission(['super_admin', 'store_manager'])) {
+                                  fulfillOrder(o.id);
+                                }
                               }}
                               className="p-1 px-3 bg-brand-rose hover:bg-brand-berry text-white rounded-md text-[10px] font-bold uppercase tracking-wider transition-all"
                             >
@@ -1019,7 +1820,9 @@ export const AdminPortal: React.FC = () => {
                             id={`delete-discount-${c.id}`}
                             onClick={() => {
                               if (confirm(`Remove promo Coupon "${c.code}" completely?`)) {
-                                deleteDiscountCode(c.id);
+                                if (checkPermission(['super_admin'])) {
+                                  deleteDiscountCode(c.id);
+                                }
                               }
                             }}
                             className="p-1 px-2.5 bg-brand-pink-light hover:bg-brand-rose text-brand-rose hover:text-white rounded-md font-bold transition duration-250"
@@ -1040,116 +1843,199 @@ export const AdminPortal: React.FC = () => {
           {/* ======================================= */}
           {activeTab === 'design' && (
             <div className="flex flex-wrap gap-1.5 p-1 bg-[#E5D5C8]/25 border border-[#E5D5C8]/45 rounded-xl w-fit">
-              <button
+              <motion.button
+                whileTap={{ scale: 0.98 }}
                 onClick={() => setDesignSub('cms')}
-                className={`px-4 py-2 rounded-lg text-[10.5px] font-extrabold uppercase tracking-wider transition-all duration-150 focus:outline-none flex items-center gap-1.5 ${
-                  designSub === 'cms'
-                    ? 'bg-brand-rose text-white shadow-[0_2px_8px_rgba(194,57,90,0.2)]'
-                    : 'text-brand-chocolate hover:text-brand-rose hover:bg-white/40'
+                className={`relative px-4 py-2 rounded-lg text-[10.5px] font-extrabold uppercase tracking-wider transition-all duration-150 focus:outline-none flex items-center gap-1.5 ${
+                  designSub === 'cms' ? 'text-white' : 'text-brand-chocolate hover:text-brand-rose'
                 }`}
               >
-                <Edit className="w-3.5 h-3.5" />
-                <span>Homepage Copywriting</span>
-              </button>
-              <button
+                {designSub === 'cms' && !prefersReducedMotion && (
+                  <motion.div layoutId="designActiveSub" className="absolute inset-0 bg-brand-rose rounded-lg shadow-[0_2px_8px_rgba(194,57,90,0.2)]" style={{ zIndex: 0 }} />
+                )}
+                {designSub === 'cms' && prefersReducedMotion && (
+                  <div className="absolute inset-0 bg-brand-rose rounded-lg shadow-[0_2px_8px_rgba(194,57,90,0.2)]" />
+                )}
+                <span className="relative z-10 flex items-center gap-1.5">
+                  <Edit className="w-3.5 h-3.5" />
+                  <span>Homepage Copywriting</span>
+                </span>
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.98 }}
                 onClick={() => setDesignSub('assets')}
-                className={`px-4 py-2 rounded-lg text-[10.5px] font-extrabold uppercase tracking-wider transition-all duration-150 focus:outline-none flex items-center gap-1.5 ${
-                  designSub === 'assets'
-                    ? 'bg-brand-rose text-white shadow-[0_2px_8px_rgba(194,57,90,0.2)]'
-                    : 'text-brand-chocolate hover:text-brand-rose hover:bg-white/40'
+                className={`relative px-4 py-2 rounded-lg text-[10.5px] font-extrabold uppercase tracking-wider transition-all duration-150 focus:outline-none flex items-center gap-1.5 ${
+                  designSub === 'assets' ? 'text-white' : 'text-brand-chocolate hover:text-brand-rose'
                 }`}
               >
-                <Image className="w-3.5 h-3.5" />
-                <span>Videos & Photo Galleries</span>
-              </button>
-              <button
+                {designSub === 'assets' && !prefersReducedMotion && (
+                  <motion.div layoutId="designActiveSub" className="absolute inset-0 bg-brand-rose rounded-lg shadow-[0_2px_8px_rgba(194,57,90,0.2)]" style={{ zIndex: 0 }} />
+                )}
+                {designSub === 'assets' && prefersReducedMotion && (
+                  <div className="absolute inset-0 bg-brand-rose rounded-lg shadow-[0_2px_8px_rgba(194,57,90,0.2)]" />
+                )}
+                <span className="relative z-10 flex items-center gap-1.5">
+                  <Image className="w-3.5 h-3.5" />
+                  <span>Videos & Photo Galleries</span>
+                </span>
+              </motion.button>
+              <motion.button
                 id="portal-settings-subtab"
+                whileTap={{ scale: 0.98 }}
                 onClick={() => setDesignSub('settings')}
-                className={`px-4 py-2 rounded-lg text-[10.5px] font-extrabold uppercase tracking-wider transition-all duration-150 focus:outline-none flex items-center gap-1.5 ${
-                  designSub === 'settings'
-                    ? 'bg-brand-rose text-white shadow-[0_2px_8px_rgba(194,57,90,0.2)]'
-                    : 'text-brand-chocolate hover:text-brand-rose hover:bg-white/40'
+                className={`relative px-4 py-2 rounded-lg text-[10.5px] font-extrabold uppercase tracking-wider transition-all duration-150 focus:outline-none flex items-center gap-1.5 ${
+                  designSub === 'settings' ? 'text-white' : 'text-brand-chocolate hover:text-brand-rose'
                 }`}
               >
-                <Settings className="w-3.5 h-3.5" />
-                <span>Portal Settings</span>
-              </button>
+                {designSub === 'settings' && !prefersReducedMotion && (
+                  <motion.div layoutId="designActiveSub" className="absolute inset-0 bg-brand-rose rounded-lg shadow-[0_2px_8px_rgba(194,57,90,0.2)]" style={{ zIndex: 0 }} />
+                )}
+                {designSub === 'settings' && prefersReducedMotion && (
+                  <div className="absolute inset-0 bg-brand-rose rounded-lg shadow-[0_2px_8px_rgba(194,57,90,0.2)]" />
+                )}
+                <span className="relative z-10 flex items-center gap-1.5">
+                  <Settings className="w-3.5 h-3.5" />
+                  <span>Portal Settings</span>
+                </span>
+              </motion.button>
             </div>
           )}
 
           {activeTab === 'design' && designSub === 'cms' && (
             <div className="bg-white border border-[#E5D5C8]/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_4px_25px_-4px_rgba(74,43,32,0.02)]">
-              <h3 className="font-serif text-lg font-bold text-brand-dark border-b border-[#E5D5C8]/30 pb-3 mb-4 flex items-center gap-2">
-                <span className="w-1.5 h-6 bg-brand-rose rounded-full"></span>
-                Front-Page Content Management Block
-              </h3>
+              <div className="flex justify-between items-center border-b border-[#E5D5C8]/30 pb-3 mb-4 flex-wrap gap-2">
+                <h3 className="font-serif text-base sm:text-lg font-bold text-brand-dark flex items-center gap-2">
+                  <span className="w-1.5 h-6 bg-brand-rose rounded-full"></span>
+                  Front-Page Content Management Block
+                </h3>
+                
+                <button
+                  type="button"
+                  onClick={() => setShowLivePreview(!showLivePreview)}
+                  className={`flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-extrabold px-3 py-1.5 rounded-full transition-all duration-200 focus:outline-none ${
+                    showLivePreview 
+                      ? 'bg-brand-rose text-white shadow-[0_2px_8px_rgba(194,57,90,0.18)]' 
+                      : 'bg-brand-cream text-[#4A2B20] border border-[#E5D5C8] hover:bg-brand-beige'
+                  }`}
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>{showLivePreview ? 'Hide Live Preview' : 'Show Live Preview'}</span>
+                </button>
+              </div>
 
-              <form onSubmit={handleCmsUpdate} className="space-y-4 text-xs font-sans">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className={`grid grid-cols-1 ${showLivePreview ? 'lg:grid-cols-2' : ''} gap-8`}>
+                <form onSubmit={handleCmsUpdate} className="space-y-4 text-xs font-sans">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10.5px] uppercase font-bold text-brand-chocolate mb-1">Hero Main Bold Title</label>
+                      <textarea
+                        rows={2}
+                        value={cmsHeroHead}
+                        onChange={(e) => setCmsHeroHead(e.target.value)}
+                        className="w-full px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark font-semibold leading-normal transition-all duration-150"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10.5px] uppercase font-bold text-brand-chocolate mb-1">Hero Sub-headline message</label>
+                      <textarea
+                        rows={2}
+                        value={cmsHeroSub}
+                        onChange={(e) => setCmsHeroSub(e.target.value)}
+                        className="w-full px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark transition-all duration-150"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                    <div>
+                      <label className="block text-[10.5px] uppercase font-bold text-brand-chocolate mb-1">About Headline Intro text</label>
+                      <input
+                        type="text"
+                        value={cmsAboutHead}
+                        onChange={(e) => setCmsAboutHead(e.target.value)}
+                        className="w-full px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark font-medium transition-all duration-150"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10.5px] uppercase font-bold text-brand-chocolate mb-1">Customer Showcase Quotation</label>
+                      <input
+                        type="text"
+                        value={cmsPromoQuote}
+                        onChange={(e) => setCmsPromoQuote(e.target.value)}
+                        className="w-full px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark transition-all duration-150"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                    <div>
+                      <label className="block text-[10.5px] uppercase font-bold text-brand-chocolate mb-1">Quotation Author</label>
+                      <input
+                        type="text"
+                        value={cmsPromoAuthor}
+                        onChange={(e) => setCmsPromoAuthor(e.target.value)}
+                        className="w-full px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark transition-all duration-150"
+                      />
+                    </div>
+                  </div>
+
                   <div>
-                    <label className="block text-[10.5px] uppercase font-bold text-brand-chocolate mb-1">Hero Main Bold Title</label>
+                    <label className="block text-[10.5px] uppercase font-bold text-brand-chocolate mb-1">About Long Narrative Bio Story *</label>
                     <textarea
-                      rows={2}
-                      value={cmsHeroHead}
-                      onChange={(e) => setCmsHeroHead(e.target.value)}
-                      className="w-full px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none text-brand-dark font-semibold leading-normal"
+                      rows={6}
+                      value={cmsAboutStory}
+                      onChange={(e) => setCmsAboutStory(e.target.value)}
+                      className="w-full px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark leading-relaxed transition-all duration-150"
                     />
                   </div>
-                  <div>
-                    <label className="block text-[10.5px] uppercase font-bold text-brand-chocolate mb-1">Hero Sub-headline message</label>
-                    <textarea
-                      rows={2}
-                      value={cmsHeroSub}
-                      onChange={(e) => setCmsHeroSub(e.target.value)}
-                      className="w-full px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none text-brand-dark"
-                    />
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                  <div>
-                    <label className="block text-[10.5px] uppercase font-bold text-brand-chocolate mb-1">About Headline Intro text</label>
-                    <input
-                      type="text"
-                      value={cmsAboutHead}
-                      onChange={(e) => setCmsAboutHead(e.target.value)}
-                      className="w-full px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none text-brand-dark font-medium"
-                    />
+                  <div className="flex items-center justify-between pt-3 border-t border-brand-warm-tan/20">
+                    <span className="text-[10px] text-[#A67E6B]">🔒 Changes take effect instantly globally on homepage view.</span>
+                    
+                    <button
+                      id="save-cms-copy-btn"
+                      type="submit"
+                      className="bg-brand-rose hover:bg-brand-berry text-white py-2 px-6 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 focus:outline-none transition-all duration-150"
+                    >
+                      <Save className="w-4 h-4" />
+                      <span>Apply Site Text Commit</span>
+                    </button>
                   </div>
-                  <div>
-                    <label className="block text-[10.5px] uppercase font-bold text-brand-chocolate mb-1">Customer Showcase Quotation</label>
-                    <input
-                      type="text"
-                      value={cmsPromoQuote}
-                      onChange={(e) => setCmsPromoQuote(e.target.value)}
-                      className="w-full px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none text-brand-dark"
-                    />
+                </form>
+
+                {/* Live Preview Column */}
+                {showLivePreview && (
+                  <div className="border border-[#E5D5C8]/80 bg-[#FAF7F2] rounded-3xl p-6 shadow-inner space-y-6 max-h-[550px] overflow-y-auto font-sans relative text-left">
+                    <div className="absolute top-3 right-3 bg-brand-rose text-white text-[8px] uppercase font-bold px-2 py-0.5 rounded-full z-10 tracking-widest pointer-events-none">
+                      Live Storefront Viewport Preview
+                    </div>
+                    
+                    {/* Hero Preview */}
+                    <div className="border border-[#E5D5C8]/40 rounded-2xl p-5 bg-white shadow-xs space-y-3">
+                      <span className="text-[8.5px] uppercase font-extrabold tracking-widest text-brand-rose block">Hero Section Preview</span>
+                      <h1 className="font-serif text-xl font-bold text-brand-dark leading-tight whitespace-pre-wrap">{cmsHeroHead || 'No Headline'}</h1>
+                      <p className="text-[#8C6D62] text-xs leading-relaxed whitespace-pre-wrap">{cmsHeroSub || 'No Sub-headline'}</p>
+                      <button className="bg-brand-rose text-white px-4 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider pointer-events-none opacity-90 mt-1">
+                        Browse Botanical Store
+                      </button>
+                    </div>
+
+                    {/* About Bio Preview */}
+                    <div className="border border-[#E5D5C8]/40 rounded-2xl p-5 bg-white shadow-xs space-y-3">
+                      <span className="text-[8.5px] uppercase font-extrabold tracking-widest text-[#4A2B20] block">Biography Narrative Preview</span>
+                      <h2 className="font-serif text-base font-bold text-brand-dark leading-tight">{cmsAboutHead || 'No About Headline'}</h2>
+                      <p className="text-[#8C6D62] text-xs leading-relaxed whitespace-pre-wrap">{cmsAboutStory || 'No story bio text'}</p>
+                    </div>
+
+                    {/* Customer Showcase Quote Preview */}
+                    <div className="border border-[#E5D5C8]/30 rounded-2xl p-5 bg-[#4A2B20] text-white shadow-xs space-y-2 text-center">
+                      <span className="text-[8.5px] uppercase font-extrabold tracking-widest text-brand-pink block">Showcase Quote Preview</span>
+                      <p className="font-serif italic text-xs text-brand-beige">“{cmsPromoQuote || 'No Quote text'}”</p>
+                      <p className="text-[9px] font-bold text-brand-pink uppercase tracking-widest">— {cmsPromoAuthor || 'Anonymous'}</p>
+                    </div>
                   </div>
-                </div>
-
-                <div>
-                  <label className="block text-[10.5px] uppercase font-bold text-brand-chocolate mb-1">About Long Narrative Bio Story *</label>
-                  <textarea
-                    rows={6}
-                    value={cmsAboutStory}
-                    onChange={(e) => setCmsAboutStory(e.target.value)}
-                    className="w-full px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none text-brand-dark leading-relaxed"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between pt-3 border-t border-brand-warm-tan/20">
-                  <span className="text-[10px] text-[#A67E6B]">🔒 Changes take effect instantly globally on homepage view.</span>
-                  
-                  <button
-                    id="save-cms-copy-btn"
-                    type="submit"
-                    className="bg-brand-rose hover:bg-brand-berry text-white py-2 px-6 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 focus:outline-none"
-                  >
-                    <Save className="w-4 h-4" />
-                    <span>Apply Site Text Commit</span>
-                  </button>
-                </div>
-              </form>
+                )}
+              </div>
 
               {cmsSuccess && (
                 <p className="mt-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-lg text-center font-medium animate-bounce">
@@ -1227,7 +2113,13 @@ export const AdminPortal: React.FC = () => {
                     TikTok & Video Feeds
                   </h3>
                   <button
-                    onClick={() => setIsAddingVideo(!isAddingVideo)}
+                    onClick={() => {
+                      if (isAddingVideo) {
+                        resetVideoForm();
+                      } else {
+                        setIsAddingVideo(true);
+                      }
+                    }}
                     className="flex items-center gap-1 text-[11px] uppercase tracking-wider font-extrabold text-white bg-brand-rose hover:bg-brand-berry px-3.5 py-1.5 rounded-full transition-all focus:outline-none"
                   >
                     <Plus className="w-3.5 h-3.5" />
@@ -1237,8 +2129,10 @@ export const AdminPortal: React.FC = () => {
 
                 {isAddingVideo && (
                   <form onSubmit={handleAddVideoSubmit} className="bg-brand-beige/50 border border-brand-warm-tan/40 p-5 rounded-2xl space-y-4 text-xs">
-                    <p className="font-serif font-bold text-brand-chocolate">Publish Video Card:</p>
-                    <div className="space-y-3">
+                    <p className="font-serif font-bold text-brand-chocolate text-[13px] border-b border-brand-warm-tan/20 pb-1.5">
+                      {editingVideoId ? `Edit Video Masterclass` : 'Add New Video Masterclass'}
+                    </p>
+                    <div className="space-y-4">
                       <div>
                         <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Video Title Headline</label>
                         <input
@@ -1250,18 +2144,21 @@ export const AdminPortal: React.FC = () => {
                           className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none"
                         />
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Simulated Views (e.g. 24.8K)</label>
-                          <input
-                            type="text"
-                            required
-                            value={vidViews}
-                            onChange={(e) => setVidViews(e.target.value)}
-                            className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none font-mono"
-                          />
-                        </div>
-                        <div>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {vidStatus !== 'draft' && vidStatus !== 'scheduled' && (
+                          <div>
+                            <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Simulated Views (e.g. 24.8K)</label>
+                            <input
+                              type="text"
+                              required
+                              value={vidViews}
+                              onChange={(e) => setVidViews(e.target.value)}
+                              className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none font-mono"
+                            />
+                          </div>
+                        )}
+                        <div className={vidStatus === 'draft' || vidStatus === 'scheduled' ? 'col-span-2' : ''}>
                           <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Collection Topic</label>
                           <select
                             value={vidCategory}
@@ -1278,41 +2175,252 @@ export const AdminPortal: React.FC = () => {
                           </select>
                         </div>
                       </div>
+
                       <div>
-                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Video Link URL (e.g. TikTok / Instagram copy link)</label>
-                        <input
-                          type="url"
-                          required
-                          value={vidUrl}
-                          onChange={(e) => setVidUrl(e.target.value)}
-                          placeholder="https://www.tiktok.com/@cartiae/video/..."
-                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none font-mono"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Reference Poster Thumbnail URL</label>
-                        <input
-                          type="url"
-                          required
-                          value={vidThumb}
-                          onChange={(e) => setVidThumb(e.target.value)}
+                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Video Description</label>
+                        <textarea
+                          value={vidDescription}
+                          onChange={(e) => setVidDescription(e.target.value)}
+                          placeholder="Enter coily hair-care step-by-step description..."
+                          rows={2}
                           className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none"
                         />
                       </div>
+
+                      {/* Video Media Section */}
+                      <div className="space-y-2.5">
+                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate">Video Media File</label>
+                        <VideoDropzone
+                          videoValue={vidUrl}
+                          onVideoChange={(newUrl, file) => {
+                            setVidUrl(newUrl);
+                            if (file) {
+                              setUploadedVideoFile(file);
+                              // Auto-generate title from filename if title is empty
+                              if (!vidTitle) {
+                                const cleanName = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
+                                setVidTitle(cleanName.charAt(0).toUpperCase() + cleanName.slice(1));
+                              }
+                            } else {
+                              setUploadedVideoFile(null);
+                            }
+                          }}
+                          label="Upload Video"
+                          prefersReducedMotion={prefersReducedMotion}
+                        />
+                        
+                        <div>
+                          <label className="block text-[10px] uppercase font-bold text-[#8C6D62] mb-1">Paste TikTok or YouTube Link (Alternative)</label>
+                          <input
+                            type="url"
+                            value={uploadedVideoFile ? '' : vidUrl}
+                            onChange={(e) => {
+                              setVidUrl(e.target.value);
+                              setUploadedVideoFile(null);
+                            }}
+                            placeholder={uploadedVideoFile ? "Local file active. Paste link to override." : "https://www.tiktok.com/@username/video/... or YouTube link"}
+                            disabled={!!uploadedVideoFile}
+                            className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none font-mono disabled:opacity-50"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Thumbnail Section */}
+                      <div className="space-y-2.5">
+                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate">Video Poster Thumbnail</label>
+                        <ImageDropzone
+                          imageValue={vidThumb}
+                          onImageChange={(newThumb) => {
+                            setVidThumb(newThumb);
+                            const simulatedFile = new File([], "custom_thumbnail.png", { type: "image/png" });
+                            setUploadedThumbFile(simulatedFile);
+                          }}
+                          label="Upload Thumbnail"
+                          prefersReducedMotion={prefersReducedMotion}
+                        />
+
+                        <div>
+                          <label className="block text-[10px] uppercase font-bold text-[#8C6D62] mb-1">Reference Poster Thumbnail URL (Alternative)</label>
+                          <input
+                            type="url"
+                            value={uploadedThumbFile ? '' : vidThumb}
+                            onChange={(e) => {
+                              setVidThumb(e.target.value);
+                              setUploadedThumbFile(null);
+                            }}
+                            placeholder={uploadedThumbFile ? "Local thumbnail active. Paste link to override." : "https://images.unsplash.com/..."}
+                            disabled={!!uploadedThumbFile}
+                            className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none font-mono disabled:opacity-50"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Publishing Controls */}
+                      <div className="space-y-2.5 pt-1">
+                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Publishing Status</label>
+                        <div className="grid grid-cols-3 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setVidStatus('draft')}
+                            className={`py-2 px-3 rounded text-center border font-bold transition-all text-[10px] uppercase tracking-wider ${
+                              vidStatus === 'draft'
+                                ? 'bg-brand-chocolate text-white border-brand-chocolate shadow-xs'
+                                : 'bg-brand-cream text-brand-chocolate border-brand-warm-tan/30 hover:bg-brand-beige/25'
+                            }`}
+                          >
+                            Save Draft
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setVidStatus('published')}
+                            className={`py-2 px-3 rounded text-center border font-bold transition-all text-[10px] uppercase tracking-wider ${
+                              vidStatus === 'published'
+                                ? 'bg-brand-chocolate text-white border-brand-chocolate shadow-xs'
+                                : 'bg-brand-cream text-brand-chocolate border-brand-warm-tan/30 hover:bg-brand-beige/25'
+                            }`}
+                          >
+                            Publish Now
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setVidStatus('scheduled')}
+                            className={`py-2 px-3 rounded text-center border font-bold transition-all text-[10px] uppercase tracking-wider ${
+                              vidStatus === 'scheduled'
+                                ? 'bg-brand-chocolate text-white border-brand-chocolate shadow-xs'
+                                : 'bg-brand-cream text-brand-chocolate border-brand-warm-tan/30 hover:bg-brand-beige/25'
+                            }`}
+                          >
+                            Schedule
+                          </button>
+                        </div>
+
+                        {vidStatus === 'scheduled' && (
+                          <div className="animate-fadeIn">
+                            <label className="block text-[10px] uppercase font-bold text-[#8C6D62] mb-1">Release Date & Time</label>
+                            <input
+                              type="datetime-local"
+                              required
+                              value={vidScheduledAt}
+                              onChange={(e) => setVidScheduledAt(e.target.value)}
+                              className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none font-sans font-semibold text-brand-chocolate"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Featured Video Toggle */}
+                      <div className="flex items-center gap-2 py-1 border-t border-brand-warm-tan/20 pt-2">
+                        <input
+                          type="checkbox"
+                          id="vid-featured-toggle"
+                          checked={vidIsFeatured}
+                          onChange={(e) => setVidIsFeatured(e.target.checked)}
+                          className="rounded text-brand-rose focus:ring-brand-rose cursor-pointer animate-none"
+                        />
+                        <label htmlFor="vid-featured-toggle" className="text-[10px] uppercase font-bold text-brand-chocolate cursor-pointer select-none">
+                          Featured Video (Priority Placement)
+                        </label>
+                      </div>
+
+                      {/* Related Products & eBooks Selector */}
+                      <div>
+                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Shop Routine Products / eBooks Used</label>
+                        <div className="bg-brand-cream border border-brand-warm-tan/30 p-2.5 rounded-lg max-h-36 overflow-y-auto space-y-1 text-[10px]">
+                          {products.map(p => (
+                            <label key={p.id} className="flex items-center gap-2 cursor-pointer text-brand-dark py-0.5 hover:bg-brand-beige/25 px-1 rounded select-none">
+                              <input
+                                type="checkbox"
+                                checked={vidRelatedIds.includes(p.id)}
+                                onChange={(evt) => {
+                                  if (evt.target.checked) {
+                                    setVidRelatedIds(prev => [...prev, p.id]);
+                                  } else {
+                                    setVidRelatedIds(prev => prev.filter(id => id !== p.id));
+                                  }
+                                }}
+                                className="rounded text-brand-rose focus:ring-brand-rose"
+                              />
+                              <span className="truncate flex-1 font-medium font-sans text-[#543F35]">
+                                [Product] {p.name} - ${p.price.toFixed(2)}
+                              </span>
+                            </label>
+                          ))}
+                          {ebooks.map(eb => (
+                            <label key={eb.id} className="flex items-center gap-2 cursor-pointer text-brand-dark py-0.5 hover:bg-brand-beige/25 px-1 rounded select-none">
+                              <input
+                                type="checkbox"
+                                checked={vidRelatedIds.includes(eb.id)}
+                                onChange={(evt) => {
+                                  if (evt.target.checked) {
+                                    setVidRelatedIds(prev => [...prev, eb.id]);
+                                  } else {
+                                    setVidRelatedIds(prev => prev.filter(id => id !== eb.id));
+                                  }
+                                }}
+                                className="rounded text-brand-rose focus:ring-brand-rose"
+                              />
+                              <span className="truncate flex-1 font-medium font-sans text-brand-rose">
+                                [eBook] {eb.name} - ${eb.price.toFixed(2)}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Video Player Live Preview */}
+                      {vidUrl && (
+                        <div className="border border-brand-warm-tan/25 p-3 rounded-2xl bg-[#FAF6F0] space-y-2 flex flex-col items-center select-none">
+                          <span className="text-[10px] uppercase font-bold text-[#8C6D62] tracking-wider">Live Video Player Preview</span>
+                          <div className="w-[140px] h-[248px] rounded-xl overflow-hidden border border-brand-warm-tan/30 relative bg-black flex items-center justify-center shadow-md">
+                            {(() => {
+                              const res = resolveVideoSource(vidUrl);
+                              if (res.type === 'youtube' && res.id) {
+                                return (
+                                  <iframe
+                                    title="Youtube Preview"
+                                    src={`${res.url}?controls=0&modestbranding=1`}
+                                    className="absolute inset-0 w-full h-full scale-[1.3] pointer-events-none object-cover"
+                                  />
+                                );
+                              }
+                              if (res.type === 'tiktok' && res.id) {
+                                return (
+                                  <iframe
+                                    title="TikTok Preview"
+                                    src={res.url}
+                                    className="absolute inset-0 w-full h-full scale-[1.1] pointer-events-none object-cover"
+                                  />
+                                );
+                              }
+                              if (res.type === 'direct' && res.url) {
+                                return (
+                                  <video
+                                    src={res.url}
+                                    controls
+                                    className="absolute inset-0 w-full h-full object-cover"
+                                  />
+                                );
+                              }
+                              return <span className="text-[9px] text-zinc-400 p-2 text-center">Invalid Link. Enter a valid YouTube, TikTok, or MP4 URL.</span>;
+                            })()}
+                          </div>
+                        </div>
+                      )}
+
                     </div>
                     <div className="flex justify-end gap-2 pt-2 text-[10.5px]">
                       <button
                         type="button"
-                        onClick={() => setIsAddingVideo(false)}
-                        className="px-3 py-1.5 border border-brand-warm-tan hover:bg-brand-cream rounded"
+                        onClick={resetVideoForm}
+                        className="px-3 py-1.5 border border-brand-warm-tan hover:bg-brand-cream rounded cursor-pointer transition"
                       >
                         Cancel
                       </button>
                       <button
                         type="submit"
-                        className="px-4 py-1.5 bg-brand-chocolate hover:bg-brand-dark text-white rounded font-bold uppercase"
+                        className="px-4 py-1.5 bg-brand-chocolate hover:bg-brand-dark text-white rounded font-bold uppercase cursor-pointer transition"
                       >
-                        Publish Video
+                        {editingVideoId ? 'Save Changes' : 'Publish Video'}
                       </button>
                     </div>
                   </form>
@@ -1324,7 +2432,7 @@ export const AdminPortal: React.FC = () => {
                     <thead>
                       <tr className="bg-brand-beige/50 border-b border-brand-warm-tan/20 text-[#8C6D62] font-semibold">
                         <th className="p-3">Poster</th>
-                        <th className="p-3">Video Title / Category</th>
+                        <th className="p-3">Video Title / Category / Status</th>
                         <th className="p-3">Views</th>
                         <th className="p-3 text-center">Actions</th>
                       </tr>
@@ -1333,30 +2441,169 @@ export const AdminPortal: React.FC = () => {
                       {videos.map((vid) => (
                         <tr key={vid.id} className="hover:bg-brand-cream/30">
                           <td className="p-3">
-                            <img src={vid.thumbnailUrl || vidThumb} referrerPolicy="no-referrer" alt="" className="w-12 h-14 object-cover rounded border border-brand-warm-tan/20" />
+                            <img src={vid.thumbnailUrl || vidThumb} referrerPolicy="no-referrer" alt="" className="w-12 h-14 object-cover rounded border border-brand-warm-tan/20 shadow-xs" />
                           </td>
                           <td className="p-3">
-                            <p className="font-semibold text-brand-chocolate">{vid.title}</p>
-                            <span className="text-[9px] uppercase tracking-wider text-brand-rose font-bold block mt-0.5">{vid.category}</span>
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <p className="font-semibold text-brand-chocolate">{vid.title}</p>
+                                {vid.isFeatured && (
+                                  <span className="bg-brand-rose/10 text-brand-rose text-[8px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded font-mono">
+                                    Featured #{videos.filter(v => v.isFeatured).sort((a,b) => (a.featuredOrder ?? 999) - (b.featuredOrder ?? 999)).findIndex(v => v.id === vid.id) + 1}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-[9px] uppercase tracking-wider text-brand-rose font-bold">{vid.category}</span>
+                                <span className="text-zinc-300 font-normal">•</span>
+                                {(() => {
+                                  const status = vid.status || 'published';
+                                  if (status === 'draft') {
+                                    return (
+                                      <span className="bg-zinc-100 text-zinc-600 text-[8px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded font-mono">
+                                        Draft
+                                      </span>
+                                    );
+                                  }
+                                  if (status === 'scheduled') {
+                                    const dateStr = vid.scheduledAt ? new Date(vid.scheduledAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'TBD';
+                                    return (
+                                      <span className="bg-blue-50 text-blue-800 border border-blue-100 text-[8px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded font-mono">
+                                        Scheduled: {dateStr}
+                                      </span>
+                                    );
+                                  }
+                                  return (
+                                    <span className="bg-emerald-50 text-emerald-800 text-[8px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded font-mono">
+                                      Published
+                                    </span>
+                                  );
+                                })()}
+                              </div>
+                              {vid.description && (
+                                <p className="text-[10px] text-[#8C6D62]/80 line-clamp-1 mt-0.5">{vid.description}</p>
+                              )}
+                              {vid.relatedIds && vid.relatedIds.length > 0 && (
+                                <span className="text-[8.5px] text-[#A67E6B] font-semibold mt-0.5 block">
+                                  Linked Items: {vid.relatedIds.length}
+                                </span>
+                              )}
+                            </div>
                           </td>
-                          <td className="p-3 font-mono">{vid.views}</td>
+                          <td className="p-3 font-mono">
+                            {vid.status === 'draft' ? (
+                              <span className="text-zinc-400 italic">Draft</span>
+                            ) : (
+                              vid.viewsCount?.toLocaleString() || vid.views || '0'
+                            )}
+                          </td>
                           <td className="p-3 text-center">
-                            <button
-                              onClick={() => {
-                                if (confirm(`Remove video "${vid.title}"?`)) {
-                                  deleteVideo(vid.id);
-                                }
-                              }}
-                              className="p-1 px-2.5 bg-brand-pink-light hover:bg-brand-rose text-brand-rose hover:text-white rounded-md text-[11px] font-bold transition duration-200"
-                            >
-                              Delete
-                            </button>
+                            <div className="flex justify-center gap-1.5 flex-wrap">
+                              <button
+                                onClick={() => setViewingAnalyticsVideo(vid)}
+                                className="p-1 px-2.5 bg-[#FAF6F0] hover:bg-brand-pink-light text-[#8C6D62] font-bold rounded-md text-[10px] transition duration-200 border border-brand-warm-tan/30 whitespace-nowrap cursor-pointer"
+                              >
+                                Analytics
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setVidTitle(vid.title);
+                                  setVidViews(vid.views);
+                                  setVidCategory(vid.category);
+                                  setVidUrl(vid.videoUrl);
+                                  setVidThumb(vid.thumbnailUrl);
+                                  setVidDescription(vid.description || '');
+                                  setVidRelatedIds(vid.relatedIds || []);
+                                  setVidIsFeatured(!!vid.isFeatured);
+                                  setVidStatus(vid.status || 'published');
+                                  setVidScheduledAt(vid.scheduledAt || '');
+                                  setUploadedVideoFile(null);
+                                  setUploadedThumbFile(null);
+                                  setEditingVideoId(vid.id);
+                                  setIsAddingVideo(true);
+                                }}
+                                className="p-1 px-2.5 bg-brand-cream hover:bg-brand-beige text-[#543F35] font-bold rounded-md text-[10px] transition duration-200 border border-brand-warm-tan/25 whitespace-nowrap cursor-pointer"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (confirm(`Remove video "${vid.title}"?`)) {
+                                    if (checkPermission(['super_admin', 'content_manager'])) {
+                                      deleteVideo(vid.id);
+                                    }
+                                  }
+                                }}
+                                className="p-1 px-2.5 bg-brand-pink-light hover:bg-brand-rose text-brand-rose hover:text-white rounded-md text-[10px] font-bold transition duration-200 whitespace-nowrap cursor-pointer"
+                              >
+                                Delete
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
+
+                {/* Featured Video Reordering Panel */}
+                {videos.filter(v => v.isFeatured).length > 0 && (
+                  <div className="bg-[#FAF6F0] border border-brand-warm-tan/30 p-5 rounded-2xl space-y-3 mt-6">
+                    <p className="font-serif font-bold text-brand-chocolate text-xs flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-brand-rose animate-pulse" />
+                      Featured Video Custom Ordering
+                    </p>
+                    <p className="text-[10px] text-[#8C6D62] leading-tight">
+                      Adjust the layout order of featured video masterclasses on the public Watch Tutorials page.
+                    </p>
+                    <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                      {videos
+                        .filter(v => v.isFeatured)
+                        .sort((a, b) => (a.featuredOrder ?? 999) - (b.featuredOrder ?? 999))
+                        .map((vid, idx, arr) => (
+                          <div
+                            key={vid.id}
+                            className="bg-white border border-[#E5D5C8]/60 p-2.5 rounded-xl flex items-center justify-between text-xs hover:border-brand-rose/30 transition-all shadow-2xs"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className="font-mono font-extrabold text-[10px] bg-brand-rose/10 text-brand-rose px-2 py-0.5 rounded-full shrink-0">
+                                #{idx + 1}
+                              </span>
+                              <img
+                                src={vid.thumbnailUrl}
+                                alt=""
+                                className="w-8 h-10 object-cover rounded border border-[#E5D5C8]/40 shrink-0"
+                              />
+                              <div className="min-w-0">
+                                <p className="font-semibold text-brand-chocolate truncate">{vid.title}</p>
+                                <span className="text-[9px] text-[#A67E6B] font-bold">{vid.category}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                disabled={idx === 0}
+                                onClick={() => moveFeaturedVideo(vid.id, 'up')}
+                                className="w-6 h-6 rounded bg-brand-cream hover:bg-brand-beige border border-brand-warm-tan/20 flex items-center justify-center font-bold disabled:opacity-30 disabled:pointer-events-none text-brand-chocolate cursor-pointer transition"
+                                title="Move Up"
+                              >
+                                ↑
+                              </button>
+                              <button
+                                type="button"
+                                disabled={idx === arr.length - 1}
+                                onClick={() => moveFeaturedVideo(vid.id, 'down')}
+                                className="w-6 h-6 rounded bg-brand-cream hover:bg-brand-beige border border-brand-warm-tan/20 flex items-center justify-center font-bold disabled:opacity-30 disabled:pointer-events-none text-brand-chocolate cursor-pointer transition"
+                                title="Move Down"
+                              >
+                                ↓
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Right Panel: Photo Gallery Showcase Creator */}
@@ -1408,16 +2655,12 @@ export const AdminPortal: React.FC = () => {
                       <div className="border border-brand-warm-tan/30 p-3 rounded-xl space-y-2 bg-white/70">
                         <p className="font-bold text-[10px] uppercase text-[#7C6354]">Photo Source File:</p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <label className="flex flex-col items-center justify-center border border-dashed border-brand-warm-tan/50 bg-[#FAF6F0] rounded-lg p-3 cursor-pointer hover:border-brand-rose/40">
-                            <Camera className="w-4 h-4 text-brand-rose mb-0.5" />
-                            <span className="text-[10px] font-bold text-brand-chocolate">Upload Local File</span>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={handleAdminAssetUpload}
-                              className="hidden"
-                            />
-                          </label>
+                          <ImageDropzone
+                            imageValue={galImage}
+                            onImageChange={setGalImage}
+                            label="Gallery Photo"
+                            prefersReducedMotion={prefersReducedMotion}
+                          />
                           <div className="flex flex-col justify-center">
                             <span className="text-[9.5px] font-bold text-[#7C6354] uppercase mb-1">Or Insert URL Link</span>
                             <input
@@ -1425,16 +2668,10 @@ export const AdminPortal: React.FC = () => {
                               placeholder="https://example.com/photo.jpg"
                               value={galImage.startsWith('data:') ? '' : galImage}
                               onChange={(e) => setGalImage(e.target.value)}
-                              className="px-2 py-1.5 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded text-xs focus:outline-none"
+                              className="px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose transition-all duration-150"
                             />
                           </div>
                         </div>
-                        {galImage && (
-                          <div className="flex items-center gap-2 pt-2">
-                            <img src={galImage} alt="" className="w-8 h-8 object-cover rounded border border-brand-warm-tan/20" />
-                            <span className="text-[9px] text-emerald-800 font-bold">✓ image linked successful</span>
-                          </div>
-                        )}
                       </div>
                     </div>
                     <div className="flex justify-end gap-2 pt-1 text-[10.5px]">
@@ -1478,7 +2715,9 @@ export const AdminPortal: React.FC = () => {
                             <button
                               onClick={() => {
                                 if (confirm(`Remove photo "${gObj.caption}"?`)) {
-                                  deleteGalleryItem(gObj.id);
+                                  if (checkPermission(['super_admin', 'content_manager'])) {
+                                    deleteGalleryItem(gObj.id);
+                                  }
                                 }
                               }}
                               className="p-1 px-2.5 bg-brand-pink-light hover:bg-brand-rose text-brand-rose hover:text-white rounded-md text-[11px] font-bold transition duration-200"
@@ -1580,17 +2819,22 @@ export const AdminPortal: React.FC = () => {
                       ? contactRequests.length 
                       : contactRequests.filter(c => c.status === filterOpt).length;
                     return (
-                      <button
+                      <motion.button
                         key={filterOpt}
+                        whileTap={{ scale: 0.98 }}
                         onClick={() => setContactFilter(filterOpt)}
-                        className={`px-3 py-1.5 text-[10.5px] font-extrabold uppercase rounded-lg transition-all focus:outline-none ${
-                          contactFilter === filterOpt
-                            ? 'bg-brand-rose text-white shadow-sm'
-                            : 'text-[#8C6D62] hover:bg-brand-cream/60'
+                        className={`relative px-3 py-1.5 text-[10.5px] font-extrabold uppercase rounded-lg transition-all focus:outline-none ${
+                          contactFilter === filterOpt ? 'text-white' : 'text-[#8C6D62] hover:bg-brand-cream/60'
                         }`}
                       >
-                        {filterOpt} ({count})
-                      </button>
+                        {contactFilter === filterOpt && !prefersReducedMotion && (
+                          <motion.div layoutId="contactActiveFilter" className="absolute inset-0 bg-brand-rose rounded-lg shadow-sm" style={{ zIndex: 0 }} />
+                        )}
+                        {contactFilter === filterOpt && prefersReducedMotion && (
+                          <div className="absolute inset-0 bg-brand-rose rounded-lg shadow-sm" />
+                        )}
+                        <span className="relative z-10">{filterOpt} ({count})</span>
+                      </motion.button>
                     );
                   })}
                 </div>
@@ -1746,6 +2990,122 @@ export const AdminPortal: React.FC = () => {
 
         </div>
       )}
+
+      {/* Analytics Modal */}
+      <AnimatePresence>
+        {viewingAnalyticsVideo && (
+          <div className="fixed inset-0 bg-brand-dark/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="bg-brand-cream border border-[#E5D5C8]/80 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-[0_12px_40px_rgba(74,43,32,0.1)] relative overflow-hidden"
+            >
+              {/* Accent line */}
+              <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-brand-rose via-brand-pink to-brand-chocolate"></div>
+
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <span className="text-[9px] uppercase tracking-wider text-brand-rose font-extrabold bg-brand-pink-light px-2 py-0.5 rounded-full">
+                    Video Analytics
+                  </span>
+                  <h3 className="font-serif text-lg font-bold text-brand-dark mt-2">
+                    {viewingAnalyticsVideo.title}
+                  </h3>
+                  <p className="text-[10px] text-zinc-500 mt-1">
+                    Category: {viewingAnalyticsVideo.category} | Status: {viewingAnalyticsVideo.status || 'published'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setViewingAnalyticsVideo(null)}
+                  className="text-zinc-400 hover:text-zinc-600 focus:outline-none text-sm cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3 mb-6">
+                {/* Core Metrics */}
+                <div className="bg-white border border-[#E5D5C8]/40 p-3 rounded-2xl text-center shadow-2xs">
+                  <span className="text-[9px] uppercase tracking-wider text-zinc-400 font-bold">Views</span>
+                  <p className="font-serif text-base font-bold text-brand-chocolate mt-1">
+                    {viewingAnalyticsVideo.viewsCount?.toLocaleString() || viewingAnalyticsVideo.views || '0'}
+                  </p>
+                </div>
+                <div className="bg-white border border-[#E5D5C8]/40 p-3 rounded-2xl text-center shadow-2xs">
+                  <span className="text-[9px] uppercase tracking-wider text-zinc-400 font-bold">Likes</span>
+                  <p className="font-serif text-base font-bold text-brand-chocolate mt-1">
+                    {viewingAnalyticsVideo.likesCount?.toLocaleString() || '0'}
+                  </p>
+                </div>
+                <div className="bg-white border border-[#E5D5C8]/40 p-3 rounded-2xl text-center shadow-2xs">
+                  <span className="text-[9px] uppercase tracking-wider text-zinc-400 font-bold">Comments</span>
+                  <p className="font-serif text-base font-bold text-brand-chocolate mt-1">
+                    {viewingAnalyticsVideo.commentsCount?.toLocaleString() || '0'}
+                  </p>
+                </div>
+                <div className="bg-white border border-[#E5D5C8]/40 p-3 rounded-2xl text-center shadow-2xs">
+                  <span className="text-[9px] uppercase tracking-wider text-zinc-400 font-bold">Saves</span>
+                  <p className="font-serif text-base font-bold text-brand-chocolate mt-1">
+                    {viewingAnalyticsVideo.savesCount?.toLocaleString() || '0'}
+                  </p>
+                </div>
+                <div className="bg-white border border-[#E5D5C8]/40 p-3 rounded-2xl text-center shadow-2xs">
+                  <span className="text-[9px] uppercase tracking-wider text-zinc-400 font-bold">Shares</span>
+                  <p className="font-serif text-base font-bold text-brand-chocolate mt-1">
+                    {viewingAnalyticsVideo.sharesCount?.toLocaleString() || '0'}
+                  </p>
+                </div>
+                <div className="bg-white border border-[#E5D5C8]/40 p-3 rounded-2xl text-center shadow-2xs">
+                  <span className="text-[9px] uppercase tracking-wider text-zinc-400 font-bold">Conversions</span>
+                  <p className="font-serif text-base font-bold text-brand-chocolate mt-1">
+                    {viewingAnalyticsVideo.conversionCount?.toLocaleString() || '0'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-white border border-[#E5D5C8]/40 p-4 rounded-2xl mb-6 space-y-3 shadow-2xs">
+                <h4 className="font-serif text-xs font-bold text-brand-chocolate border-b border-zinc-100 pb-1.5">
+                  eCommerce Click Funnel
+                </h4>
+                
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-zinc-500 font-medium">&ldquo;Shop this routine&rdquo; clicks:</span>
+                  <span className="font-bold text-brand-chocolate">{viewingAnalyticsVideo.shopClicks?.toLocaleString() || '0'}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-zinc-500 font-medium">Product CTA clicks:</span>
+                  <span className="font-bold text-brand-chocolate">{viewingAnalyticsVideo.productAddClicks?.toLocaleString() || '0'}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-zinc-500 font-medium">eBook CTA clicks:</span>
+                  <span className="font-bold text-brand-chocolate">{viewingAnalyticsVideo.ebookAddClicks?.toLocaleString() || '0'}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs border-t border-zinc-100 pt-2">
+                  <span className="text-zinc-500 font-bold">Conversion Rate (vs Views):</span>
+                  <span className="font-bold text-brand-rose">
+                    {(() => {
+                      const views = viewingAnalyticsVideo.viewsCount || 1;
+                      const convs = viewingAnalyticsVideo.conversionCount || 0;
+                      return ((convs / Math.max(views, 1)) * 100).toFixed(2) + '%';
+                    })()}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setViewingAnalyticsVideo(null)}
+                  className="px-5 py-2 bg-brand-chocolate hover:bg-brand-dark text-white rounded-xl font-bold uppercase text-[10.5px] cursor-pointer transition shadow-xs"
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

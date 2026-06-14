@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { ShoppingBag, Menu, X, ShieldAlert, Sparkles, Lock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ShoppingBag, Menu, X, Lock } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface HeaderProps {
   activePart: string;
@@ -9,8 +10,9 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openCart }) => {
-  const { cart, isAdminLoggedIn } = useApp();
+  const { cart, isAdminLoggedIn, prefersReducedMotion } = useApp();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
@@ -22,6 +24,14 @@ export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openC
     { label: 'Our Story', key: 'story' },
     { label: 'Contact', key: 'contact' },
   ];
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handleNavClick = (key: string) => {
     setActivePart(key);
@@ -35,17 +45,23 @@ export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openC
         <span>Enjoy 15% off with code <strong className="font-bold">GROW4C</strong> • Instant download on all eBooks</span>
       </div>
 
-      <header className="sticky top-0 z-40 bg-brand-cream/90 backdrop-blur-md border-b border-brand-warm-tan/15">
+      <header className={`sticky top-0 z-40 transition-all duration-300 ${
+        isScrolled 
+          ? 'bg-brand-cream/85 backdrop-blur-md py-1 shadow-sm border-b border-brand-warm-tan/10' 
+          : 'bg-brand-cream/95 py-3 border-b border-brand-warm-tan/15'
+      }`}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           {/* Mobile Navigation Layout */}
-          <div className="flex items-center justify-between h-20 md:hidden relative">
+          <div className={`flex items-center justify-between transition-all duration-300 md:hidden relative ${
+            isScrolled ? 'h-14' : 'h-20'
+          }`}>
             
             {/* LEFT SIDE: Minimal Hamburger Menu Toggle */}
             <div className="flex w-1/4 justify-start items-center">
               <button
                 id="menu-toggle-btn"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="text-brand-dark hover:text-brand-rose focus:outline-none flex items-center gap-2 transition-colors py-1 group"
+                className="text-brand-dark hover:text-brand-rose focus:outline-none flex items-center gap-2 transition-colors py-1 group cursor-pointer"
                 aria-label="Open navigation menu"
               >
                 <Menu className="w-5 h-5 stroke-[1.5]" />
@@ -60,12 +76,12 @@ export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openC
               <button
                 id="brand-logo-btn-mobile"
                 onClick={() => handleNavClick('home')}
-                className="group flex flex-col items-center text-center focus:outline-none"
+                className="group flex flex-col items-center text-center focus:outline-none cursor-pointer"
               >
                 <span className="font-serif text-xl sm:text-2xl tracking-normal text-brand-dark group-hover:text-brand-rose transition-colors duration-300">
                   Cartiae Rae
                 </span>
-                <span className="font-sans text-[8px] uppercase tracking-[0.25em] text-brand-dark/40 mt-1 sm:mt-1.5 transition-colors group-hover:text-brand-rose/60">
+                <span className="font-sans text-[8px] uppercase tracking-[0.25em] text-brand-dark/40 mt-1 transition-colors group-hover:text-brand-rose/60">
                   Hair Education
                 </span>
               </button>
@@ -76,7 +92,7 @@ export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openC
               <button
                 id="admin-nav-trigger-mobile"
                 onClick={() => handleNavClick('admin')}
-                className={`${isAdminLoggedIn ? 'text-brand-rose' : 'text-brand-dark/40 hover:text-brand-rose'} p-1.5 transition-colors focus:outline-none`}
+                className={`${isAdminLoggedIn ? 'text-brand-rose' : 'text-brand-dark/40 hover:text-brand-rose'} p-1.5 transition-colors focus:outline-none cursor-pointer`}
                 title={isAdminLoggedIn ? "Admin Dashboard" : "Staff Portal Login"}
                 aria-label="Staff Access Portal"
               >
@@ -87,26 +103,36 @@ export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openC
               <button
                 id="cart-trigger-btn-mobile"
                 onClick={openCart}
-                className="relative p-2 text-brand-dark hover:text-brand-rose transition-colors duration-300 flex items-center justify-center focus:outline-none"
+                className="relative p-2 text-brand-dark hover:text-brand-rose transition-colors duration-300 flex items-center justify-center focus:outline-none cursor-pointer"
                 aria-label="View Cart"
               >
                 <ShoppingBag className="w-4.5 h-4.5 text-brand-dark stroke-[1.5]" />
-                {cartCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 bg-brand-rose text-white text-[8px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
-                    {cartCount}
-                  </span>
-                )}
+                <AnimatePresence>
+                  {cartCount > 0 && (
+                    <motion.span 
+                      key="cart-count-mobile"
+                      initial={{ scale: prefersReducedMotion ? 1 : 0.6, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: prefersReducedMotion ? 1 : 0.6, opacity: 0 }}
+                      className="absolute -top-0.5 -right-0.5 bg-brand-rose text-white text-[8px] font-bold w-4 h-4 flex items-center justify-center rounded-full"
+                    >
+                      {cartCount}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </button>
             </div>
           </div>
 
           {/* New Desktop Editorial Layout (Directly access pages) */}
-          <div className="hidden md:flex items-center justify-between h-20 w-full">
+          <div className={`hidden md:flex items-center justify-between transition-all duration-300 w-full ${
+            isScrolled ? 'h-14' : 'h-20'
+          }`}>
             {/* Left Brand Logo */}
             <button
               id="brand-logo-btn-desktop"
               onClick={() => handleNavClick('home')}
-              className="flex flex-col items-start text-left focus:outline-none group animate-none"
+              className="flex flex-col items-start text-left focus:outline-none group cursor-pointer"
             >
               <span className="font-serif text-xl sm:text-2xl tracking-normal text-brand-dark group-hover:text-brand-rose transition-colors duration-300">
                 Cartiae Rae
@@ -125,13 +151,17 @@ export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openC
                     key={item.key}
                     id={`desktop-nav-${item.key}`}
                     onClick={() => handleNavClick(item.key)}
-                    className={`text-[10px] font-medium uppercase tracking-[0.2em] relative py-1 focus:outline-none transition-colors duration-300 bg-transparent ${
+                    className={`text-[10px] font-medium uppercase tracking-[0.2em] relative py-1.5 focus:outline-none transition-colors duration-300 bg-transparent cursor-pointer ${
                       isActive ? 'text-brand-rose font-semibold bg-transparent' : 'text-brand-dark/70 hover:text-brand-dark bg-transparent'
                     }`}
                   >
                     {item.label}
                     {isActive && (
-                      <span className="absolute bottom-[-4px] left-0 right-[-2px] h-[1.5px] bg-brand-rose animate-none" />
+                      <motion.span 
+                        layoutId="activeTabUnderline"
+                        className="absolute bottom-[-1px] left-0 right-0 h-[1.5px] bg-brand-rose"
+                        transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                      />
                     )}
                   </button>
                 );
@@ -143,7 +173,7 @@ export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openC
               <button
                 id="admin-nav-trigger-desktop"
                 onClick={() => handleNavClick('admin')}
-                className={`${isAdminLoggedIn ? 'text-brand-rose' : 'text-brand-dark/40 hover:text-brand-rose'} p-1.5 transition-colors focus:outline-none`}
+                className={`${isAdminLoggedIn ? 'text-brand-rose' : 'text-brand-dark/40 hover:text-brand-rose'} p-1.5 transition-colors focus:outline-none cursor-pointer`}
                 title={isAdminLoggedIn ? "Admin Dashboard" : "Staff Portal Login"}
                 aria-label="Staff Access Portal"
               >
@@ -158,101 +188,120 @@ export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openC
                 aria-label="View Cart"
               >
                 <ShoppingBag className="w-4.5 h-4.5 text-brand-dark stroke-[1.5]" />
-                {cartCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 bg-brand-rose text-white text-[8px] font-bold w-4 h-4 flex items-center justify-center rounded-full animate-none">
-                    {cartCount}
-                  </span>
-                )}
+                <AnimatePresence>
+                  {cartCount > 0 && (
+                    <motion.span 
+                      key="cart-count-desktop"
+                      initial={{ scale: prefersReducedMotion ? 1 : 0.6, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: prefersReducedMotion ? 1 : 0.6, opacity: 0 }}
+                      className="absolute -top-0.5 -right-0.5 bg-brand-rose text-white text-[8px] font-bold w-4 h-4 flex items-center justify-center rounded-full"
+                    >
+                      {cartCount}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </button>
             </div>
           </div>
         </div>
 
         {/* Minimalist Slide-Down/Overlay Menu */}
-        {isMenuOpen && (
-          <div className="fixed inset-x-0 top-0 h-screen bg-brand-cream/98 z-50 flex flex-col justify-between overflow-y-auto transform transition-all duration-300">
-            {/* Overlay Header */}
-            <div className="max-w-7xl mx-auto px-6 lg:px-8 w-full">
-              <div className="flex items-center justify-between h-20 border-b border-brand-warm-tan/10">
-                {/* Close Button on left corresponding to menu position */}
-                <button
-                  id="menu-close-btn"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="text-brand-dark hover:text-brand-rose focus:outline-none flex items-center gap-2 transition-colors py-1"
-                  aria-label="Close menu"
-                >
-                  <X className="w-5 h-5 stroke-[1.5]" />
-                  <span className="hidden sm:inline font-sans text-[10px] uppercase tracking-[0.2em] font-medium text-brand-dark/70">
-                    Close
+        <AnimatePresence>
+          {isMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: prefersReducedMotion ? 0 : -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: prefersReducedMotion ? 0 : -20 }}
+              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+              className="fixed inset-x-0 top-0 h-screen bg-brand-cream/98 z-50 flex flex-col justify-between overflow-y-auto"
+            >
+              {/* Overlay Header */}
+              <div className="max-w-7xl mx-auto px-6 lg:px-8 w-full">
+                <div className="flex items-center justify-between h-20 border-b border-brand-warm-tan/10">
+                  {/* Close Button on left corresponding to menu position */}
+                  <button
+                    id="menu-close-btn"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="text-brand-dark hover:text-brand-rose focus:outline-none flex items-center gap-2 transition-colors py-1 cursor-pointer"
+                    aria-label="Close menu"
+                  >
+                    <X className="w-5 h-5 stroke-[1.5]" />
+                    <span className="hidden sm:inline font-sans text-[10px] uppercase tracking-[0.2em] font-medium text-brand-dark/70">
+                      Close
+                    </span>
+                  </button>
+
+                  {/* Logo Centered */}
+                  <span className="font-serif text-xl sm:text-2xl tracking-normal text-brand-dark select-none absolute left-1/2 top-10 -translate-x-1/2 -translate-y-1/2">
+                    Cartiae Rae
                   </span>
-                </button>
 
-                {/* Logo Centered */}
-                <span className="font-serif text-xl sm:text-2xl tracking-normal text-brand-dark select-none absolute left-1/2 top-10 -translate-x-1/2 -translate-y-1/2">
-                  Cartiae Rae
-                </span>
-
-                {/* Empty container for symmetry */}
-                <div className="w-10 h-10" />
+                  {/* Empty container for symmetry */}
+                  <div className="w-10 h-10" />
+                </div>
               </div>
-            </div>
 
-            {/* Navigation links styled like a luxury editorial table of contents */}
-            <div className="max-w-3xl mx-auto px-6 py-12 flex-1 flex flex-col justify-center w-full">
-              <div className="space-y-6 sm:space-y-8">
-                <span className="font-sans text-[10px] uppercase tracking-[0.3em] text-brand-rose font-bold block mb-4">
-                  Navigation Menu
-                </span>
-                <nav className="space-y-4 sm:space-y-5">
-                  {navItems.map((item, index) => {
-                    const isActive = activePart === item.key;
-                    return (
-                      <button
-                        key={item.key}
-                        id={`overlay-nav-${item.key}`}
-                        onClick={() => handleNavClick(item.key)}
-                        className="group flex items-baseline w-full text-left focus:outline-none py-1.5"
-                      >
-                        <span className="font-mono text-xs text-brand-rose/60 mr-4 tracking-wider select-none">
-                          0{index + 1}
-                        </span>
-                        <span className={`font-serif text-2xl sm:text-3xl tracking-normal transition-all duration-300 ${
-                          isActive 
-                            ? 'text-brand-rose font-semibold pl-2' 
-                            : 'text-brand-dark hover:text-brand-rose hover:pl-2'
-                        }`}>
-                          {item.label}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </nav>
+              {/* Navigation links styled like a luxury editorial table of contents */}
+              <div className="max-w-3xl mx-auto px-6 py-12 flex-1 flex flex-col justify-center w-full">
+                <div className="space-y-6 sm:space-y-8">
+                  <span className="font-sans text-[10px] uppercase tracking-[0.3em] text-brand-rose font-bold block mb-4">
+                    Navigation Menu
+                  </span>
+                  <nav className="space-y-4 sm:space-y-5">
+                    {navItems.map((item, index) => {
+                      const isActive = activePart === item.key;
+                      return (
+                        <motion.button
+                          key={item.key}
+                          id={`overlay-nav-${item.key}`}
+                          onClick={() => handleNavClick(item.key)}
+                          initial={{ opacity: 0, x: prefersReducedMotion ? 0 : -8 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: prefersReducedMotion ? 0 : index * 0.04 + 0.05, duration: 0.25 }}
+                          className="group flex items-baseline w-full text-left focus:outline-none py-1.5 cursor-pointer"
+                        >
+                          <span className="font-mono text-xs text-brand-rose/60 mr-4 tracking-wider select-none">
+                            0{index + 1}
+                          </span>
+                          <span className={`font-serif text-2xl sm:text-3xl tracking-normal transition-all duration-300 ${
+                            isActive 
+                              ? 'text-brand-rose font-semibold pl-2' 
+                              : 'text-brand-dark hover:text-brand-rose hover:pl-2'
+                          }`}>
+                            {item.label}
+                          </span>
+                        </motion.button>
+                      );
+                    })}
+                  </nav>
+                </div>
               </div>
-            </div>
 
-            {/* Menu Footer */}
-            <div className="w-full bg-[#FAF6F0] py-8 border-t border-brand-warm-tan/15 text-center px-6">
-              <p className="font-sans text-[10px] uppercase tracking-[0.2em] text-[#6C5347]/70">
-                Cartiae Rae Hair Studio • Healthy Hair Regimens Made Simple
-              </p>
-              {isAdminLoggedIn ? (
-                <button
-                  onClick={() => handleNavClick('admin')}
-                  className="mt-2 text-[9px] uppercase tracking-widest text-[#B11B41] underline font-semibold focus:outline-none"
-                >
-                  Go to Admin Panel
-                </button>
-              ) : (
-                <button
-                  onClick={() => handleNavClick('admin')}
-                  className="mt-2 text-[9px] uppercase tracking-widest text-brand-dark/50 hover:text-brand-rose transition-colors font-sans focus:outline-none"
-                >
-                  Staff Access
-                </button>
-              )}
-            </div>
-          </div>
-        )}
+              {/* Menu Footer */}
+              <div className="w-full bg-[#FAF6F0] py-8 border-t border-brand-warm-tan/15 text-center px-6">
+                <p className="font-sans text-[10px] uppercase tracking-[0.2em] text-[#6C5347]/70">
+                  Cartiae Rae Hair Studio • Healthy Hair Regimens Made Simple
+                </p>
+                {isAdminLoggedIn ? (
+                  <button
+                    onClick={() => handleNavClick('admin')}
+                    className="mt-2 text-[9px] uppercase tracking-widest text-[#B11B41] underline font-semibold focus:outline-none cursor-pointer"
+                  >
+                    Go to Admin Panel
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleNavClick('admin')}
+                    className="mt-2 text-[9px] uppercase tracking-widest text-brand-dark/50 hover:text-brand-rose transition-colors font-sans focus:outline-none cursor-pointer"
+                  >
+                    Staff Access
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
     </>
   );

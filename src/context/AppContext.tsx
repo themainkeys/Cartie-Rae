@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { EBook, Product, TikTokVideo, PhotoGalleryItem, BlogPost, DiscountCode, CartItem, Order, NewsletterSignup, HomepageContent, WishlistItem, ContactRequest } from '../types';
+import { EBook, Product, TikTokVideo, PhotoGalleryItem, BlogPost, DiscountCode, CartItem, Order, NewsletterSignup, HomepageContent, WishlistItem, ContactRequest, AdminUser } from '../types';
 import { initialEBooks, initialProducts, initialVideos, initialGallery, initialBlogPosts, initialDiscountCodes, initialHomepageContent } from '../data/initialData';
 
 interface AppContextType {
@@ -15,6 +15,7 @@ interface AppContextType {
   orders: Order[];
   appliedDiscount: DiscountCode | null;
   isAdminLoggedIn: boolean;
+  currentAdminUser: AdminUser | null;
   wishlist: WishlistItem[];
   toast: { message: string; type: 'success' | 'info' | 'error' } | null;
   triggerToast: (message: string, type?: 'success' | 'info' | 'error') => void;
@@ -38,6 +39,7 @@ interface AppContextType {
   
   // Video Operations
   addVideo: (video: Omit<TikTokVideo, 'id'>) => void;
+  updateVideo: (id: string, updated: Partial<TikTokVideo>) => void;
   deleteVideo: (id: string) => void;
   
   // Gallery Operations
@@ -84,6 +86,7 @@ interface AppContextType {
   // Settings & Preferences
   emailNotificationsEnabled: boolean;
   setEmailNotificationsEnabled: (enabled: boolean) => void;
+  prefersReducedMotion: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -209,6 +212,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return localStorage.getItem('cartiae_admin_auth') === 'true';
   });
 
+  const [currentAdminUser, setCurrentAdminUser] = useState<AdminUser | null>(() => {
+    const local = localStorage.getItem('cartiae_admin_user');
+    return local ? JSON.parse(local) : null;
+  });
+
   const [wishlist, setWishlist] = useState<WishlistItem[]>(() => {
     const local = localStorage.getItem('cartiae_wishlist');
     return local ? JSON.parse(local) : [];
@@ -218,6 +226,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const local = localStorage.getItem('cartiae_email_notifications_enabled');
     return local !== null ? local === 'true' : true;
   });
+
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setPrefersReducedMotion(media.matches);
+    const listener = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
+    media.addEventListener('change', listener);
+    return () => media.removeEventListener('change', listener);
+  }, []);
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
 
@@ -250,6 +268,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => { localStorage.setItem('cartiae_applied_discount', JSON.stringify(appliedDiscount)); }, [appliedDiscount]);
   useEffect(() => { localStorage.setItem('cartiae_wishlist', JSON.stringify(wishlist)); }, [wishlist]);
   useEffect(() => { localStorage.setItem('cartiae_email_notifications_enabled', String(emailNotificationsEnabled)); }, [emailNotificationsEnabled]);
+  useEffect(() => {
+    if (currentAdminUser) {
+      localStorage.setItem('cartiae_admin_user', JSON.stringify(currentAdminUser));
+    } else {
+      localStorage.removeItem('cartiae_admin_user');
+    }
+  }, [currentAdminUser]);
 
   // --- Contact Request Operations ---
   const addContactRequest = (request: Omit<ContactRequest, 'id' | 'date' | 'status'>) => {
@@ -322,6 +347,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `vid-${Date.now()}`
     };
     setVideos(prev => [newVideo, ...prev]);
+  };
+
+  const updateVideo = (id: string, updated: Partial<TikTokVideo>) => {
+    setVideos(prev => prev.map(item => item.id === id ? { ...item, ...updated } : item));
   };
 
   const deleteVideo = (id: string) => {
@@ -529,10 +558,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // --- Admin Auth ---
   const loginAdmin = (password: string): boolean => {
-    // Elegant hardcoded administrative password for this beautiful standalone app
-    if (password === 'cartiae123' || password === 'admin') {
+    let user: AdminUser | null = null;
+    if (password === 'admin' || password === 'cartiae123') {
+      user = { id: 'adm-001', name: 'Cartiae Rae', email: 'admin@cartiaerae.com', role: 'super_admin' };
+    } else if (password === 'manager') {
+      user = { id: 'adm-002', name: 'Elena Vance (Manager)', email: 'manager@cartiaerae.com', role: 'store_manager' };
+    } else if (password === 'content') {
+      user = { id: 'adm-003', name: 'Brianna Smith (Editor)', email: 'content@cartiaerae.com', role: 'content_manager' };
+    }
+
+    if (user) {
       setIsAdminLoggedIn(true);
+      setCurrentAdminUser(user);
       localStorage.setItem('cartiae_admin_auth', 'true');
+      localStorage.setItem('cartiae_admin_user', JSON.stringify(user));
       return true;
     }
     return false;
@@ -540,17 +579,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const logoutAdmin = () => {
     setIsAdminLoggedIn(false);
+    setCurrentAdminUser(null);
     localStorage.removeItem('cartiae_admin_auth');
+    localStorage.removeItem('cartiae_admin_user');
   };
 
   return (
     <AppContext.Provider value={{
-      ebooks, products, videos, gallery, blogs, discountCodes, homepageContent, newsletterSignups, cart, orders, appliedDiscount, isAdminLoggedIn, wishlist,
+      ebooks, products, videos, gallery, blogs, discountCodes, homepageContent, newsletterSignups, cart, orders, appliedDiscount, isAdminLoggedIn, currentAdminUser, wishlist,
       contactRequests,
       toast, triggerToast,
       addEBook, updateEBook, deleteEBook,
       addProduct, updateProduct, deleteProduct,
-      addVideo, deleteVideo,
+      addVideo, updateVideo, deleteVideo,
       addGalleryItem, deleteGalleryItem,
       addBlogPost, updateBlogPost, deleteBlogPost, likeBlogPost,
       addDiscountCode, deleteDiscountCode,
@@ -561,7 +602,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createOrder, fulfillOrder,
       loginAdmin, logoutAdmin,
       addContactRequest, respondToContactRequest, deleteContactRequest, updateContactRequestStatus,
-      emailNotificationsEnabled, setEmailNotificationsEnabled
+      emailNotificationsEnabled, setEmailNotificationsEnabled,
+      prefersReducedMotion
     }}>
       {children}
     </AppContext.Provider>
