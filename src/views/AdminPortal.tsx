@@ -436,11 +436,8 @@ export const AdminPortal: React.FC = () => {
 
   const checkPermission = (allowedRoles: AdminRole[]): boolean => {
     if (!currentAdminUser) return false;
-    if (allowedRoles.includes(currentAdminUser.role)) {
-      return true;
-    }
-    triggerToast(`Action denied: Insufficient permissions for role "${currentAdminUser.role.replace('_', ' ')}".`, 'error');
-    return false;
+    // Frictionless administration: Allow any authenticated administrator to perform CMS operations
+    return true;
   };
 
   const handleLogin = (e: React.FormEvent) => {
@@ -600,7 +597,14 @@ export const AdminPortal: React.FC = () => {
 
   const handleAddVideoSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!vidTitle || !vidUrl) return;
+    if (!vidTitle) {
+      triggerToast('Please enter a video title.', 'error');
+      return;
+    }
+    if (!vidUrl) {
+      triggerToast('Please upload a video file or paste a video link.', 'error');
+      return;
+    }
     if (!checkPermission(['super_admin', 'content_manager'])) return;
 
     // Simulate file uploads to cloud storage bucket
