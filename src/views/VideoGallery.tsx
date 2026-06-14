@@ -202,7 +202,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
   return (
     <div 
       data-video-id={video.id}
-      className="snap-start snap-always w-full h-full shrink-0 relative flex flex-col justify-end overflow-hidden bg-brand-beige"
+      className="w-full aspect-[9/16] max-w-[320px] rounded-[32px] border border-brand-warm-tan/20 relative flex flex-col justify-end overflow-hidden bg-brand-beige shadow-md hover:shadow-lg hover:scale-[1.01] transition-all duration-300"
     >
       {/* Video Stage Frame */}
       <div 
@@ -620,37 +620,9 @@ export const VideoGallery: React.FC = () => {
     setCommentsMap(seedComments);
   }, [videos]);
 
-  // Autoplay/Pause observer for snap-scrolling
+  // Autoplay/Pause observer for snap-scrolling (disabled for grid layout)
   useEffect(() => {
-    const container = feedContainerRef.current;
-    if (!container || filteredVideos.length === 0) return;
-
-    const observerOptions = {
-      root: container,
-      rootMargin: '0px',
-      threshold: 0.6,
-    };
-
-    const handleIntersection = (entries: IntersectionObserverEntry[]) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          const videoId = entry.target.getAttribute('data-video-id');
-          if (videoId) {
-            setPlayingId(videoId);
-            setIsManuallyPaused(false); // Play immediately on scroll focus
-          }
-        }
-      });
-    };
-
-    const observer = new IntersectionObserver(handleIntersection, observerOptions);
-
-    const targets = container.querySelectorAll('[data-video-id]');
-    targets.forEach((target) => observer.observe(target));
-
-    return () => {
-      observer.disconnect();
-    };
+    // Scroll autoplay disabled
   }, [filteredVideos]);
 
   // Resolve related items from video metadata (with static fallback)
@@ -795,12 +767,12 @@ export const VideoGallery: React.FC = () => {
         ))}
       </div>
 
-      {/* Main Reels Snap Container */}
-      <div className="flex justify-center items-center w-full">
+      {/* Main Reels Grid Container */}
+      <div className="w-full flex justify-center py-4">
         {filteredVideos.length > 0 ? (
           <div 
             ref={feedContainerRef}
-            className="w-full sm:w-auto h-[calc(100vh-250px)] sm:h-[660px] sm:aspect-[9/16] overflow-y-scroll snap-y snap-mandatory scroll-smooth scrollbar-none rounded-none sm:rounded-[36px] border-y sm:border border-brand-warm-tan/30 bg-brand-beige relative shadow-xl flex flex-col items-center"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 w-full max-w-7xl justify-items-center px-4"
           >
             {filteredVideos.map((video) => {
               const isActive = playingId === video.id;
