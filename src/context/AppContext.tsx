@@ -107,13 +107,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const local = localStorage.getItem('cartiae_videos');
     if (local) {
       try {
-        const parsed = JSON.parse(local) as TikTokVideo[];
-        return parsed.map(item => {
+        let parsed = JSON.parse(local) as TikTokVideo[];
+        parsed = parsed.map(item => {
           if (item.thumbnailUrl && item.thumbnailUrl.includes('photo-1608139556157-196be06511fc')) {
             return { ...item, thumbnailUrl: '/about-portrait.jpg' };
           }
           return item;
         });
+        
+        // Dynamic migration: Seed new initialVideos not present in user's localStorage array
+        const parsedIds = new Set(parsed.map(v => v.id));
+        const missingFromInitial = initialVideos.filter(v => !parsedIds.has(v.id));
+        if (missingFromInitial.length > 0) {
+          return [...parsed, ...missingFromInitial];
+        }
+        return parsed;
       } catch (e) {
         return initialVideos;
       }
