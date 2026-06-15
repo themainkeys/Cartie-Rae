@@ -211,7 +211,7 @@ export const initialVideos: TikTokVideo[] = [
     title: 'Advanced Moisture Layering for 4C Coils',
     views: '12.5k',
     category: 'Wash Day',
-    videoUrl: 'https://www.youtube.com/embed/l89A48GZJ7c',
+    videoUrl: 'https://www.youtube.com/embed/Jm9X59N3d0I',
     thumbnailUrl: '/about-portrait.jpg',
     status: 'published',
     isFeatured: true,
@@ -231,7 +231,7 @@ export const initialVideos: TikTokVideo[] = [
     title: 'Precision Bantu Knots: Step-by-Step',
     views: '8.2k',
     category: 'Styling',
-    videoUrl: 'https://www.youtube.com/embed/gW7O48r0LzY',
+    videoUrl: 'https://www.youtube.com/embed/g_g4w6kS6zU',
     thumbnailUrl: 'https://images.unsplash.com/photo-1560869713-7d0a29430f33?auto=format&fit=crop&q=80&w=400',
     status: 'published',
     isFeatured: true,
@@ -290,7 +290,7 @@ export const initialVideos: TikTokVideo[] = [
     title: 'Cornrow Base Under Wig Quick Method',
     views: '9.4k',
     category: 'Cornrows',
-    videoUrl: 'https://www.youtube.com/embed/SND6WpGoM7Q',
+    videoUrl: 'https://www.youtube.com/embed/gH1yM-l4p-w',
     thumbnailUrl: 'https://images.unsplash.com/photo-1582095133179-bfd08e2fc6b3?auto=format&fit=crop&q=80&w=400',
     status: 'published',
     isFeatured: false,
@@ -309,7 +309,7 @@ export const initialVideos: TikTokVideo[] = [
     title: 'How to Treat Scalp Dryness Instantly',
     views: '11.1k',
     category: 'Growth Tips',
-    videoUrl: 'https://www.youtube.com/embed/W9lOAnM64kU',
+    videoUrl: 'https://www.youtube.com/embed/0_u6eT_M7Xw',
     thumbnailUrl: 'https://images.unsplash.com/photo-1620331311520-246422fd82f9?auto=format&fit=crop&q=80&w=400',
     status: 'published',
     isFeatured: false,
@@ -570,6 +570,30 @@ export const initialGallery: PhotoGalleryItem[] = [
     image: 'https://images.unsplash.com/photo-1582095133179-bfd08e2fc6b3?auto=format&fit=crop&q=80&w=600',
     caption: 'The Detangling Collection in action detailing coiled strands with zero pulling.',
     category: 'Routines'
+  },
+  {
+    id: 'gal-7',
+    image: 'https://images.unsplash.com/photo-1605980776566-0486c3ac7617?auto=format&fit=crop&q=80&w=600',
+    caption: 'Defined coily puff with hydrated edges styled for a premium weekend event.',
+    category: 'Hairstyles'
+  },
+  {
+    id: 'gal-8',
+    image: 'https://images.unsplash.com/photo-1620331311520-246422fd82f9?auto=format&fit=crop&q=80&w=600',
+    caption: 'Polished high-contrast twist-out results showing extreme curl definition.',
+    category: 'Hairstyles'
+  },
+  {
+    id: 'gal-9',
+    image: 'https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&q=80&w=600',
+    caption: 'Morning hydration routine checking coils and styling self-care habits.',
+    category: 'Lifestyle'
+  },
+  {
+    id: 'gal-10',
+    image: '/about-portrait.jpg',
+    caption: 'Founder Cartiae Rae showcasing daily moisturized, bouncy natural 4C coils.',
+    category: 'Lifestyle'
   }
 ];
 

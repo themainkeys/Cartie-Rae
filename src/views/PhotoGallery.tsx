@@ -17,11 +17,16 @@ export const PhotoGallery: React.FC = () => {
   const [likesCount, setLikesCount] = useState<Record<string, number>>({});
   const [hasLiked, setHasLiked] = useState<Record<string, boolean>>({});
 
-  // Pagination count
+  // View Mode: 'slider' (default Lookbook) vs 'grid' (traditional masonry)
+  const [viewMode, setViewMode] = useState<'slider' | 'grid'>('slider');
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+
+  // Pagination count for grid mode
   const [visibleCount, setVisibleCount] = useState(3);
 
   useEffect(() => {
     setVisibleCount(3);
+    setCurrentSlideIndex(0);
   }, [activeCategory]);
 
   const categories: ('All' | 'Progress' | 'Hairstyles' | 'Routines' | 'Lifestyle')[] = [
@@ -35,6 +40,11 @@ export const PhotoGallery: React.FC = () => {
   const paginatedPhotos = useMemo(() => {
     return filteredPhotos.slice(0, visibleCount);
   }, [filteredPhotos, visibleCount]);
+
+  const currentPhoto = useMemo(() => {
+    if (filteredPhotos.length === 0) return null;
+    return filteredPhotos[currentSlideIndex % filteredPhotos.length];
+  }, [filteredPhotos, currentSlideIndex]);
 
   const handleLike = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -62,7 +72,7 @@ export const PhotoGallery: React.FC = () => {
     if (navigator.share && navigator.canShare && navigator.canShare({ url })) {
       try {
         await navigator.share({
-          title: 'Cartiae Rae Hair Milestone Portfolios',
+          title: 'Cartiae Rae Lookbook Portfolios',
           text: `Check out this incredible 4C hair journey step: "${item.caption}"`,
           url: url
         });
@@ -83,6 +93,20 @@ export const PhotoGallery: React.FC = () => {
     }
   };
 
+  const handleNextSlide = () => {
+    if (filteredPhotos.length <= 1) return;
+    setSlideDirection('right');
+    setCurrentSlideIndex(prev => (prev + 1) % filteredPhotos.length);
+    setCopied(false);
+  };
+
+  const handlePrevSlide = () => {
+    if (filteredPhotos.length <= 1) return;
+    setSlideDirection('left');
+    setCurrentSlideIndex(prev => (prev - 1 + filteredPhotos.length) % filteredPhotos.length);
+    setCopied(false);
+  };
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const galId = params.get('galleryItem');
@@ -94,31 +118,53 @@ export const PhotoGallery: React.FC = () => {
     }
   }, [gallery]);
 
-  // Implement Left/Right keyboard arrows navigation
+  // Implement Left/Right keyboard arrows navigation for zoom modal and slide carousel
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!selectedPhoto) return;
-      if (e.key === 'ArrowRight') {
-        const idx = filteredPhotos.findIndex(p => p.id === selectedPhoto.id);
-        if (idx !== -1 && filteredPhotos.length > 1) {
-          setSlideDirection('right');
-          setSelectedPhoto(filteredPhotos[(idx + 1) % filteredPhotos.length]);
-          setCopied(false);
+      if (selectedPhoto) {
+        if (e.key === 'ArrowRight') {
+          const idx = filteredPhotos.findIndex(p => p.id === selectedPhoto.id);
+          if (idx !== -1 && filteredPhotos.length > 1) {
+            setSlideDirection('right');
+            setSelectedPhoto(filteredPhotos[(idx + 1) % filteredPhotos.length]);
+            setCopied(false);
+          }
+        } else if (e.key === 'ArrowLeft') {
+          const idx = filteredPhotos.findIndex(p => p.id === selectedPhoto.id);
+          if (idx !== -1 && filteredPhotos.length > 1) {
+            setSlideDirection('left');
+            setSelectedPhoto(filteredPhotos[(idx - 1 + filteredPhotos.length) % filteredPhotos.length]);
+            setCopied(false);
+          }
+        } else if (e.key === 'Escape') {
+          setSelectedPhoto(null);
         }
-      } else if (e.key === 'ArrowLeft') {
-        const idx = filteredPhotos.findIndex(p => p.id === selectedPhoto.id);
-        if (idx !== -1 && filteredPhotos.length > 1) {
-          setSlideDirection('left');
-          setSelectedPhoto(filteredPhotos[(idx - 1 + filteredPhotos.length) % filteredPhotos.length]);
-          setCopied(false);
+      } else if (viewMode === 'slider') {
+        if (e.key === 'ArrowRight') {
+          handleNextSlide();
+        } else if (e.key === 'ArrowLeft') {
+          handlePrevSlide();
         }
-      } else if (e.key === 'Escape') {
-        setSelectedPhoto(null);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedPhoto, filteredPhotos]);
+  }, [selectedPhoto, filteredPhotos, viewMode, currentSlideIndex]);
+
+  const slideVariants = {
+    enter: (direction: 'left' | 'right' | null) => ({
+      x: prefersReducedMotion || !direction ? 0 : direction === 'right' ? 150 : -150,
+      opacity: 0
+    }),
+    center: {
+      x: 0,
+      opacity: 1
+    },
+    exit: (direction: 'left' | 'right' | null) => ({
+      x: prefersReducedMotion || !direction ? 0 : direction === 'right' ? -150 : 150,
+      opacity: 0
+    })
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-6 lg:px-8 py-10">
@@ -126,18 +172,18 @@ export const PhotoGallery: React.FC = () => {
       {/* Banner Intro */}
       <div className="text-center mb-16 space-y-3">
         <span className="font-sans text-[10px] uppercase tracking-[0.35em] text-brand-rose font-bold block">
-          Client &amp; Student Portfolios
+          Client &amp; Student Lookbooks
         </span>
         <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-brand-dark font-normal">
-          The 4C Progress Log
+          The 4C Gallery
         </h1>
         <p className="font-sans text-xs sm:text-sm text-[#6C5347]/80 max-w-xl mx-auto leading-relaxed">
-          Real milestones after maintaining Cartiae&apos;s moisturizing systems. Length retention, coily curl definition, and hydration habits.
+          Real milestones after maintaining Cartiae&apos;s moisturizing systems. Browse hairstyles, lifestyle logs, and hydration routines.
         </p>
       </div>
 
       {/* Category Tabs banner with sliding active indicator */}
-      <div className="flex flex-wrap gap-x-6 gap-y-2 justify-center mb-12 border-b border-brand-warm-tan/20 pb-6">
+      <div className="flex flex-wrap gap-x-6 gap-y-2 justify-center mb-8 border-b border-brand-warm-tan/20 pb-6">
         {categories.map((cat) => (
           <button
             key={cat}
@@ -149,7 +195,7 @@ export const PhotoGallery: React.FC = () => {
                 : 'text-brand-dark/60 hover:text-brand-dark'
             }`}
           >
-            <span>{cat === 'All' ? 'All Milestones' : cat}</span>
+            <span>{cat === 'All' ? 'All Photos' : cat}</span>
             {activeCategory === cat && (
               <motion.span 
                 layoutId="activePhotoTab"
@@ -161,103 +207,276 @@ export const PhotoGallery: React.FC = () => {
         ))}
       </div>
 
-      {/* Masonry-like grid container with Layout reordering */}
-      <motion.div 
-        layout={prefersReducedMotion ? false : "position"}
-        className="columns-1 sm:columns-2 lg:columns-3 gap-8 space-y-8"
-      >
-        <AnimatePresence mode="popLayout">
-          {paginatedPhotos.map((item) => {
-            const itemLikes = getLikes(item.id);
-            const userLiked = hasLiked[item.id];
+      {/* View Mode Toggle */}
+      <div className="flex justify-center mb-10 select-none">
+        <div className="bg-[#FAF6F0] p-1.5 rounded-full border border-brand-warm-tan/25 flex items-center gap-1 shadow-xs">
+          <button
+            onClick={() => setViewMode('slider')}
+            className={`px-5 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all duration-300 flex items-center gap-1.5 cursor-pointer relative ${
+              viewMode === 'slider' ? 'text-white' : 'text-brand-dark/60 hover:text-brand-dark'
+            }`}
+          >
+            {viewMode === 'slider' && (
+              <motion.span
+                layoutId="activeViewMode"
+                className="absolute inset-0 bg-brand-rose rounded-full"
+                transition={{ type: "spring", stiffness: 350, damping: 28 }}
+              />
+            )}
+            <span className="relative z-10">Lookbook Slide</span>
+          </button>
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`px-5 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all duration-300 flex items-center gap-1.5 cursor-pointer relative ${
+              viewMode === 'grid' ? 'text-white' : 'text-brand-dark/60 hover:text-brand-dark'
+            }`}
+          >
+            {viewMode === 'grid' && (
+              <motion.span
+                layoutId="activeViewMode"
+                className="absolute inset-0 bg-brand-rose rounded-full"
+                transition={{ type: "spring", stiffness: 350, damping: 28 }}
+              />
+            )}
+            <span className="relative z-10">Grid Gallery</span>
+          </button>
+        </div>
+      </div>
 
-            return (
-              <motion.div
-                layout={prefersReducedMotion ? false : "position"}
-                key={item.id}
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.98 }}
-                transition={{ duration: 0.25 }}
-                onClick={() => {
-                  setSlideDirection(null);
-                  setSelectedPhoto(item);
-                }}
-                whileHover={{ y: prefersReducedMotion ? 0 : -4 }}
-                className="break-inside-avoid mb-8 relative overflow-hidden border border-[#DCCAAB]/25 bg-[#FAF6F0] hover:border-brand-rose/60 hover:shadow-md transition-shadow duration-300 cursor-pointer group rounded-2xl"
-              >
-                {/* Photo Stage */}
-                <div className="relative overflow-hidden w-full">
+      {/* 🎬 1. Lookbook Slide View */}
+      {viewMode === 'slider' && (
+        <div className="w-full flex flex-col items-center py-4 select-none mb-16">
+          {filteredPhotos.length > 0 && currentPhoto ? (
+            <div className="w-full max-w-xl flex flex-col items-center px-4">
+              
+              {/* Slider Main Stage */}
+              <div className="relative w-full aspect-[4/5] sm:aspect-[3/4] md:h-[450px] bg-[#120E0C] rounded-[28px] overflow-hidden shadow-xl border border-brand-warm-tan/20 flex items-center justify-center">
+                <AnimatePresence initial={false} custom={slideDirection} mode="wait">
                   <motion.img
-                    src={item.image}
-                    alt={item.caption}
-                    referrerPolicy="no-referrer"
-                    whileHover={prefersReducedMotion ? {} : { scale: 1.03 }}
-                    transition={{ duration: 0.5 }}
-                    className="w-full object-cover"
+                    key={currentPhoto.id}
+                    src={currentPhoto.image}
+                    alt={currentPhoto.caption}
+                    custom={slideDirection}
+                    variants={slideVariants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={{ duration: 0.3, ease: 'easeInOut' }}
+                    drag="x"
+                    dragConstraints={{ left: 0, right: 0 }}
+                    dragElastic={0.4}
+                    onDragEnd={(e, info) => {
+                      if (info.offset.x > 50) {
+                        handlePrevSlide();
+                      } else if (info.offset.x < -50) {
+                        handleNextSlide();
+                      }
+                    }}
+                    onClick={() => {
+                      setSlideDirection(null);
+                      setSelectedPhoto(currentPhoto);
+                    }}
+                    className="w-full h-full object-cover cursor-zoom-in"
                   />
-                  {/* Premium overlay visible on hover */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-brand-dark/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-5">
-                    <p className="text-white text-xs font-serif italic truncate w-full">{item.caption}</p>
-                  </div>
-                </div>
+                </AnimatePresence>
 
-                {/* Tag overlay */}
-                <span className="absolute top-4 left-4 bg-brand-dark/90 text-[#FAF6F0] text-[8px] uppercase tracking-widest font-bold px-2.5 py-1 font-mono rounded">
-                  {item.category}
+                {/* Tag Overlay */}
+                <span className="absolute top-4 left-4 bg-brand-dark/95 text-[#FAF6F0] text-[8px] uppercase tracking-widest font-bold px-2.5 py-1 font-mono rounded z-10">
+                  {currentPhoto.category}
                 </span>
 
-                {/* Text caption details and likes count at bottom */}
-                <div className="p-5 border-t border-brand-warm-tan/10 bg-[#FAF6F0]">
-                  <p className="font-sans text-xs text-brand-dark/80 leading-relaxed italic">
-                    &ldquo;{item.caption}&rdquo;
-                  </p>
+                {/* Left Slide Arrow */}
+                {filteredPhotos.length > 1 && (
+                  <button
+                    onClick={handlePrevSlide}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-[#FAF6F0]/90 hover:bg-brand-rose hover:text-white text-brand-dark shadow transition-all duration-300 opacity-80 hover:opacity-100 flex items-center justify-center cursor-pointer z-10 border border-brand-warm-tan/10"
+                    title="Previous Slide"
+                  >
+                    <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
+                  </button>
+                )}
 
-                  <div className="mt-4 pt-3 border-t border-brand-warm-tan/15 flex items-center justify-between text-[10px]">
-                    <span className="text-[#A67E6B] font-medium flex items-center gap-1 font-mono uppercase tracking-wider">
-                      Routine Log
-                    </span>
-                    
-                    {/* Likes count */}
+                {/* Right Slide Arrow */}
+                {filteredPhotos.length > 1 && (
+                  <button
+                    onClick={handleNextSlide}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-[#FAF6F0]/90 hover:bg-brand-rose hover:text-white text-brand-dark shadow transition-all duration-300 opacity-80 hover:opacity-100 flex items-center justify-center cursor-pointer z-10 border border-brand-warm-tan/10"
+                    title="Next Slide"
+                  >
+                    <ChevronRight className="w-4 h-4 stroke-[2.5]" />
+                  </button>
+                )}
+              </div>
+
+              {/* Slider Info Deck Card */}
+              <div className="w-full mt-6 p-6 bg-[#FAF6F0] border border-[#DCCAAB]/25 rounded-[24px] shadow-sm flex flex-col gap-4 text-left">
+                <p className="font-serif text-sm sm:text-base italic text-brand-dark leading-relaxed">
+                  &ldquo;{currentPhoto.caption}&rdquo;
+                </p>
+
+                <div className="pt-3 border-t border-brand-warm-tan/15 flex items-center justify-between text-[10px]">
+                  <span className="text-[#A67E6B] font-medium flex items-center gap-1 font-mono uppercase tracking-wider">
+                    Lookbook Entry
+                  </span>
+                  
+                  <div className="flex items-center gap-4">
+                    {/* Share action */}
                     <button
-                      onClick={(e) => handleLike(item.id, e)}
+                      onClick={() => handleShare(currentPhoto)}
+                      className="flex items-center gap-1.5 font-semibold text-brand-dark/50 hover:text-brand-rose transition-colors cursor-pointer"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                      <span>{copied ? 'Copied' : 'Share'}</span>
+                    </button>
+
+                    {/* Like button */}
+                    <button
+                      onClick={(e) => handleLike(currentPhoto.id, e)}
                       className={`flex items-center gap-1.5 font-semibold transition-colors focus:outline-none cursor-pointer ${
-                        userLiked ? 'text-brand-rose' : 'text-brand-dark/50 hover:text-brand-rose'
+                        hasLiked[currentPhoto.id] ? 'text-brand-rose' : 'text-brand-dark/50 hover:text-brand-rose'
                       }`}
                     >
-                      <span>{userLiked ? 'Liked' : 'Like'}</span>
-                      <span className="text-[9px] font-mono">({itemLikes})</span>
+                      <span>{hasLiked[currentPhoto.id] ? 'Liked' : 'Like'}</span>
+                      <span className="text-[9px] font-mono">({getLikes(currentPhoto.id)})</span>
                     </button>
                   </div>
                 </div>
+              </div>
 
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
-      </motion.div>
+              {/* Indicator Dots */}
+              {filteredPhotos.length > 1 && (
+                <div className="flex gap-1.5 mt-5 flex-wrap justify-center max-w-full">
+                  {filteredPhotos.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        setSlideDirection(idx > currentSlideIndex ? 'right' : 'left');
+                        setCurrentSlideIndex(idx);
+                        setCopied(false);
+                      }}
+                      className={`w-2 h-2 rounded-full transition-all duration-300 cursor-pointer ${
+                        currentSlideIndex === idx 
+                          ? 'bg-brand-rose w-4' 
+                          : 'bg-brand-warm-tan/30 hover:bg-brand-warm-tan/65'
+                      }`}
+                      title={`Go to slide ${idx + 1}`}
+                    />
+                  ))}
+                </div>
+              )}
 
-      {/* Load More Button for Scalability */}
-      {filteredPhotos.length > visibleCount && (
-        <div className="flex justify-center mt-12 mb-20">
-          <motion.button
-            onClick={() => setVisibleCount(prev => prev + 3)}
-            whileHover={{ scale: prefersReducedMotion ? 1 : 1.02 }}
-            whileTap={{ scale: prefersReducedMotion ? 1 : 0.98 }}
-            className="px-8 py-3 bg-brand-dark hover:bg-brand-rose text-[#FAF6F0] text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer rounded-xl shadow-sm"
-          >
-            Load More Photos
-          </motion.button>
+            </div>
+          ) : (
+            <div className="py-20 text-center bg-[#FAF6F0] border border-brand-warm-tan/25 rounded-2xl max-w-md w-full">
+              <Camera className="w-8 h-8 text-[#B11B41] mx-auto mb-3 opacity-60" />
+              <p className="font-serif text-base text-brand-dark">No lookbook portraits found.</p>
+              <p className="font-sans text-xs text-brand-dark/50 mt-1">Try selecting a different gallery category.</p>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Empty elements warning */}
-      {filteredPhotos.length === 0 && (
-        <div className="py-20 text-center bg-brand-beige/10 border border-brand-warm-tan/25 rounded-2xl">
-          <Camera className="w-8 h-8 text-[#B11B41] mx-auto mb-3 opacity-60" />
-          <p className="font-serif text-base text-brand-dark">No progress portraits found.</p>
-          <p className="font-sans text-xs text-brand-dark/50 mt-1">Try selecting a different lifestyle milestone.</p>
-        </div>
+      {/* 🖼 2. Grid Portfolio View */}
+      {viewMode === 'grid' && (
+        <>
+          <motion.div 
+            layout={prefersReducedMotion ? false : "position"}
+            className="columns-1 sm:columns-2 lg:columns-3 gap-8 space-y-8"
+          >
+            <AnimatePresence mode="popLayout">
+              {paginatedPhotos.map((item) => {
+                const itemLikes = getLikes(item.id);
+                const userLiked = hasLiked[item.id];
+
+                return (
+                  <motion.div
+                    layout={prefersReducedMotion ? false : "position"}
+                    key={item.id}
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
+                    transition={{ duration: 0.25 }}
+                    onClick={() => {
+                      setSlideDirection(null);
+                      setSelectedPhoto(item);
+                    }}
+                    whileHover={{ y: prefersReducedMotion ? 0 : -4 }}
+                    className="break-inside-avoid mb-8 relative overflow-hidden border border-[#DCCAAB]/25 bg-[#FAF6F0] hover:border-brand-rose/60 hover:shadow-md transition-shadow duration-300 cursor-pointer group rounded-2xl"
+                  >
+                    {/* Photo Stage */}
+                    <div className="relative overflow-hidden w-full">
+                      <motion.img
+                        src={item.image}
+                        alt={item.caption}
+                        referrerPolicy="no-referrer"
+                        whileHover={prefersReducedMotion ? {} : { scale: 1.03 }}
+                        transition={{ duration: 0.5 }}
+                        className="w-full object-cover"
+                      />
+                      {/* Premium overlay visible on hover */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-brand-dark/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-5">
+                        <p className="text-white text-xs font-serif italic truncate w-full">{item.caption}</p>
+                      </div>
+                    </div>
+
+                    {/* Tag overlay */}
+                    <span className="absolute top-4 left-4 bg-brand-dark/90 text-[#FAF6F0] text-[8px] uppercase tracking-widest font-bold px-2.5 py-1 font-mono rounded">
+                      {item.category}
+                    </span>
+
+                    {/* Text caption details and likes count at bottom */}
+                    <div className="p-5 border-t border-brand-warm-tan/10 bg-[#FAF6F0]">
+                      <p className="font-sans text-xs text-brand-dark/80 leading-relaxed italic">
+                        &ldquo;{item.caption}&rdquo;
+                      </p>
+
+                      <div className="mt-4 pt-3 border-t border-brand-warm-tan/15 flex items-center justify-between text-[10px]">
+                        <span className="text-[#A67E6B] font-medium flex items-center gap-1 font-mono uppercase tracking-wider">
+                          Lookbook Log
+                        </span>
+                        
+                        {/* Likes count */}
+                        <button
+                          onClick={(e) => handleLike(item.id, e)}
+                          className={`flex items-center gap-1.5 font-semibold transition-colors focus:outline-none cursor-pointer ${
+                            userLiked ? 'text-brand-rose' : 'text-brand-dark/50 hover:text-brand-rose'
+                          }`}
+                        >
+                          <span>{userLiked ? 'Liked' : 'Like'}</span>
+                          <span className="text-[9px] font-mono">({itemLikes})</span>
+                        </button>
+                      </div>
+                    </div>
+
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </motion.div>
+
+          {/* Load More Button for Scalability */}
+          {filteredPhotos.length > visibleCount && (
+            <div className="flex justify-center mt-12 mb-20">
+              <motion.button
+                onClick={() => setVisibleCount(prev => prev + 3)}
+                whileHover={{ scale: prefersReducedMotion ? 1 : 1.02 }}
+                whileTap={{ scale: prefersReducedMotion ? 1 : 0.98 }}
+                className="px-8 py-3 bg-brand-dark hover:bg-brand-rose text-[#FAF6F0] text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer rounded-xl shadow-sm"
+              >
+                Load More Photos
+              </motion.button>
+            </div>
+          )}
+
+          {/* Empty elements warning */}
+          {filteredPhotos.length === 0 && (
+            <div className="py-20 text-center bg-brand-beige/10 border border-brand-warm-tan/25 rounded-2xl">
+              <Camera className="w-8 h-8 text-[#B11B41] mx-auto mb-3 opacity-60" />
+              <p className="font-serif text-base text-brand-dark">No progress portraits found.</p>
+              <p className="font-sans text-xs text-brand-dark/50 mt-1">Try selecting a different lifestyle milestone.</p>
+            </div>
+          )}
+        </>
       )}
 
       {/* ======================================= */}

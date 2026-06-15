@@ -20,7 +20,7 @@ export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openC
     { label: 'Home', key: 'home' },
     { label: 'Shop Essentials', key: 'shop' },
     { label: 'Watch Tutorials', key: 'tutorials' },
-    { label: 'Progress Gallery', key: 'gallery' },
+    { label: 'Gallery', key: 'gallery' },
     { label: 'Our Story', key: 'story' },
     { label: 'Contact', key: 'contact' },
   ];

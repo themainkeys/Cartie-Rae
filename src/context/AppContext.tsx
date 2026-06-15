@@ -112,6 +112,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (item.thumbnailUrl && item.thumbnailUrl.includes('photo-1608139556157-196be06511fc')) {
             return { ...item, thumbnailUrl: '/about-portrait.jpg' };
           }
+          // Reset/migrate URL of seed videos if they have old/dead placeholder URLs
+          const initialMatch = initialVideos.find(v => v.id === item.id);
+          if (initialMatch && item.videoUrl !== initialMatch.videoUrl) {
+            return { ...item, videoUrl: initialMatch.videoUrl };
+          }
           return item;
         });
         
@@ -133,13 +138,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const local = localStorage.getItem('cartiae_gallery');
     if (local) {
       try {
-        const parsed = JSON.parse(local) as PhotoGalleryItem[];
-        return parsed.map(item => {
+        let parsed = JSON.parse(local) as PhotoGalleryItem[];
+        parsed = parsed.map(item => {
           if (item.id === 'gal-5' && item.image.includes('photo-1509967419530-da38b4704bc6')) {
             return { ...item, image: '/hero-portrait.jpg' };
           }
           return item;
         });
+
+        // Dynamic migration: Seed new initialGallery items not present in user's localStorage array
+        const parsedIds = new Set(parsed.map(g => g.id));
+        const missingFromInitial = initialGallery.filter(g => !parsedIds.has(g.id));
+        if (missingFromInitial.length > 0) {
+          return [...parsed, ...missingFromInitial];
+        }
+        return parsed;
       } catch (e) {
         return initialGallery;
       }
