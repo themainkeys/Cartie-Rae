@@ -82,11 +82,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetails
         <motion.img
           src={product.image}
           alt={product.name}
+          loading="lazy"
           referrerPolicy="no-referrer"
           whileHover={prefersReducedMotion ? {} : { scale: 1.04 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
           className="w-full h-full object-cover"
         />
+
+        {/* Best Seller Badge */}
+        {product.isFeatured && (
+          <span className="absolute top-4 left-4 bg-brand-rose text-white px-2 py-0.5 text-[8px] font-sans font-bold uppercase tracking-widest rounded shadow-xs z-10">
+            Best Seller
+          </span>
+        )}
 
         {/* Quick View Hover Backdrop Overlay */}
         <div className="absolute inset-0 bg-brand-dark/25 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
@@ -170,13 +178,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetails
             id={`add-to-bag-${product.id}`}
             onClick={handleAdd}
             disabled={product.stockStatus === 'Out of Stock'}
+            whileHover={{ scale: product.stockStatus === 'Out of Stock' || prefersReducedMotion ? 1 : 1.02 }}
             whileTap={{ scale: product.stockStatus === 'Out of Stock' || prefersReducedMotion ? 1 : 0.97 }}
-            className={`flex-1 py-2.5 text-[10px] uppercase tracking-widest font-semibold transition-colors duration-300 focus:outline-none rounded-xl cursor-pointer ${
+            className={`flex-1 py-2.5 text-[10px] uppercase tracking-widest font-bold transition-all duration-300 focus:outline-none rounded-xl cursor-pointer shadow-[0_2px_8px_rgba(74,43,32,0.15)] hover:shadow-lg ${
               product.stockStatus === 'Out of Stock'
                 ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
                 : added
                 ? 'bg-brand-rose text-white'
-                : 'bg-brand-dark hover:bg-brand-rose text-white'
+                : 'bg-brand-dark hover:bg-brand-rose hover:text-white text-white'
             }`}
           >
             {added ? 'Added to Bag ✓' : 'Add to Bag'}

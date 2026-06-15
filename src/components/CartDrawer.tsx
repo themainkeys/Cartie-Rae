@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { 
   ShoppingCart, X, Trash2, ArrowLeft, CreditCard, 
@@ -127,6 +127,49 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
     onClose();
   };
 
+  const drawerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleCloseCheckout();
+        return;
+      }
+      if (e.key === 'Tab' && drawerRef.current) {
+        const focusableElements = drawerRef.current.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex="0"]'
+        );
+        if (focusableElements.length === 0) return;
+        const first = focusableElements[0] as HTMLElement;
+        const last = focusableElements[focusableElements.length - 1] as HTMLElement;
+
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            last.focus();
+            e.preventDefault();
+          }
+        } else {
+          if (document.activeElement === last) {
+            first.focus();
+            e.preventDefault();
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    // Focus close button initially
+    setTimeout(() => {
+      const closeBtn = drawerRef.current?.querySelector('button');
+      if (closeBtn) closeBtn.focus();
+    }, 100);
+
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -143,6 +186,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
 
           {/* Drawer Slide-Over Sheet */}
           <motion.div
+            ref={drawerRef}
             id="cart-drawer-container"
             initial={{ x: prefersReducedMotion ? 0 : '100%', opacity: prefersReducedMotion ? 0 : 1 }}
             animate={{ x: 0, opacity: 1 }}

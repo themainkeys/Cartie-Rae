@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { Product, EBook } from '../types';
 import { ProductCard } from '../components/ProductCard';
@@ -50,6 +50,89 @@ export const MainStore: React.FC<MainStoreProps> = ({ initialFilter = 'All', isC
   // States
   const [promoInput, setPromoInput] = useState('');
   const [promoError, setPromoError] = useState<string | null>(null);
+
+  const productModalRef = useRef<HTMLDivElement>(null);
+  const ebookModalRef = useRef<HTMLDivElement>(null);
+
+  // Keyboard trap and ESC key closure for product modal
+  useEffect(() => {
+    if (!selectedProduct) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelectedProduct(null);
+        return;
+      }
+      if (e.key === 'Tab' && productModalRef.current) {
+        const focusableElements = productModalRef.current.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex="0"]'
+        );
+        if (focusableElements.length === 0) return;
+        const first = focusableElements[0] as HTMLElement;
+        const last = focusableElements[focusableElements.length - 1] as HTMLElement;
+
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            last.focus();
+            e.preventDefault();
+          }
+        } else {
+          if (document.activeElement === last) {
+            first.focus();
+            e.preventDefault();
+          }
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    // Focus close button initially
+    setTimeout(() => {
+      const closeBtn = productModalRef.current?.querySelector('button');
+      if (closeBtn) closeBtn.focus();
+    }, 100);
+
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedProduct]);
+
+  // Keyboard trap and ESC key closure for eBook modal
+  useEffect(() => {
+    if (!selectedEBook) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelectedEBook(null);
+        return;
+      }
+      if (e.key === 'Tab' && ebookModalRef.current) {
+        const focusableElements = ebookModalRef.current.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex="0"]'
+        );
+        if (focusableElements.length === 0) return;
+        const first = focusableElements[0] as HTMLElement;
+        const last = focusableElements[focusableElements.length - 1] as HTMLElement;
+
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            last.focus();
+            e.preventDefault();
+          }
+        } else {
+          if (document.activeElement === last) {
+            first.focus();
+            e.preventDefault();
+          }
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    // Focus close button initially
+    setTimeout(() => {
+      const closeBtn = ebookModalRef.current?.querySelector('button');
+      if (closeBtn) closeBtn.focus();
+    }, 100);
+
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedEBook]);
 
   const categories = ['All', 'eBooks', 'Hair Oils', 'Accessories', 'Treatments'];
 
@@ -371,6 +454,7 @@ export const MainStore: React.FC<MainStoreProps> = ({ initialFilter = 'All', isC
             
             {/* Modal Box */}
             <motion.div
+              ref={productModalRef}
               initial={{ opacity: 0, scale: 0.95, y: prefersReducedMotion ? 0 : 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: prefersReducedMotion ? 0 : 15 }}
@@ -559,7 +643,7 @@ export const MainStore: React.FC<MainStoreProps> = ({ initialFilter = 'All', isC
                     disabled={selectedProduct.stockStatus === 'Out of Stock'}
                     whileHover={{ scale: selectedProduct.stockStatus === 'Out of Stock' || prefersReducedMotion ? 1 : 1.02 }}
                     whileTap={{ scale: selectedProduct.stockStatus === 'Out of Stock' || prefersReducedMotion ? 1 : 0.98 }}
-                    className={`px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 focus:outline-none transition-all duration-200 cursor-pointer ${
+                    className={`px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-rose transition-all duration-200 cursor-pointer ${
                       selectedProduct.stockStatus === 'Out of Stock'
                         ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
                         : 'bg-brand-rose hover:bg-brand-berry text-white shadow-[0_2px_10px_rgba(194,57,90,0.2)] hover:shadow-lg'
@@ -592,6 +676,7 @@ export const MainStore: React.FC<MainStoreProps> = ({ initialFilter = 'All', isC
             
             {/* Modal Box */}
             <motion.div
+              ref={ebookModalRef}
               initial={{ opacity: 0, scale: 0.95, y: prefersReducedMotion ? 0 : 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: prefersReducedMotion ? 0 : 15 }}
@@ -622,8 +707,8 @@ export const MainStore: React.FC<MainStoreProps> = ({ initialFilter = 'All', isC
 
                 {/* Core description text */}
                 <div className="p-6">
-                  <span className="bg-brand-pink-light text-brand-rose text-[9px] uppercase tracking-widest font-bold px-2 py-0.5 rounded border border-brand-rose/10">
-                    Instant Download • eBook Guidance
+                  <span className="bg-emerald-50 text-emerald-800 text-[9px] uppercase tracking-widest font-extrabold px-2 py-0.5 rounded border border-emerald-200/50">
+                    Instant Digital Download
                   </span>
                   <h3 className="font-serif text-2xl font-bold text-brand-dark leading-tight mt-2.5">
                     {selectedEBook.name}
@@ -739,7 +824,7 @@ export const MainStore: React.FC<MainStoreProps> = ({ initialFilter = 'All', isC
                     }}
                     whileHover={{ scale: prefersReducedMotion ? 1 : 1.02 }}
                     whileTap={{ scale: prefersReducedMotion ? 1 : 0.98 }}
-                    className="bg-brand-rose hover:bg-brand-berry text-white px-6 py-2.5 rounded-full text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 focus:outline-none cursor-pointer"
+                    className="bg-brand-rose hover:bg-brand-berry text-white px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-rose transition-all duration-200 cursor-pointer shadow-md hover:shadow-lg"
                   >
                     <ShoppingBag className="w-4 h-4" />
                     <span>Add To Bag</span>

@@ -92,6 +92,7 @@ export const EBookCard: React.FC<EBookCardProps> = ({ ebook, onViewDetails }) =>
         <img
           src={ebook.image}
           alt={ebook.name}
+          loading="lazy"
           referrerPolicy="no-referrer"
           className="w-full h-full object-cover transition-transform duration-700"
         />
@@ -106,7 +107,7 @@ export const EBookCard: React.FC<EBookCardProps> = ({ ebook, onViewDetails }) =>
             }}
             whileHover={{ scale: prefersReducedMotion ? 1 : 1.05 }}
             whileTap={{ scale: prefersReducedMotion ? 1 : 0.95 }}
-            className="px-3 py-1.5 bg-[#FAF6F0] hover:bg-brand-rose hover:text-white text-brand-dark text-[9px] uppercase font-semibold tracking-widest shadow-md transition-all duration-300 flex items-center gap-1 cursor-pointer rounded-lg"
+            className="px-3 py-1.5 bg-[#FAF6F0] hover:bg-brand-rose hover:text-white text-brand-dark text-[9px] uppercase font-semibold tracking-widest shadow-md transition-all duration-300 flex items-center gap-1.5 cursor-pointer rounded-lg"
           >
             <Eye className="w-3 h-3" />
             Preview
@@ -136,6 +137,17 @@ export const EBookCard: React.FC<EBookCardProps> = ({ ebook, onViewDetails }) =>
         >
           <Heart className={`w-3.5 h-3.5 ${isSaved ? 'fill-brand-rose text-brand-rose' : 'text-brand-dark/70'}`} />
         </motion.button>
+
+        {/* Instant Digital Download Badge */}
+        <span className="absolute top-3 left-3 bg-emerald-700 text-white px-2 py-0.5 text-[7px] font-sans font-extrabold uppercase tracking-wider rounded shadow-xs z-10">
+          Instant Download
+        </span>
+
+        {ebook.isFeatured && (
+          <span className="absolute bottom-3 right-3 bg-brand-rose text-[#FAF6F0] px-1.5 py-0.5 text-[7.5px] font-mono border border-brand-warm-tan/30 uppercase tracking-widest font-bold rounded z-10 shadow-xs">
+            Best Seller
+          </span>
+        )}
 
         {/* PDF Badge */}
         <span className="absolute bottom-3 left-3 bg-[#FAF6F0]/90 text-brand-dark px-2 py-0.5 text-[9px] font-mono border border-brand-warm-tan/30 uppercase tracking-widest font-semibold rounded">
@@ -194,11 +206,12 @@ export const EBookCard: React.FC<EBookCardProps> = ({ ebook, onViewDetails }) =>
             <motion.button
               id={`add-ebook-cart-${ebook.id}`}
               onClick={handleAdd}
+              whileHover={{ scale: prefersReducedMotion ? 1 : 1.02 }}
               whileTap={{ scale: prefersReducedMotion ? 1 : 0.97 }}
-              className={`flex-1 sm:flex-initial px-6 py-2.5 text-[10px] uppercase tracking-widest font-semibold transition-colors duration-300 focus:outline-none rounded-xl cursor-pointer ${
+              className={`flex-1 sm:flex-initial px-6 py-2.5 text-[10px] uppercase tracking-widest font-bold transition-all duration-300 focus:outline-none rounded-xl cursor-pointer shadow-[0_2px_8px_rgba(74,43,32,0.15)] hover:shadow-lg ${
                 added
                   ? 'bg-brand-rose text-white'
-                  : 'bg-brand-dark hover:bg-brand-rose text-white'
+                  : 'bg-brand-dark hover:bg-brand-rose hover:text-white text-white'
               }`}
             >
               {added ? 'Added to Bag ✓' : 'Add to Bag'}

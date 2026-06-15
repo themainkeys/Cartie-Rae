@@ -125,6 +125,9 @@ interface VideoGridCardProps {
   onShare: () => void;
   onClick: () => void;
   prefersReducedMotion: boolean;
+  isPlayingPreview: boolean;
+  onHoverStart: () => void;
+  onHoverEnd: () => void;
 }
 
 const VideoGridCard: React.FC<VideoGridCardProps> = ({
@@ -138,9 +141,11 @@ const VideoGridCard: React.FC<VideoGridCardProps> = ({
   onSave,
   onShare,
   onClick,
-  prefersReducedMotion
+  prefersReducedMotion,
+  isPlayingPreview,
+  onHoverStart,
+  onHoverEnd
 }) => {
-  const [playPreview, setPlayPreview] = useState(false);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -155,7 +160,7 @@ const VideoGridCard: React.FC<VideoGridCardProps> = ({
   const handleMouseEnter = () => {
     if (!window.matchMedia('(hover: hover)').matches) return;
     hoverTimeoutRef.current = setTimeout(() => {
-      setPlayPreview(true);
+      onHoverStart();
     }, 300);
   };
 
@@ -164,7 +169,7 @@ const VideoGridCard: React.FC<VideoGridCardProps> = ({
       clearTimeout(hoverTimeoutRef.current);
       hoverTimeoutRef.current = null;
     }
-    setPlayPreview(false);
+    onHoverEnd();
     if (videoRef.current) {
       videoRef.current.pause();
       videoRef.current.currentTime = 0;
@@ -196,7 +201,7 @@ const VideoGridCard: React.FC<VideoGridCardProps> = ({
       {/* Video preview / Cover stage */}
       <div className="absolute inset-0 w-full h-full bg-black flex items-center justify-center">
         <AnimatePresence mode="wait">
-          {playPreview ? (
+          {isPlayingPreview ? (
             <motion.div
               key="player"
               initial={{ opacity: 0 }}
@@ -263,7 +268,7 @@ const VideoGridCard: React.FC<VideoGridCardProps> = ({
       </div>
 
       {/* Progress loop indicator */}
-      {playPreview && (
+      {isPlayingPreview && (
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20 z-20 overflow-hidden">
           <div 
             className="h-full bg-brand-rose origin-left"
@@ -318,7 +323,7 @@ const VideoGridCard: React.FC<VideoGridCardProps> = ({
             e.stopPropagation();
             onClick(); // Opens detail lightbox modal
           }}
-          className="mt-2.5 bg-[#FAF6F0] hover:bg-brand-rose text-brand-dark hover:text-white px-3 py-1.5 rounded-xl text-[9px] uppercase font-extrabold tracking-widest transition-all duration-300 flex items-center gap-1 cursor-pointer w-fit pointer-events-auto shadow-sm"
+          className="mt-2.5 bg-[#FAF6F0] hover:bg-brand-rose text-brand-dark hover:text-white px-3 py-1.5 rounded-xl text-[9px] uppercase font-extrabold tracking-widest transition-all duration-300 flex items-center gap-1 cursor-pointer w-fit pointer-events-auto shadow-sm hover:scale-[1.02] active:scale-[0.98]"
         >
           <ShoppingBag className="w-3 h-3 shrink-0" />
           <span>Shop Routine ({relatedItemsCount})</span>
@@ -387,6 +392,9 @@ export const VideoGallery: React.FC = () => {
   const [isMuted, setIsMuted] = useState(true);
   const [modalTab, setModalTab] = useState<'shop' | 'comments'>('shop');
   
+  // Lifted hover video state
+  const [hoveredVideoId, setHoveredVideoId] = useState<string | null>(null);
+  
   // Simulated stats tracking
   const [likedMap, setLikedMap] = useState<Record<string, boolean>>({});
   const [savedMap, setSavedMap] = useState<Record<string, boolean>>({});
@@ -403,6 +411,7 @@ export const VideoGallery: React.FC = () => {
   const [teaserSuccess, setTeaserSuccess] = useState(false);
 
   const backdropRef = useRef<HTMLDivElement>(null);
+  const modalContainerRef = useRef<HTMLDivElement>(null);
   const touchStartY = useRef(0);
 
   const categories: ('All' | 'Wash Day' | 'Styling' | 'Growth Tips' | 'Protective Styles' | 'Cornrows')[] = [
@@ -461,16 +470,49 @@ export const VideoGallery: React.FC = () => {
     setCommentsMap(seedComments);
   }, [videos]);
 
-  // Handle ESC key to close modal
+  // Focus trapping & ESC key support inside modal
   useEffect(() => {
+    if (!activePlaybackVideoId) return;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setActivePlaybackVideoId(null);
+        return;
+      }
+      if (e.key === 'Tab' && modalContainerRef.current) {
+        const focusableElements = modalContainerRef.current.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex="0"], iframe, video'
+        );
+        if (focusableElements.length === 0) return;
+        const first = focusableElements[0] as HTMLElement;
+        const last = focusableElements[focusableElements.length - 1] as HTMLElement;
+
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            last.focus();
+            e.preventDefault();
+          }
+        } else {
+          if (document.activeElement === last) {
+            first.focus();
+            e.preventDefault();
+          }
+        }
       }
     };
+
     window.addEventListener('keydown', handleKeyDown);
+    
+    // Set initial focus to the close button
+    setTimeout(() => {
+      const closeBtn = modalContainerRef.current?.querySelector('button');
+      if (closeBtn) {
+        closeBtn.focus();
+      }
+    }, 100);
+
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [activePlaybackVideoId]);
 
   const activeVideo = useMemo(() => {
     return videos.find(v => v.id === activePlaybackVideoId);
@@ -704,6 +746,13 @@ export const VideoGallery: React.FC = () => {
                     setModalTab('shop');
                   }}
                   prefersReducedMotion={prefersReducedMotion}
+                  isPlayingPreview={hoveredVideoId === video.id}
+                  onHoverStart={() => setHoveredVideoId(video.id)}
+                  onHoverEnd={() => {
+                    if (hoveredVideoId === video.id) {
+                      setHoveredVideoId(null);
+                    }
+                  }}
                 />
               );
             })}
@@ -771,6 +820,7 @@ export const VideoGallery: React.FC = () => {
 
             {/* Immersive Detail Card Dialog Container */}
             <motion.div
+              ref={modalContainerRef}
               initial={{ scale: 0.95, y: 15 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 15 }}
@@ -926,7 +976,7 @@ export const VideoGallery: React.FC = () => {
 
                             <button
                               onClick={() => handleAddProduct(item)}
-                              className="px-3 py-1.5 bg-brand-dark hover:bg-brand-rose text-[#FAF6F0] text-[9px] uppercase font-bold tracking-widest transition-colors rounded-xl focus:outline-none cursor-pointer shrink-0"
+                              className="px-3 py-1.5 bg-brand-dark hover:bg-brand-rose text-[#FAF6F0] text-[9px] uppercase font-bold tracking-widest transition-all rounded-xl focus:outline-none cursor-pointer shrink-0 hover:scale-[1.02] active:scale-[0.98] shadow-sm"
                             >
                               Add
                             </button>

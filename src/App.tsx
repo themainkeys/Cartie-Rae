@@ -163,9 +163,9 @@ const Homepage: React.FC<{
               <div className="space-y-3">
                 <motion.span 
                   variants={getRevealItem(prefersReducedMotion)}
-                  className="font-sans text-[10px] uppercase tracking-[0.3em] text-brand-rose font-semibold block"
+                  className="font-sans text-[10px] uppercase tracking-[0.25em] text-brand-rose font-semibold block"
                 >
-                  Natural 4C Hair Science
+                  Hair Education • eBooks • Products • Tutorials
                 </motion.span>
                 <motion.h1 
                   variants={getRevealItem(prefersReducedMotion)}
@@ -188,23 +188,23 @@ const Homepage: React.FC<{
                 className="flex flex-col sm:flex-row gap-4 pt-2"
               >
                 <motion.button
-                  id="hero-buy-blueprint"
-                  onClick={handleQuickBuyBlueprint}
+                  id="hero-start-journey"
+                  onClick={() => setActivePart('shop')}
                   whileHover={{ scale: prefersReducedMotion ? 1 : 1.01 }}
                   whileTap={{ scale: prefersReducedMotion ? 1 : 0.99 }}
-                  className="bg-brand-dark hover:bg-[#3d1a10] text-[#FAF6F0] px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.15em] transition-colors duration-300 flex items-center justify-center cursor-pointer shadow-sm hover:shadow-md rounded-xl"
+                  className="bg-brand-dark hover:bg-[#3d1a10] text-[#FAF6F0] px-8 py-3.5 text-xs font-bold uppercase tracking-[0.15em] transition-all duration-300 flex items-center justify-center cursor-pointer shadow-[0_4px_14px_rgba(74,43,32,0.15)] hover:shadow-lg rounded-xl focus-visible:ring-2 focus-visible:ring-brand-rose focus:outline-none"
                 >
-                  <span>eBook Blueprint — $24.99</span>
+                  <span>Start Your Hair Journey</span>
                 </motion.button>
 
                 <motion.button
-                  id="hero-view-tutorials"
+                  id="hero-shop-routine"
                   onClick={() => setActivePart('tutorials')}
                   whileHover={{ scale: prefersReducedMotion ? 1 : 1.01 }}
                   whileTap={{ scale: prefersReducedMotion ? 1 : 0.99 }}
-                  className="bg-transparent border border-brand-dark/20 hover:border-brand-dark hover:bg-brand-dark/5 text-brand-dark px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.15em] transition-all duration-300 flex items-center justify-center cursor-pointer rounded-xl"
+                  className="bg-transparent border-2 border-brand-dark hover:bg-brand-dark hover:text-[#FAF6F0] text-brand-dark px-8 py-3.5 text-xs font-bold uppercase tracking-[0.15em] transition-all duration-300 flex items-center justify-center cursor-pointer rounded-xl focus-visible:ring-2 focus-visible:ring-brand-rose focus:outline-none"
                 >
-                  <span>Watch Free Tutorials</span>
+                  <span>Shop the Routine</span>
                 </motion.button>
               </motion.div>
 
@@ -471,6 +471,78 @@ const Homepage: React.FC<{
       </motion.section>
 
       {/* ======================================= */}
+      {/* 🌟 2.75 CUSTOMER REVIEWS & TESTIMONIALS */}
+      {/* ======================================= */}
+      <motion.section
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-100px" }}
+        variants={getRevealContainer(prefersReducedMotion)}
+        className="max-w-7xl mx-auto px-6 lg:px-8 py-10"
+      >
+        <div className="text-center mb-10 space-y-2">
+          <span className="text-[10px] uppercase tracking-widest text-[#B11B41] font-semibold block">Verified Results</span>
+          <h2 className="font-serif text-2xl lg:text-3xl text-brand-dark font-normal">What Our Coily Collective Says</h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[
+            {
+              quote: "The Botanical Growth Oil completely restored my thinning temples in just three weeks. It absorbs instantly without clogging my coily follicles.",
+              author: "Nia J.",
+              verified: "Verified Buyer",
+              rating: 5,
+              product: "Botanical Growth Oil"
+            },
+            {
+              quote: "I used to dread wash days—they took up to six hours! Following the Wash Day Mastery blueprint cut it down to 90 minutes. A total lifesaver.",
+              author: "Brianna S.",
+              verified: "Verified eBook Student",
+              rating: 5,
+              product: "Wash Day Mastery Guide"
+            },
+            {
+              quote: "The Mulberry Silk Sleep Cap stays securely on my head all night without slipping or pressing my edges. My 4C curls feel hydrated every morning.",
+              author: "Tamera W.",
+              verified: "Verified Buyer",
+              rating: 5,
+              product: "Silk Sleep Cap"
+            }
+          ].map((item, index) => (
+            <motion.div
+              key={index}
+              variants={getRevealItemScale(prefersReducedMotion)}
+              className="bg-white border border-brand-warm-tan/15 p-6 rounded-2xl shadow-xs hover:shadow-md transition-shadow duration-300 flex flex-col justify-between"
+            >
+              <div className="space-y-3">
+                {/* 5 Stars */}
+                <div className="flex text-amber-500">
+                  {[...Array(item.rating)].map((_, i) => (
+                    <Star key={i} className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                  ))}
+                </div>
+                <p className="font-sans text-xs sm:text-[13px] italic text-[#5C453C]/95 leading-relaxed">
+                  &ldquo;{item.quote}&rdquo;
+                </p>
+              </div>
+
+              <div className="border-t border-brand-warm-tan/10 pt-3 mt-4 flex items-center justify-between text-[10px] font-sans">
+                <div>
+                  <span className="font-bold text-brand-dark block">{item.author}</span>
+                  <span className="text-emerald-700 font-semibold flex items-center gap-0.5 mt-0.5">
+                    ✓ {item.verified}
+                  </span>
+                </div>
+                <span className="text-[#A67E6B] font-mono text-[9px] uppercase tracking-wider font-bold">
+                  {item.product}
+                </span>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </motion.section>
+
+      {/* ======================================= */}
       {/* 🚪 3. SIMPLE & REFINED HAIR STORY BIO   */}
       {/* ======================================= */}
       <motion.section 
@@ -478,36 +550,75 @@ const Homepage: React.FC<{
         whileInView="visible"
         viewport={{ once: true, margin: "-100px" }}
         variants={getRevealContainer(prefersReducedMotion)}
-        className="bg-brand-beige/25 py-20"
+        className="bg-brand-beige/25 py-20 border-y border-brand-warm-tan/10"
       >
-        <div className="max-w-3xl mx-auto px-6 text-center space-y-6">
-          <motion.span variants={getRevealItem(prefersReducedMotion)} className="text-[10px] uppercase tracking-widest text-[#B11B41] font-semibold block">Our Approach</motion.span>
-          <motion.h2 
-            variants={getRevealItem(prefersReducedMotion)}
-            className="font-serif text-3xl font-medium text-brand-dark leading-tight"
-          >
-            {homepageContent.aboutHeadline}
-          </motion.h2>
-          <motion.div variants={getRevealItem(prefersReducedMotion)} className="h-[1px] w-12 bg-brand-rose/40 mx-auto" />
-          
-          <motion.p 
-            variants={getRevealItem(prefersReducedMotion)}
-            className="font-sans text-sm text-[#5C453C]/85 leading-relaxed text-center"
-          >
-            {homepageContent.aboutStory.split('.').slice(0, 4).join('.') + '.'}
-          </motion.p>
-
-          <motion.div variants={getRevealItem(prefersReducedMotion)} className="pt-4">
-            <motion.button
-              id="read-bio-story-btn"
-              onClick={() => setActivePart('story')}
-              whileHover={{ scale: prefersReducedMotion ? 1 : 1.02 }}
-              whileTap={{ scale: prefersReducedMotion ? 1 : 0.98 }}
-              className="px-8 py-3 bg-brand-dark hover:bg-brand-rose text-[#FAF6F0] text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer rounded-xl"
+        <div className="max-w-5xl mx-auto px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
+            
+            {/* Left side: Professional Portrait with elegant border */}
+            <motion.div 
+              variants={getRevealItemScale(prefersReducedMotion)}
+              className="md:col-span-5 relative"
             >
-              Read Our Full Story
-            </motion.button>
-          </motion.div>
+              <div className="aspect-[4/5] overflow-hidden bg-brand-beige border border-brand-warm-tan/20 rounded-2xl shadow-md">
+                <img
+                  src="/about-portrait.jpg"
+                  alt="Founder Cartiae Rae"
+                  loading="lazy"
+                  className="w-full h-full object-cover select-none"
+                />
+              </div>
+              {/* Subtle visual accent */}
+              <div className="absolute -bottom-3 -right-3 bg-brand-dark text-[#FAF6F0] px-4 py-2.5 rounded-xl text-[10px] tracking-wider uppercase font-mono border border-brand-warm-tan/15 shadow-sm hidden sm:block">
+                ★ 15K+ Routines Calibrated
+              </div>
+            </motion.div>
+
+            {/* Right side: Founder Story and Credibility Statement */}
+            <div className="md:col-span-7 text-left space-y-6">
+              <div className="space-y-2">
+                <motion.span variants={getRevealItem(prefersReducedMotion)} className="text-[10px] uppercase tracking-widest text-[#B11B41] font-semibold block">Meet the Founder</motion.span>
+                <motion.h2 
+                  variants={getRevealItem(prefersReducedMotion)}
+                  className="font-serif text-3xl font-medium text-brand-dark leading-tight"
+                >
+                  {homepageContent.aboutHeadline}
+                </motion.h2>
+                <motion.div variants={getRevealItem(prefersReducedMotion)} className="h-[1.5px] w-14 bg-brand-rose/60" />
+              </div>
+              
+              <motion.p 
+                variants={getRevealItem(prefersReducedMotion)}
+                className="font-sans text-xs sm:text-sm text-[#5C453C]/90 leading-relaxed"
+              >
+                {homepageContent.aboutStory.split('.').slice(0, 4).join('.') + '.'}
+              </motion.p>
+
+              {/* Explaining why people should trust her guidance */}
+              <motion.div 
+                variants={getRevealItem(prefersReducedMotion)}
+                className="p-4 bg-white/60 border border-brand-warm-tan/20 rounded-xl space-y-2"
+              >
+                <h4 className="font-serif text-xs font-bold text-brand-dark uppercase tracking-wider">Why Trust My Guidance?</h4>
+                <p className="font-sans text-[11px] text-[#5C453C]/80 leading-relaxed">
+                  As a certified Coily Hair Specialist, I have spent years formulating clean botanical blends and testing detangling protocols on fine, highly-elliptical 4C curls. My routines have helped over 15,000 clients minimize mechanical damage and achieve true moisture retention.
+                </p>
+              </motion.div>
+
+              <motion.div variants={getRevealItem(prefersReducedMotion)} className="pt-2">
+                <motion.button
+                  id="read-bio-story-btn"
+                  onClick={() => setActivePart('story')}
+                  whileHover={{ scale: prefersReducedMotion ? 1 : 1.02 }}
+                  whileTap={{ scale: prefersReducedMotion ? 1 : 0.98 }}
+                  className="px-8 py-3 bg-brand-dark hover:bg-brand-rose text-[#FAF6F0] text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer rounded-xl shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-rose"
+                >
+                  Read Our Full Story
+                </motion.button>
+              </motion.div>
+            </div>
+            
+          </div>
         </div>
       </motion.section>
 
