@@ -31,23 +31,24 @@ To access the CMS Console and update your storefront, click **Admin** in the foo
 
 ## 💎 Premium Customer Experience Features
 
-### 1. Homepage Conversion
-- **Tags & Headlines**: Displays clear taglines indicating your key offerings: *Hair Education • eBooks • Products • Tutorials*.
-- **Tactile CTAs**: High-contrast buttons like *"Start Your Hair Journey"* and *"Shop the Routine"* direct customers directly to conversion points.
-- **Founder Story**: Redesigned to show your portrait (`/about-portrait.jpg`) alongside a professional statement explaining why clients should trust your coily-hair expertise.
-- **Social Proof Grid**: Displays detailed customer testimonials with 5-star verified badges.
+### 1. Minimalist Homepage
+- **Clean Structure**: The landing page features a hero portrait of Cartiae Rae, a brief elegant brand introduction, and immediate, clean navigation cards linking directly to the main site paths: **eBook**, **Services**, **Visuals**, and **Shop**. All cluttered sections (testimonials, bio cards, product sliders, and newsletters) have been removed for high-intent conversion.
 
-### 2. Immersive Watch Tutorials Page
-- **9:16 Video Mockups**: Render coily hair regimens similarly to TikTok and YouTube Shorts.
-- **Isolated Desktop Hover Previews**: Hovering over a card starts a muted preview after 300ms. If the mouse leaves or moves to another card, the previous preview instantly stops (ensuring only *one* video plays at a time).
-- **Cinematic Lightbox Modal**: Clicking a card opens a full-screen theater overlay. Customers can read full details, browse and **"Add to Bag"** products used in the video, or participate in the **Q&A Discussion comments**.
-- **Close Gestures**: Tap the close `X`, click the backdrop outside the frame, or press the `Escape` key.
+### 2. Private Coaching & Services Page
+- **Coaching Products**: Dedicated Services page featuring two private virtual calls ($100 each): *Hair Assessment Guidance Call* and *Social Media Growth Coaching Call*, complete with deliverables, notices, and disclaimers.
+- **Digital Booking Workflow**: Booking a coaching session adds a virtual item to the cart. During checkout, these digital service items bypass the shipping address form. On success, the Cart Drawer displays clear instructions: *"Virtual Booking Confirmed: We will contact you at your email address within 24 hours to schedule your session."*
 
-### 3. Apothecary Shop
-- **Buy CTAs**: Upgraded visual hierarchy with high-contrast, bold buttons featuring hover scaling and soft shadows.
-- **Instant Digital Download**: Digital eBooks render an emerald-green badge indicating instant access upon purchase.
-- **Best Seller Badging**: Featured guides and elixirs render prominent labels.
+### 3. Immersive Watch Tutorials (Visuals)
+- **Step Into the Studio**: The video feed is renamed to **Visuals** and features a clean grid.
+- **Isolated Hover Previews**: Muted video previews play automatically on desktop mouse hover and stop instantly when the mouse leaves.
+- **Lightbox Details**: Clicking a card opens a full-screen theater overlay, allowing comments, and listing products featured. The `"Cornrows"` category has been retired.
 
+### 4. Simplified Lookbook (Gallery)
+- **Lookbook view**: Replaces the old multi-tab lookbook sections with a sleek, minimalist slideshow styled as a premium Editorial Lookbook. The `"Lifestyle"` category has been retired.
+
+### 5. Streamlined Contact & FAQs
+- **Contact Form**: Removed porosity, hair type, and reference photo attachment fields. Added a **Phone Number** field and renamed the submit button to a bold `"Dispatch Message to Cartiae Rae"`.
+- **Frequently Asked Questions**: Updated answers to detail the instant eBook delivery process and how 1-on-1 consultations are booked and scheduled.
 ---
 
 ## 🛠️ CMS Console Operations (How to Manage Content)
