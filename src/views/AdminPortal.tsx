@@ -130,7 +130,7 @@ const ImageDropzone: React.FC<ImageDropzoneProps> = ({ imageValue, onImageChange
         className="hidden"
       />
       {imageValue ? (
-        <div className="flex items-center gap-3 w-full" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-3 w-full">
           <img
             src={imageValue}
             alt="Uploaded Preview"
@@ -138,15 +138,13 @@ const ImageDropzone: React.FC<ImageDropzoneProps> = ({ imageValue, onImageChange
           />
           <div className="text-left flex-1 min-w-0">
             <p className="text-[10px] font-bold text-brand-chocolate truncate">{label} Uploaded</p>
-            <p className="text-[9px] text-[#A67E6B] font-medium">Click Replace or drop new file</p>
+            <p className="text-[9px] text-[#A67E6B] font-medium">Click anywhere to replace file</p>
           </div>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
+          <span
             className="text-[9px] text-brand-rose font-bold bg-brand-pink-light/50 px-2 py-1 rounded hover:bg-brand-rose hover:text-white transition-colors whitespace-nowrap"
           >
             Replace
-          </button>
+          </span>
         </div>
       ) : (
         <div className="flex flex-col items-center text-center">
