@@ -594,6 +594,36 @@ export const initialGallery: PhotoGalleryItem[] = [
     image: '/about-portrait.jpg',
     caption: 'Founder Cartiae Rae showcasing daily moisturized, bouncy natural 4C coils.',
     category: 'Progress'
+  },
+  {
+    id: 'gal-11',
+    image: '/lookbook-1.jpg',
+    caption: 'Classic straight-back feed-in cornrows highlighting neat parting and clean protective style symmetry.',
+    category: 'Hairstyles'
+  },
+  {
+    id: 'gal-12',
+    image: '/lookbook-2.jpg',
+    caption: 'Side-profile twist braid detailing with silver hoop accents for a sleek, contemporary protective look.',
+    category: 'Hairstyles'
+  },
+  {
+    id: 'gal-13',
+    image: '/lookbook-3.jpg',
+    caption: 'Elegant cornrow patterns and styled braids paired with golden jewelry accents for a premium finish.',
+    category: 'Hairstyles'
+  },
+  {
+    id: 'gal-14',
+    image: '/lookbook-4.jpg',
+    caption: 'Bouncy, healthy natural Afro growth showing extreme shape retention and carefully styled baby hair edges.',
+    category: 'Progress'
+  },
+  {
+    id: 'gal-15',
+    image: '/lookbook-5.jpg',
+    caption: 'Short, defined natural curls exhibiting rich luster, balanced moisture density, and gold accessory framing.',
+    category: 'Progress'
   }
 ];
 

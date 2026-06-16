@@ -132,12 +132,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (local) {
       try {
         let parsed = JSON.parse(local) as PhotoGalleryItem[];
-        return parsed.map(item => {
+        const mapped = parsed.map(item => {
           if (item.id === 'gal-5' && item.image.includes('photo-1509967419530-da38b4704bc6')) {
             return { ...item, image: '/hero-portrait.jpg' };
           }
           return item;
         });
+
+        // Seed new lookbook photos (gal-11 to gal-15) if missing from local storage
+        const parsedIds = new Set(mapped.map(g => g.id));
+        const newSeedIds = ['gal-11', 'gal-12', 'gal-13', 'gal-14', 'gal-15'];
+        const missingNewSeeds = initialGallery.filter(g => newSeedIds.includes(g.id) && !parsedIds.has(g.id));
+        if (missingNewSeeds.length > 0) {
+          return [...missingNewSeeds, ...mapped];
+        }
+        return mapped;
       } catch (e) {
         return initialGallery;
       }
