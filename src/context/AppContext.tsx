@@ -139,9 +139,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           return item;
         });
 
-        // Seed new lookbook photos (gal-11 to gal-15) if missing from local storage
+        // Seed new lookbook photos (gal-11 to gal-20) if missing from local storage
         const parsedIds = new Set(mapped.map(g => g.id));
-        const newSeedIds = ['gal-11', 'gal-12', 'gal-13', 'gal-14', 'gal-15'];
+        const newSeedIds = [
+          'gal-11', 'gal-12', 'gal-13', 'gal-14', 'gal-15',
+          'gal-16', 'gal-17', 'gal-18', 'gal-19', 'gal-20'
+        ];
         const missingNewSeeds = initialGallery.filter(g => newSeedIds.includes(g.id) && !parsedIds.has(g.id));
         if (missingNewSeeds.length > 0) {
           return [...missingNewSeeds, ...mapped];

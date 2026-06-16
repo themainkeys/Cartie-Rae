@@ -624,6 +624,36 @@ export const initialGallery: PhotoGalleryItem[] = [
     image: '/lookbook-5.jpg',
     caption: 'Short, defined natural curls exhibiting rich luster, balanced moisture density, and gold accessory framing.',
     category: 'Progress'
+  },
+  {
+    id: 'gal-16',
+    image: '/lookbook-6.jpg',
+    caption: 'Active lather foaming during our Botanical Shampoo wash sequence to clarify natural cuticles.',
+    category: 'Routines'
+  },
+  {
+    id: 'gal-17',
+    image: '/lookbook-7.jpg',
+    caption: 'Dividing natural hair into chunky sections to optimize moisture distribution and ease tension.',
+    category: 'Routines'
+  },
+  {
+    id: 'gal-18',
+    image: '/lookbook-8.jpg',
+    caption: 'A gorgeous, defined twist-out style revealing incredible volume and springy natural 4C curl shape.',
+    category: 'Hairstyles'
+  },
+  {
+    id: 'gal-19',
+    image: '/lookbook-9.jpg',
+    caption: 'Stretching and detangling fine 4C coils using our wide-tooth pick sequence to prevent knotting.',
+    category: 'Routines'
+  },
+  {
+    id: 'gal-20',
+    image: '/lookbook-10.jpg',
+    caption: 'Cuticle moisture saturation check showing shiny, hydrated coil patterns fresh after conditioning.',
+    category: 'Progress'
   }
 ];
 
