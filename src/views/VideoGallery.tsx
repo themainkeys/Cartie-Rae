@@ -385,7 +385,7 @@ const VideoGridCard: React.FC<VideoGridCardProps> = ({
 
 export const VideoGallery: React.FC = () => {
   const { videos, products, ebooks, addToCart, triggerToast, prefersReducedMotion } = useApp();
-  const [activeCategory, setActiveCategory] = useState<'All' | 'Wash Day' | 'Styling' | 'Growth Tips' | 'Protective Styles'>('All');
+  const [activeCategory, setActiveCategory] = useState<'All' | 'Wash Day' | 'Styling' | 'Growth Tips' | 'Protective Styles' | 'Product Reviews' | 'Tutorials'>('All');
   
   // Immersive Modal State
   const [activePlaybackVideoId, setActivePlaybackVideoId] = useState<string | null>(null);
