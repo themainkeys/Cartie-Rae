@@ -35,24 +35,12 @@ export const FAQ: React.FC = () => {
 
   const faqs: FAQItem[] = [
     {
-      question: "How often should I moisturize my 4C natural hair?",
-      answer: "Since 4C hair's tight, zigzag coil pattern prevents your scalp's natural sebum from easily traveling down the hair shaft, dry strands are common. We recommend moisturizing every 2 to 3 days using the L.C.O. (Liquid/Leave-In, Cream, Oil) method to seal in rich hydration without weighing down fine fibers."
+      question: "When will I receive my purchased eBooks?",
+      answer: "Your eBook is delivered instantly after purchase. A download link appears on your confirmation page, and a copy is also sent to your email for future access."
     },
     {
-      question: "Why is shrinkage natural, and how should I manage it?",
-      answer: "Shrinkage is a sign of highly elastic, healthy, and hydrated hair—it can shrink up to 75% of its true length when wet. Instead of fighting it with strong high-heat styling tools, embrace it, or manage it gently using heatless stretching methods like banding, threading, flat-twists, or chunky braids."
-    },
-    {
-      question: "Is it possible to grow short 4C hair past active shoulder-length?",
-      answer: "Absolutely. All healthy hair grows continuously, but 4C strands are delicate and prone to breaking at the ends. Retaining length is the secret: focus on deep conditioning, minimizing daily manual manipulation, keeping ends tucked into protective styles, and shielding strands from dry fabrics using mulberry silk bonnets."
-    },
-    {
-      question: "How do I prevent single-strand knots (fairy knots) to keep ends smooth?",
-      answer: "Single-strand knots occur when coily strands curl back into themselves and tie a knot. You can reduce them by keeping your hair stretched rather than fully shrunken, detangling only with generous conditioner slip, trimming weathered tips with professional shears, and sleeping on friction-free satin pillowcases."
-    },
-    {
-      question: "Should my daily routine prioritize proteins or moisture?",
-      answer: "For natural 4C coily hair, daily hydration should rely on water and humectant solutions (like aloe vera liquid) locked in by rich botanical oils. Protein treatments should be reserved as a structured monthly or bi-monthly remedy to reinforce structural cuticle integrity without inducing hardness or brittleness."
+      question: "Do I offer 1-on-1 consultations?",
+      answer: "Yes. Consultations are private personalized sessions tailored to your goals. After booking, you will receive a confirmation email with your meeting details and everything you need to prepare."
     }
   ];
 
@@ -71,10 +59,10 @@ export const FAQ: React.FC = () => {
     >
       <motion.div variants={revealItem} className="text-center space-y-3 mb-10">
         <span className="text-[10px] uppercase tracking-[0.3em] text-brand-berry font-bold block">
-          Education & Answers
+          Support &amp; Details
         </span>
         <h2 className="font-serif text-3xl font-normal text-brand-dark">
-          Common 4C Care Questions
+          Frequently Asked Questions
         </h2>
         <div className="h-[1px] w-12 bg-brand-rose/40 mx-auto mt-2" />
       </motion.div>

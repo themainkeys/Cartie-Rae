@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { EBook, Product, TikTokVideo, PhotoGalleryItem, BlogPost, DiscountCode, CartItem, Order, NewsletterSignup, HomepageContent, WishlistItem, ContactRequest } from '../types';
+import { EBook, Product, TikTokVideo, PhotoGalleryItem, BlogPost, DiscountCode, CartItem, Order, NewsletterSignup, HomepageContent, WishlistItem, ContactRequest, AdminUser } from '../types';
 import { initialEBooks, initialProducts, initialVideos, initialGallery, initialBlogPosts, initialDiscountCodes, initialHomepageContent } from '../data/initialData';
 
 interface AppContextType {
@@ -15,6 +15,7 @@ interface AppContextType {
   orders: Order[];
   appliedDiscount: DiscountCode | null;
   isAdminLoggedIn: boolean;
+  currentAdminUser: AdminUser | null;
   wishlist: WishlistItem[];
   toast: { message: string; type: 'success' | 'info' | 'error' } | null;
   triggerToast: (message: string, type?: 'success' | 'info' | 'error') => void;
@@ -38,10 +39,12 @@ interface AppContextType {
   
   // Video Operations
   addVideo: (video: Omit<TikTokVideo, 'id'>) => void;
+  updateVideo: (id: string, updated: Partial<TikTokVideo>) => void;
   deleteVideo: (id: string) => void;
   
   // Gallery Operations
   addGalleryItem: (item: Omit<PhotoGalleryItem, 'id'>) => void;
+  updateGalleryItem: (id: string, updated: Partial<Omit<PhotoGalleryItem, 'id'>>) => void;
   deleteGalleryItem: (id: string) => void;
   
   // Blog Operations
@@ -84,6 +87,7 @@ interface AppContextType {
   // Settings & Preferences
   emailNotificationsEnabled: boolean;
   setEmailNotificationsEnabled: (enabled: boolean) => void;
+  prefersReducedMotion: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -102,17 +106,73 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [videos, setVideos] = useState<TikTokVideo[]>(() => {
     const local = localStorage.getItem('cartiae_videos');
-    return local ? JSON.parse(local) : initialVideos;
+    if (local) {
+      try {
+        let parsed = JSON.parse(local) as TikTokVideo[];
+        return parsed.map(item => {
+          if (item.thumbnailUrl && item.thumbnailUrl.includes('photo-1608139556157-196be06511fc')) {
+            return { ...item, thumbnailUrl: '/about-portrait.jpg' };
+          }
+          // Reset/migrate URL of seed videos if they have old/dead placeholder URLs
+          const initialMatch = initialVideos.find(v => v.id === item.id);
+          if (initialMatch && item.videoUrl !== initialMatch.videoUrl) {
+            return { ...item, videoUrl: initialMatch.videoUrl };
+          }
+          return item;
+        });
+      } catch (e) {
+        return initialVideos;
+      }
+    }
+    return initialVideos;
   });
 
   const [gallery, setGallery] = useState<PhotoGalleryItem[]>(() => {
     const local = localStorage.getItem('cartiae_gallery');
-    return local ? JSON.parse(local) : initialGallery;
+    if (local) {
+      try {
+        let parsed = JSON.parse(local) as PhotoGalleryItem[];
+        const mapped = parsed.map(item => {
+          if (item.id === 'gal-5' && item.image.includes('photo-1509967419530-da38b4704bc6')) {
+            return { ...item, image: '/hero-portrait.jpg' };
+          }
+          return item;
+        });
+
+        // Seed new lookbook photos (gal-11 to gal-20) if missing from local storage
+        const parsedIds = new Set(mapped.map(g => g.id));
+        const newSeedIds = [
+          'gal-11', 'gal-12', 'gal-13', 'gal-14', 'gal-15',
+          'gal-16', 'gal-17', 'gal-18', 'gal-19', 'gal-20'
+        ];
+        const missingNewSeeds = initialGallery.filter(g => newSeedIds.includes(g.id) && !parsedIds.has(g.id));
+        if (missingNewSeeds.length > 0) {
+          return [...missingNewSeeds, ...mapped];
+        }
+        return mapped;
+      } catch (e) {
+        return initialGallery;
+      }
+    }
+    return initialGallery;
   });
 
   const [blogs, setBlogs] = useState<BlogPost[]>(() => {
     const local = localStorage.getItem('cartiae_blogs');
-    return local ? JSON.parse(local) : initialBlogPosts;
+    if (local) {
+      try {
+        const parsed = JSON.parse(local) as BlogPost[];
+        return parsed.map(item => {
+          if (item.image && item.image.includes('photo-1608139556157-196be06511fc')) {
+            return { ...item, image: '/about-portrait.jpg' };
+          }
+          return item;
+        });
+      } catch (e) {
+        return initialBlogPosts;
+      }
+    }
+    return initialBlogPosts;
   });
 
   const [discountCodes, setDiscountCodes] = useState<DiscountCode[]>(() => {
@@ -137,13 +197,67 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [orders, setOrders] = useState<Order[]>(() => {
     const local = localStorage.getItem('cartiae_orders');
-    return local ? JSON.parse(local) : [];
+    return local ? JSON.parse(local) : [
+      {
+        id: 'ORD-4029',
+        customerName: 'Aria Carter',
+        customerEmail: 'aria.carter@gmail.com',
+        customerPhone: '+1 (555) 728-1923',
+        shippingAddress: '435 Peachtree St, Atlanta, GA 30308',
+        items: [
+          { id: 'ebook-1', type: 'ebook', name: 'The 4C Growth Blueprint', price: 24.99, image: 'https://images.unsplash.com/photo-1618673747378-7e0af319150f?auto=format&fit=crop&q=80&w=800', quantity: 1 }
+        ],
+        subtotal: 24.99,
+        discountAmount: 0,
+        total: 24.99,
+        date: '2026-06-08',
+        status: 'Fulfilled'
+      },
+      {
+        id: 'ORD-4030',
+        customerName: 'Shayla Jenkins',
+        customerEmail: 'shayla.j@yahoo.com',
+        customerPhone: '+1 (555) 381-8109',
+        shippingAddress: '128 Crown Heights Blvd, Brooklyn, NY 11213',
+        items: [
+          { id: 'prod-1', type: 'product', name: 'Botanical Growth Oil', price: 38.00, image: 'https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&q=80&w=800', quantity: 1 },
+          { id: 'prod-2', type: 'product', name: 'Silk Sleep Cap', price: 25.00, image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=800', quantity: 1 }
+        ],
+        subtotal: 63.00,
+        discountAmount: 9.45,
+        total: 53.55,
+        discountCodeApplied: 'GROW4C',
+        date: '2026-06-10',
+        status: 'Pending'
+      }
+    ];
   });
 
   const [contactRequests, setContactRequests] = useState<ContactRequest[]>(() => {
     const local = localStorage.getItem('cartiae_contacts');
     if (local) return JSON.parse(local);
-    return [];
+    return [
+      {
+        id: 'CON-101',
+        name: 'Tiffany Adams',
+        email: 'tiff.adams@gmail.com',
+        porosity: 'Low Porosity 4C',
+        message: 'Hi Cartiae! I bought your organic oils last week, and I am struggling with severe breakage around my Crown region. How often should I apply the oil under my steam cap? Attached is a photo of my hair condition.',
+        photoAttachment: 'https://images.unsplash.com/photo-1595959183075-c1d0a5113cc3?auto=format&fit=crop&q=80&w=600',
+        date: '2026-06-11',
+        status: 'Pending'
+      },
+      {
+        id: 'CON-102',
+        name: 'Nailah Vance',
+        email: 'nailah.v@outlook.com',
+        porosity: 'High Porosity 4C',
+        message: 'My hair is extremely dry and absorbs water within five minutes, then gets flaky again. I attached a photo of my natural curls. Please advise if the Botanical formula will build up on my locs.',
+        photoAttachment: 'https://images.unsplash.com/photo-1605980776566-0486c3ac7617?auto=format&fit=crop&q=80&w=600',
+        date: '2026-06-12',
+        status: 'Pending'
+      }
+    ];
   });
 
   const [appliedDiscount, setAppliedDiscount] = useState<DiscountCode | null>(() => {
@@ -155,6 +269,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return localStorage.getItem('cartiae_admin_auth') === 'true';
   });
 
+  const [currentAdminUser, setCurrentAdminUser] = useState<AdminUser | null>(() => {
+    const local = localStorage.getItem('cartiae_admin_user');
+    return local ? JSON.parse(local) : null;
+  });
+
   const [wishlist, setWishlist] = useState<WishlistItem[]>(() => {
     const local = localStorage.getItem('cartiae_wishlist');
     return local ? JSON.parse(local) : [];
@@ -164,6 +283,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const local = localStorage.getItem('cartiae_email_notifications_enabled');
     return local !== null ? local === 'true' : true;
   });
+
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setPrefersReducedMotion(media.matches);
+    const listener = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
+    media.addEventListener('change', listener);
+    return () => media.removeEventListener('change', listener);
+  }, []);
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
 
@@ -196,6 +325,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => { localStorage.setItem('cartiae_applied_discount', JSON.stringify(appliedDiscount)); }, [appliedDiscount]);
   useEffect(() => { localStorage.setItem('cartiae_wishlist', JSON.stringify(wishlist)); }, [wishlist]);
   useEffect(() => { localStorage.setItem('cartiae_email_notifications_enabled', String(emailNotificationsEnabled)); }, [emailNotificationsEnabled]);
+  useEffect(() => {
+    if (currentAdminUser) {
+      localStorage.setItem('cartiae_admin_user', JSON.stringify(currentAdminUser));
+    } else {
+      localStorage.removeItem('cartiae_admin_user');
+    }
+  }, [currentAdminUser]);
 
   // --- Contact Request Operations ---
   const addContactRequest = (request: Omit<ContactRequest, 'id' | 'date' | 'status'>) => {
@@ -270,6 +406,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setVideos(prev => [newVideo, ...prev]);
   };
 
+  const updateVideo = (id: string, updated: Partial<TikTokVideo>) => {
+    setVideos(prev => prev.map(item => item.id === id ? { ...item, ...updated } : item));
+  };
+
   const deleteVideo = (id: string) => {
     setVideos(prev => prev.filter(item => item.id !== id));
   };
@@ -281,6 +421,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `gal-${Date.now()}`
     };
     setGallery(prev => [newItem, ...prev]);
+  };
+
+  const updateGalleryItem = (id: string, updated: Partial<Omit<PhotoGalleryItem, 'id'>>) => {
+    setGallery(prev => prev.map(item => item.id === id ? { ...item, ...updated } : item));
   };
 
   const deleteGalleryItem = (id: string) => {
@@ -475,11 +619,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // --- Admin Auth ---
   const loginAdmin = (password: string): boolean => {
-    // Private administrative password for the live storefront owner
-    const ADMIN_PASSWORD = 'CartiaeRae2026!';
-    if (password === ADMIN_PASSWORD) {
+    let user: AdminUser | null = null;
+    if (password === 'admin' || password === 'cartiae123') {
+      user = { id: 'adm-001', name: 'Cartiae Rae', email: 'admin@cartiaerae.com', role: 'super_admin' };
+    } else if (password === 'manager') {
+      user = { id: 'adm-002', name: 'Elena Vance (Manager)', email: 'manager@cartiaerae.com', role: 'store_manager' };
+    } else if (password === 'content') {
+      user = { id: 'adm-003', name: 'Brianna Smith (Editor)', email: 'content@cartiaerae.com', role: 'content_manager' };
+    }
+
+    if (user) {
       setIsAdminLoggedIn(true);
+      setCurrentAdminUser(user);
       localStorage.setItem('cartiae_admin_auth', 'true');
+      localStorage.setItem('cartiae_admin_user', JSON.stringify(user));
       return true;
     }
     return false;
@@ -487,18 +640,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const logoutAdmin = () => {
     setIsAdminLoggedIn(false);
+    setCurrentAdminUser(null);
     localStorage.removeItem('cartiae_admin_auth');
+    localStorage.removeItem('cartiae_admin_user');
   };
 
   return (
     <AppContext.Provider value={{
-      ebooks, products, videos, gallery, blogs, discountCodes, homepageContent, newsletterSignups, cart, orders, appliedDiscount, isAdminLoggedIn, wishlist,
+      ebooks, products, videos, gallery, blogs, discountCodes, homepageContent, newsletterSignups, cart, orders, appliedDiscount, isAdminLoggedIn, currentAdminUser, wishlist,
       contactRequests,
       toast, triggerToast,
       addEBook, updateEBook, deleteEBook,
       addProduct, updateProduct, deleteProduct,
-      addVideo, deleteVideo,
-      addGalleryItem, deleteGalleryItem,
+      addVideo, updateVideo, deleteVideo,
+      addGalleryItem, updateGalleryItem, deleteGalleryItem,
       addBlogPost, updateBlogPost, deleteBlogPost, likeBlogPost,
       addDiscountCode, deleteDiscountCode,
       updateHomepageContent,
@@ -508,7 +663,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createOrder, fulfillOrder,
       loginAdmin, logoutAdmin,
       addContactRequest, respondToContactRequest, deleteContactRequest, updateContactRequestStatus,
-      emailNotificationsEnabled, setEmailNotificationsEnabled
+      emailNotificationsEnabled, setEmailNotificationsEnabled,
+      prefersReducedMotion
     }}>
       {children}
     </AppContext.Provider>

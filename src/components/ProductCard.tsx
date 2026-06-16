@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Product } from '../types';
 import { useApp } from '../context/AppContext';
-import { Star, ShoppingBag, Heart, Check, Flame, Share2, Eye } from 'lucide-react';
+import { Star, ShoppingBag, Heart, Check, Share2, Eye } from 'lucide-react';
+import { motion } from 'motion/react';
 
 interface ProductCardProps {
   product: Product;
@@ -9,7 +10,7 @@ interface ProductCardProps {
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetails }) => {
-  const { addToCart, wishlist, addToWishlist, removeFromWishlist } = useApp();
+  const { addToCart, wishlist, addToWishlist, removeFromWishlist, prefersReducedMotion } = useApp();
   const [added, setAdded] = useState(false);
   const [shared, setShared] = useState(false);
 
@@ -49,12 +50,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetails
     }
   };
 
-  // Calculate average rating
   const avgRating = product.reviews.length > 0
     ? Math.round((product.reviews.reduce((acc, r) => acc + r.score, 0) / product.reviews.length) * 10) / 10
-    : 4.8; // default beautiful rating
-
-  const reviewCount = product.reviews.length > 0 ? product.reviews.length : 124;
+    : 4.8;
 
   const handleAdd = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -69,48 +67,53 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetails
     setTimeout(() => setAdded(false), 2000);
   };
 
-  const getStockColor = () => {
-    switch (product.stockStatus) {
-      case 'Out of Stock':
-        return 'bg-zinc-100 text-zinc-500 border-zinc-200';
-      case 'Low Stock':
-        return 'bg-amber-50 text-amber-800 border-amber-200/50';
-      case 'In Stock':
-      default:
-        return 'bg-emerald-50 text-emerald-800 border-emerald-200/50';
-    }
-  };
-
   return (
-    <div
+    <motion.div
       onClick={() => onViewDetails(product)}
-      className="group flex flex-col bg-[#FAF6F0] overflow-hidden border border-brand-warm-tan/20 transition-all duration-300 cursor-pointer h-full"
+      whileHover={{ 
+        y: prefersReducedMotion ? 0 : -6,
+        boxShadow: prefersReducedMotion ? "none" : "0 12px 30px -10px rgba(74, 43, 32, 0.08)"
+      }}
+      transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+      className="group flex flex-col bg-[#FAF6F0] overflow-hidden border border-brand-warm-tan/20 cursor-pointer h-full rounded-2xl"
     >
       {/* Product Image Stage */}
       <div className="relative aspect-[4/5] w-full bg-brand-beige overflow-hidden">
-        <img
+        <motion.img
           src={product.image}
           alt={product.name}
+          loading="lazy"
           referrerPolicy="no-referrer"
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-101"
+          whileHover={prefersReducedMotion ? {} : { scale: 1.04 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="w-full h-full object-cover"
         />
+
+        {/* Best Seller Badge */}
+        {product.isFeatured && (
+          <span className="absolute top-4 left-4 bg-brand-rose text-white px-2 py-0.5 text-[8px] font-sans font-bold uppercase tracking-widest rounded shadow-xs z-10">
+            Best Seller
+          </span>
+        )}
 
         {/* Quick View Hover Backdrop Overlay */}
         <div className="absolute inset-0 bg-brand-dark/25 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-          <button
+          <motion.button
             onClick={(e) => {
               e.stopPropagation();
               onViewDetails(product);
             }}
-            className="px-4 py-2 bg-[#FAF6F0] hover:bg-brand-rose hover:text-white text-brand-dark text-[10px] uppercase font-semibold tracking-widest shadow-md transition-all duration-300 flex items-center gap-1.5 transform translate-y-2 group-hover:translate-y-0 cursor-pointer"
+            whileHover={{ scale: prefersReducedMotion ? 1 : 1.05 }}
+            whileTap={{ scale: prefersReducedMotion ? 1 : 0.95 }}
+            className="px-4 py-2 bg-[#FAF6F0] hover:bg-brand-rose hover:text-white text-brand-dark text-[10px] uppercase font-semibold tracking-widest shadow-md transition-all duration-300 flex items-center gap-1.5 transform translate-y-2 group-hover:translate-y-0 cursor-pointer rounded-xl"
           >
             <Eye className="w-3.5 h-3.5" />
             Quick View
-          </button>
+          </motion.button>
         </div>
 
         {/* Favorite Button Overlay (Subtle) */}
-        <button
+        <motion.button
           onClick={(e) => {
             e.stopPropagation();
             if (isSaved) {
@@ -125,11 +128,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetails
               });
             }
           }}
-          className="absolute top-4 right-4 p-2 rounded-none bg-white/90 shadow-sm hover:bg-brand-rose hover:text-white text-brand-dark transition-colors focus:outline-none"
+          whileHover={{ scale: prefersReducedMotion ? 1 : 1.08 }}
+          whileTap={{ scale: prefersReducedMotion ? 1 : 0.92 }}
+          className="absolute top-4 right-4 p-2 rounded-full bg-white/90 shadow-sm hover:bg-brand-rose hover:text-white text-brand-dark transition-colors focus:outline-none z-10 cursor-pointer"
           aria-label="Wishlist product"
         >
           <Heart className={`w-3.5 h-3.5 ${isSaved ? 'fill-brand-rose text-brand-rose' : 'text-brand-dark/70'}`} />
-        </button>
+        </motion.button>
 
         {/* Out of Stock flag overlay (Subtle dark ribbon) */}
         {product.stockStatus === 'Out of Stock' && (
@@ -146,7 +151,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetails
             {product.category}
           </span>
           {product.stockStatus === 'Low Stock' && (
-            <span className="font-sans text-[8px] uppercase font-bold text-amber-700">
+            <span className="font-sans text-[8px] uppercase font-bold text-amber-750">
               Low Stock
             </span>
           )}
@@ -169,32 +174,35 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetails
 
         {/* Action Button at the very base */}
         <div className="pt-2 mt-auto flex gap-2">
-          <button
+          <motion.button
             id={`add-to-bag-${product.id}`}
             onClick={handleAdd}
             disabled={product.stockStatus === 'Out of Stock'}
-            className={`flex-1 py-2.5 text-[10px] uppercase tracking-widest font-semibold transition-colors duration-300 focus:outline-none ${
+            whileHover={{ scale: product.stockStatus === 'Out of Stock' || prefersReducedMotion ? 1 : 1.02 }}
+            whileTap={{ scale: product.stockStatus === 'Out of Stock' || prefersReducedMotion ? 1 : 0.97 }}
+            className={`flex-1 py-2.5 text-[10px] uppercase tracking-widest font-bold transition-all duration-300 focus:outline-none rounded-xl cursor-pointer shadow-[0_2px_8px_rgba(74,43,32,0.15)] hover:shadow-lg ${
               product.stockStatus === 'Out of Stock'
                 ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
                 : added
-                ? 'bg-[#3b82f6] text-white'
-                : 'bg-brand-dark hover:bg-brand-rose text-white'
+                ? 'bg-brand-rose text-white'
+                : 'bg-brand-dark hover:bg-brand-rose hover:text-white text-white'
             }`}
           >
-            {added ? 'Added to Bag' : 'Add to Bag'}
-          </button>
+            {added ? 'Added to Bag ✓' : 'Add to Bag'}
+          </motion.button>
           
-          <button
+          <motion.button
             id={`share-product-${product.id}`}
             onClick={handleShare}
-            className="px-3 py-2.5 text-[10px] bg-[#FAF6F0] border border-brand-warm-tan/30 hover:bg-brand-rose hover:text-[#FAF6F0] text-brand-dark transition-colors duration-300 focus:outline-none flex items-center justify-center cursor-pointer"
+            whileTap={{ scale: prefersReducedMotion ? 1 : 0.95 }}
+            className="px-3 py-2.5 text-[10px] bg-[#FAF6F0] border border-brand-warm-tan/30 hover:bg-brand-rose hover:text-[#FAF6F0] text-brand-dark transition-colors duration-300 focus:outline-none flex items-center justify-center cursor-pointer rounded-xl"
             title="Share Product"
             aria-label="Share product"
           >
             {shared ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Share2 className="w-3.5 h-3.5" />}
-          </button>
+          </motion.button>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
