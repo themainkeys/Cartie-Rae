@@ -48,7 +48,7 @@ export const stripeService = {
     const successUrl = `${window.location.origin}/checkout-success?session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${window.location.origin}/cart`;
 
-    const containsDigitalItems = cart.some(item => item.type === 'ebook');
+    const containsDigitalItems = cart.some(item => item.type === 'ebook' || item.type === 'service');
     const containsPhysicalItems = cart.some(item => item.type === 'product');
 
     // Format line items for Stripe price_data
@@ -69,7 +69,11 @@ export const stripeService = {
           product_data: {
             name: item.name,
             images: [item.image],
-            description: item.type === 'ebook' ? 'Instant Access Digital eBook PDF Guide' : 'Natural Botanical Hair Essential',
+            description: item.type === 'ebook' 
+              ? 'Instant Access Digital eBook PDF Guide' 
+              : item.type === 'service' 
+                ? 'Virtual One-on-One Strategy Consultation Call' 
+                : 'Natural Botanical Hair Essential',
             metadata: {
               itemId: item.id,
               itemType: item.type,

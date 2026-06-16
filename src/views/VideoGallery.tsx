@@ -385,7 +385,7 @@ const VideoGridCard: React.FC<VideoGridCardProps> = ({
 
 export const VideoGallery: React.FC = () => {
   const { videos, products, ebooks, addToCart, triggerToast, prefersReducedMotion } = useApp();
-  const [activeCategory, setActiveCategory] = useState<'All' | 'Wash Day' | 'Styling' | 'Growth Tips' | 'Protective Styles' | 'Cornrows'>('All');
+  const [activeCategory, setActiveCategory] = useState<'All' | 'Wash Day' | 'Styling' | 'Growth Tips' | 'Protective Styles'>('All');
   
   // Immersive Modal State
   const [activePlaybackVideoId, setActivePlaybackVideoId] = useState<string | null>(null);
@@ -414,8 +414,8 @@ export const VideoGallery: React.FC = () => {
   const modalContainerRef = useRef<HTMLDivElement>(null);
   const touchStartY = useRef(0);
 
-  const categories: ('All' | 'Wash Day' | 'Styling' | 'Growth Tips' | 'Protective Styles' | 'Cornrows')[] = [
-    'All', 'Wash Day', 'Styling', 'Growth Tips', 'Protective Styles', 'Cornrows'
+  const categories: ('All' | 'Wash Day' | 'Styling' | 'Growth Tips' | 'Protective Styles')[] = [
+    'All', 'Wash Day', 'Styling', 'Growth Tips', 'Protective Styles'
   ];
 
   const filteredVideos = useMemo(() => {
@@ -430,7 +430,10 @@ export const VideoGallery: React.FC = () => {
       return true;
     });
 
-    const categorized = visibleVideos.filter(v => activeCategory === 'All' || v.category === activeCategory);
+    const categorized = visibleVideos.filter(v => {
+      if ((v.category as string) === 'Cornrows') return false;
+      return activeCategory === 'All' || v.category === activeCategory;
+    });
 
     return [...categorized].sort((a, b) => {
       const isAFeatured = !!a.isFeatured;
@@ -682,7 +685,7 @@ export const VideoGallery: React.FC = () => {
           Short-Form Masterclass
         </span>
         <h1 className="font-serif text-3xl sm:text-4xl text-brand-dark font-normal">
-          The 4C Video Feed
+          Visuals
         </h1>
         <p className="font-sans text-xs sm:text-sm text-[#6C5347]/80 max-w-xl mx-auto leading-relaxed">
           Explore step-by-step natural coily care, density retention, and protective styling routines.

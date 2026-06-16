@@ -12,9 +12,8 @@ export const ContactPage: React.FC = () => {
   // Contact Message form state
   const [msgName, setMsgName] = useState('');
   const [msgEmail, setMsgEmail] = useState('');
-  const [msgPorosity, setMsgPorosity] = useState('Low Porosity 4C');
+  const [msgPhone, setMsgPhone] = useState('');
   const [msgText, setMsgText] = useState('');
-  const [msgPhoto, setMsgPhoto] = useState('');
   const [msgSuccess, setMsgSuccess] = useState(false);
 
   // Accordion state
@@ -29,36 +28,13 @@ export const ContactPage: React.FC = () => {
   const faqs = [
     {
       q: 'When will I receive my purchased eBooks?',
-      a: 'Your eBooks are delivered instantly! The moments your simulated sandbox checkout is approved, high-speed download links appear directly on your success screen. Additionally, we transmit a permanent download invoice with a visual copy directly to your inbox.'
+      a: 'Your eBook is delivered instantly after purchase. A download link appears on your confirmation page, and a copy is also sent to your email for future access.'
     },
     {
-      q: 'Do you offer virtual 1-on-1 consultations?',
-      a: 'Absolutely! We offer personalized session slots where we review your current routine, porosity challenges, and formulate a step-by-step master hair growth calendar together. You can register your slot using the schedule desk above!'
-    },
-    {
-      q: 'How long does shipping take for botanical oils?',
-      a: 'We package physical hair dropper orders within 48 business hours using delicate organic linen wrap to preserve botanical extracts. Standard shipping inside the US requires 3-5 business days. International delivery takes 7-10 business days.'
-    },
-    {
-      q: 'Can I apply the Botanical Growth Oil to relaxed or protective styles?',
-      a: 'Yes, absolutely! The castor and rosemary formula is highly effective at stimulating dead scalp follicles under tight styles (tuck-ins, cornrows, wigs) with zero residue. It is also excellent to hydrate weak edges on chemically altered hair.'
+      q: 'Do I offer 1-on-1 consultations?',
+      a: 'Yes. Consultations are private personalized sessions tailored to your goals. After booking, you will receive a confirmation email with your meeting details and everything you need to prepare.'
     }
   ];
-
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        alert('Please choose a file smaller than 2MB for storage performance.');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setMsgPhoto(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   const handleMessageSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,9 +43,8 @@ export const ContactPage: React.FC = () => {
     addContactRequest({
       name: msgName,
       email: msgEmail,
-      porosity: msgPorosity,
-      message: msgText,
-      photoAttachment: msgPhoto || undefined
+      phone: msgPhone || undefined,
+      message: msgText
     });
 
     setMsgSuccess(true);
@@ -78,8 +53,8 @@ export const ContactPage: React.FC = () => {
     // clear fields
     setMsgName('');
     setMsgEmail('');
+    setMsgPhone('');
     setMsgText('');
-    setMsgPhoto('');
     setTimeout(() => setMsgSuccess(false), 5000);
   };
 
@@ -121,7 +96,7 @@ export const ContactPage: React.FC = () => {
           </div>
 
           <form onSubmit={handleMessageSubmit} className="space-y-4 text-left">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-[10.5px] uppercase font-bold text-brand-chocolate mb-1.5">Your Full Name *</label>
                 <input
@@ -146,27 +121,16 @@ export const ContactPage: React.FC = () => {
                   className="w-full px-4 py-3 bg-brand-cream border border-brand-warm-tan/40 text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose transition-all font-sans"
                 />
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-[10.5px] uppercase font-bold text-brand-chocolate mb-1.5">Porosity / Hair-Type Category</label>
-                <select
-                  id="contact-porosity"
-                  value={msgPorosity}
-                  onChange={(e) => setMsgPorosity(e.target.value)}
-                  className="w-full px-4 py-3 bg-brand-cream border border-brand-warm-tan/40 text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose transition-all font-sans font-medium text-brand-chocolate cursor-pointer"
-                >
-                  <option>Low Porosity 4C</option>
-                  <option>High Porosity 4C</option>
-                  <option>Unsure / Transitioning</option>
-                  <option>Locs / Protective Style</option>
-                </select>
-              </div>
-              <div className="flex flex-col justify-center select-none">
-                <span className="text-[10px] text-brand-rose bg-brand-pink-light/65 px-3 py-2 rounded-xl font-sans font-semibold leading-normal">
-                  💡 High porosity and low porosity require completely different sealing procedures!
-                </span>
+                <label className="block text-[10.5px] uppercase font-bold text-brand-chocolate mb-1.5">Phone Number</label>
+                <input
+                  id="contact-phone"
+                  type="tel"
+                  placeholder="+1 (555) 000-0000"
+                  value={msgPhone}
+                  onChange={(e) => setMsgPhone(e.target.value)}
+                  className="w-full px-4 py-3 bg-brand-cream border border-brand-warm-tan/40 text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose transition-all font-sans"
+                />
               </div>
             </div>
 
@@ -176,66 +140,11 @@ export const ContactPage: React.FC = () => {
                 id="contact-message"
                 required
                 rows={4}
-                placeholder="Detail your challenges (such as split ends, detangling snags, dry scalp conditions)..."
+                placeholder="Detail your challenges..."
                 value={msgText}
                 onChange={(e) => setMsgText(e.target.value)}
                 className="w-full px-4 py-3 bg-brand-cream border border-brand-warm-tan/40 text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose transition-all font-sans"
               />
-            </div>
-
-            <div>
-              <label className="block text-[10.5px] uppercase font-bold text-brand-chocolate mb-1.5">Attach a Reference Photo of your hair (Optional)</label>
-              <div className="flex flex-col sm:flex-row gap-3 items-center">
-                <div className="flex-1 w-full">
-                  <label className="flex flex-col items-center justify-center border border-dashed border-brand-warm-tan/50 bg-[#FAF6F0] rounded-2xl p-4 cursor-pointer hover:border-brand-rose/50 transition-colors">
-                    <div className="flex items-center gap-2 text-[#7C6354]">
-                      <Camera className="w-5 h-5 text-brand-rose" />
-                      <span className="text-[11px] font-bold uppercase tracking-wider">Upload / Snap Photo</span>
-                    </div>
-                    <span className="text-[10px] text-[#A67E6B] mt-1">PNG, JPG up to 2MB</span>
-                    <input
-                      type="file"
-                      id="contact-photo-upload"
-                      accept="image/*"
-                      onChange={handlePhotoUpload}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
-                <div className="flex-1 w-full text-left">
-                  <span className="block text-[10px] text-[#7C6354] uppercase font-bold mb-1.5">Or Paste Image URL</span>
-                  <input
-                    type="url"
-                    id="contact-photo-url"
-                    placeholder="https://example.com/hair.jpg"
-                    value={msgPhoto.startsWith('data:') ? '' : msgPhoto}
-                    onChange={(e) => setMsgPhoto(e.target.value)}
-                    className="w-full px-4 py-3 bg-brand-cream border border-brand-warm-tan/40 text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose transition-all"
-                  />
-                </div>
-              </div>
-              <AnimatePresence>
-                {msgPhoto && (
-                  <motion.div 
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    className="mt-3 flex items-center gap-2 bg-brand-pink-light/35 p-2 rounded-xl border border-brand-rose/10 w-fit text-left"
-                  >
-                    <img src={msgPhoto} alt="Preview" className="w-10 h-10 object-cover rounded border border-brand-warm-tan/20" />
-                    <div>
-                      <p className="text-[10px] font-bold text-brand-rose uppercase">Photo Attached</p>
-                      <button
-                        type="button"
-                        onClick={() => setMsgPhoto('')}
-                        className="text-[9px] text-red-650 hover:underline font-bold cursor-pointer"
-                      >
-                        Remove Photo
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </div>
 
             <motion.button
@@ -246,7 +155,7 @@ export const ContactPage: React.FC = () => {
               className="w-full bg-brand-rose hover:bg-brand-berry text-white py-3.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-sm hover:shadow"
             >
               <Send className="w-4 h-4" />
-              <span>Dispatch Message to Cartiae</span>
+              <span>Dispatch Message to Cartiae Rae</span>
             </motion.button>
           </form>
 
@@ -367,7 +276,7 @@ export const ContactPage: React.FC = () => {
 
       {/* Frequently Asked Questions accordion using motion transitions */}
       <div className="max-w-4xl mx-auto space-y-4 pt-10 border-t border-brand-warm-tan/20">
-        <h3 className="font-serif text-2xl font-bold text-center text-brand-dark mb-6">Frequently Answered Questions</h3>
+        <h3 className="font-serif text-2xl font-bold text-center text-brand-dark mb-6">Frequently Asked Questions</h3>
         
         {faqs.map((faq, fIndex) => {
           const isOpen = openedFaq === fIndex;

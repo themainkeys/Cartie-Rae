@@ -358,7 +358,7 @@ export const AdminPortal: React.FC = () => {
   const [editingVideoId, setEditingVideoId] = useState<string | null>(null);
   const [vidTitle, setVidTitle] = useState('');
   const [vidViews, setVidViews] = useState('12.5K views');
-  const [vidCategory, setVidCategory] = useState<'Wash Day' | 'Styling' | 'Protective Styles' | 'Growth Tips' | 'Cornrows' | 'Product Reviews' | 'Tutorials'>('Styling');
+  const [vidCategory, setVidCategory] = useState<'Wash Day' | 'Styling' | 'Protective Styles' | 'Growth Tips' | 'Product Reviews' | 'Tutorials'>('Styling');
   const [vidUrl, setVidUrl] = useState('');
   const [vidThumb, setVidThumb] = useState('https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&q=80&w=800');
   const [vidDescription, setVidDescription] = useState('');
@@ -392,7 +392,7 @@ export const AdminPortal: React.FC = () => {
 
   const [isAddingGallery, setIsAddingGallery] = useState(false);
   const [galCaption, setGalCaption] = useState('');
-  const [galCategory, setGalCategory] = useState<'Progress' | 'Hairstyles' | 'Routines' | 'Lifestyle'>('Progress');
+  const [galCategory, setGalCategory] = useState<'Progress' | 'Hairstyles' | 'Routines'>('Progress');
   const [galImage, setGalImage] = useState('');
 
   // CMS editor states
@@ -2188,7 +2188,6 @@ export const AdminPortal: React.FC = () => {
                             <option>Styling</option>
                             <option>Protective Styles</option>
                             <option>Growth Tips</option>
-                            <option>Cornrows</option>
                             <option>Product Reviews</option>
                             <option>Tutorials</option>
                           </select>
@@ -2739,7 +2738,6 @@ export const AdminPortal: React.FC = () => {
                           <option>Progress</option>
                           <option>Hairstyles</option>
                           <option>Routines</option>
-                          <option>Lifestyle</option>
                         </select>
                       </div>
                       

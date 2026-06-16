@@ -78,8 +78,8 @@ export const Footer: React.FC<FooterProps> = ({ setActivePart }) => {
                 </button>
               </li>
               <li>
-                <button onClick={() => setActivePart('shop')} className="hover:text-brand-rose focus:outline-none transition-colors">
-                  Digital eBooks
+                <button onClick={() => setActivePart('services')} className="hover:text-brand-rose focus:outline-none transition-colors">
+                  Coaching &amp; Services
                 </button>
               </li>
               <li>
@@ -88,8 +88,8 @@ export const Footer: React.FC<FooterProps> = ({ setActivePart }) => {
                 </button>
               </li>
               <li>
-                <button onClick={() => setActivePart('story')} className="hover:text-brand-rose focus:outline-none transition-colors">
-                  Our Story
+                <button onClick={() => setActivePart('about')} className="hover:text-brand-rose focus:outline-none transition-colors">
+                  About
                 </button>
               </li>
             </ul>

@@ -39,7 +39,7 @@ export interface TikTokVideo {
   id: string;
   title: string;
   views: string;
-  category: 'Wash Day' | 'Styling' | 'Protective Styles' | 'Growth Tips' | 'Cornrows' | 'Product Reviews' | 'Tutorials';
+  category: 'Wash Day' | 'Styling' | 'Protective Styles' | 'Growth Tips' | 'Product Reviews' | 'Tutorials';
   videoUrl: string; // Embed source or simulated link
   thumbnailUrl: string;
   description?: string;
@@ -63,7 +63,7 @@ export interface PhotoGalleryItem {
   id: string;
   image: string;
   caption: string;
-  category: 'Progress' | 'Hairstyles' | 'Routines' | 'Lifestyle';
+  category: 'Progress' | 'Hairstyles' | 'Routines';
 }
 
 export interface BlogPost {
@@ -88,7 +88,7 @@ export interface DiscountCode {
 
 export interface CartItem {
   id: string;
-  type: 'product' | 'ebook';
+  type: 'product' | 'ebook' | 'service';
   name: string;
   price: number;
   image: string;
@@ -97,7 +97,7 @@ export interface CartItem {
 
 export interface WishlistItem {
   id: string;
-  type: 'product' | 'ebook';
+  type: 'product' | 'ebook' | 'service';
   name: string;
   price: number;
   image: string;
@@ -122,7 +122,8 @@ export interface ContactRequest {
   id: string;
   name: string;
   email: string;
-  porosity: string;
+  porosity?: string;
+  phone?: string;
   message: string;
   photoAttachment?: string; // base64 string or image URL
   date: string;

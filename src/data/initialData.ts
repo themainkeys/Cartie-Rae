@@ -289,7 +289,7 @@ export const initialVideos: TikTokVideo[] = [
     id: 'vid-5',
     title: 'Cornrow Base Under Wig Quick Method',
     views: '9.4k',
-    category: 'Cornrows',
+    category: 'Protective Styles',
     videoUrl: 'https://www.youtube.com/embed/gH1yM-l4p-w',
     thumbnailUrl: 'https://images.unsplash.com/photo-1582095133179-bfd08e2fc6b3?auto=format&fit=crop&q=80&w=400',
     status: 'published',
@@ -422,7 +422,7 @@ export const initialVideos: TikTokVideo[] = [
     id: 'vid-12',
     title: 'Flat Cornrows Base for Beginners',
     views: '11.8k',
-    category: 'Cornrows',
+    category: 'Protective Styles',
     videoUrl: 'https://www.tiktok.com/@cartiaerae/video/7628994030386334989',
     thumbnailUrl: 'https://images.unsplash.com/photo-1582095133179-bfd08e2fc6b3?auto=format&fit=crop&q=80&w=400',
     status: 'published',
@@ -563,7 +563,7 @@ export const initialGallery: PhotoGalleryItem[] = [
     id: 'gal-5',
     image: '/hero-portrait.jpg',
     caption: 'Healthy, fluffy 4C shape styled on a sunny autumn weekend.',
-    category: 'Lifestyle'
+    category: 'Hairstyles'
   },
   {
     id: 'gal-6',
@@ -587,13 +587,13 @@ export const initialGallery: PhotoGalleryItem[] = [
     id: 'gal-9',
     image: 'https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&q=80&w=600',
     caption: 'Morning hydration routine checking coils and styling self-care habits.',
-    category: 'Lifestyle'
+    category: 'Routines'
   },
   {
     id: 'gal-10',
     image: '/about-portrait.jpg',
     caption: 'Founder Cartiae Rae showcasing daily moisturized, bouncy natural 4C coils.',
-    category: 'Lifestyle'
+    category: 'Progress'
   }
 ];
 

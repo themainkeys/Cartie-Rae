@@ -66,6 +66,25 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
     return cart.some(item => item.type === 'ebook');
   }, [cart]);
 
+  const holdsServiceItems = useMemo(() => {
+    return cart.some(item => item.type === 'service');
+  }, [cart]);
+
+  const orderHoldsPhysical = useMemo(() => {
+    if (!createdOrder) return false;
+    return createdOrder.items.some((item: any) => item.type === 'product');
+  }, [createdOrder]);
+
+  const orderHoldsDigital = useMemo(() => {
+    if (!createdOrder) return false;
+    return createdOrder.items.some((item: any) => item.type === 'ebook');
+  }, [createdOrder]);
+
+  const orderHoldsService = useMemo(() => {
+    if (!createdOrder) return false;
+    return createdOrder.items.some((item: any) => item.type === 'service');
+  }, [createdOrder]);
+
   // --- Functions ---
   const handlePromoApply = (e: React.FormEvent) => {
     e.preventDefault();
@@ -267,7 +286,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                                   <h4 className="font-serif font-bold text-brand-dark line-clamp-1">{item.name}</h4>
                                   <p className="text-[10px] text-brand-rose font-mono font-medium mt-0.5">${item.price.toFixed(2)} each</p>
                                   <span className="text-[9px] uppercase tracking-wider font-semibold text-brand-dark/40 bg-brand-beige px-1.5 py-0.5 rounded inline-block mt-1">
-                                    {item.type === 'ebook' ? 'Instant eBook PDF' : 'Physical Product'}
+                                    {item.type === 'ebook' ? 'Digital Guide' : item.type === 'service' ? 'Virtual Consultation' : 'Physical Product'}
                                   </span>
                                 </div>
                                 {/* Quantities spinner */}
@@ -361,7 +380,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                                   <h4 className="font-serif font-bold text-brand-dark line-clamp-1">{item.name}</h4>
                                   <p className="text-[10px] text-brand-rose font-mono font-medium mt-0.5">${item.price.toFixed(2)}</p>
                                   <span className="text-[9px] uppercase tracking-wider font-semibold text-brand-dark/40 bg-brand-beige px-1.5 py-0.5 rounded inline-block mt-1">
-                                    {item.type === 'ebook' ? 'Instant eBook' : 'Physical Product'}
+                                    {item.type === 'ebook' ? 'Digital Guide' : item.type === 'service' ? 'Virtual Consultation' : 'Physical Product'}
                                   </span>
                                 </div>
                                 
@@ -677,7 +696,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                     </div>
 
                     {/* CONVERT DIGITAL DOWNLOAD BUTTONS */}
-                    {holdsDigitalItems && (
+                    {orderHoldsDigital && (
                       <div className="bg-emerald-50 border border-emerald-250 p-4 rounded-2xl text-left space-y-2.5 shadow-sm">
                         <p className="text-[11px] font-bold text-emerald-800 uppercase flex items-center gap-1.5 select-none">
                           <Download className="w-4 h-4 text-emerald-600 animate-bounce" />
@@ -718,8 +737,21 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                       </div>
                     )}
 
+                    {/* VIRTUAL SERVICE BOOKING INSTRUCTIONS */}
+                    {orderHoldsService && (
+                      <div className="bg-brand-beige/50 border border-brand-warm-tan/40 p-4 rounded-2xl text-left space-y-2.5 shadow-sm">
+                        <p className="text-[11px] font-bold text-brand-chocolate uppercase flex items-center gap-1.5 select-none">
+                          <Clock className="w-4.5 h-4.5 text-brand-rose" />
+                          <span>Virtual Booking Confirmed</span>
+                        </p>
+                        <p className="text-[10.5px] text-[#6E5549] leading-relaxed mt-1">
+                          We will contact you at your email address within 24 hours to schedule your session.
+                        </p>
+                      </div>
+                    )}
+
                     {/* Physical items instructions */}
-                    {holdsPhysicalItems && (
+                    {orderHoldsPhysical && (
                       <div className="bg-brand-beige/50 border border-brand-warm-tan/40 p-4 rounded-2xl text-left shadow-sm">
                         <p className="text-[11px] font-bold text-brand-chocolate uppercase flex items-center gap-1 select-none">
                           <Smartphone className="w-4 h-4 text-brand-rose" />

@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 
 export const PhotoGallery: React.FC = () => {
   const { gallery, prefersReducedMotion } = useApp();
-  const [activeCategory, setActiveCategory] = useState<'All' | 'Progress' | 'Hairstyles' | 'Routines' | 'Lifestyle'>('All');
+  const [activeCategory, setActiveCategory] = useState<'All' | 'Progress' | 'Hairstyles' | 'Routines'>('All');
   const [selectedPhoto, setSelectedPhoto] = useState<PhotoGalleryItem | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -29,12 +29,12 @@ export const PhotoGallery: React.FC = () => {
     setCurrentSlideIndex(0);
   }, [activeCategory]);
 
-  const categories: ('All' | 'Progress' | 'Hairstyles' | 'Routines' | 'Lifestyle')[] = [
-    'All', 'Progress', 'Hairstyles', 'Routines', 'Lifestyle'
+  const categories: ('All' | 'Progress' | 'Hairstyles' | 'Routines')[] = [
+    'All', 'Progress', 'Hairstyles', 'Routines'
   ];
 
   const filteredPhotos = useMemo(() => {
-    return gallery.filter(p => activeCategory === 'All' || p.category === activeCategory);
+    return gallery.filter(p => (p.category as string) !== 'Lifestyle' && (activeCategory === 'All' || p.category === activeCategory));
   }, [gallery, activeCategory]);
 
   const paginatedPhotos = useMemo(() => {
@@ -171,15 +171,9 @@ export const PhotoGallery: React.FC = () => {
       
       {/* Banner Intro */}
       <div className="text-center mb-16 space-y-3">
-        <span className="font-sans text-[10px] uppercase tracking-[0.35em] text-brand-rose font-bold block">
-          Client &amp; Student Lookbooks
-        </span>
         <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-brand-dark font-normal">
-          The 4C Gallery
+          Lookbook
         </h1>
-        <p className="font-sans text-xs sm:text-sm text-[#6C5347]/80 max-w-xl mx-auto leading-relaxed">
-          Real milestones after maintaining Cartiae&apos;s moisturizing systems. Browse hairstyles, lifestyle logs, and hydration routines.
-        </p>
       </div>
 
       {/* Category Tabs banner with sliding active indicator */}

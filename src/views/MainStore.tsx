@@ -134,7 +134,7 @@ export const MainStore: React.FC<MainStoreProps> = ({ initialFilter = 'All', isC
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedEBook]);
 
-  const categories = ['All', 'eBooks', 'Hair Oils', 'Accessories', 'Treatments'];
+  const categories = ['All', 'eBooks'];
 
   const categoryDisplayMap: Record<string, { label: string; icon: React.ReactNode }> = {
     'All': { label: 'All', icon: <ShoppingBag className="w-3.5 h-3.5" /> },
@@ -147,12 +147,17 @@ export const MainStore: React.FC<MainStoreProps> = ({ initialFilter = 'All', isC
   // Filter items logic
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
+      // Check if product's category is currently in active categories list
+      // Note: 'Accessories' or 'Hair Oils' could be added to categories list in the future
+      const isCategoryActive = categories.includes(p.category) || (p.category === 'Accessories' && categories.includes('Tools'));
+      if (!isCategoryActive) return false;
+
       const matchCat = activeCategory === 'All' || p.category === activeCategory;
       const matchSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           p.description.toLowerCase().includes(searchQuery.toLowerCase());
       return matchCat && matchSearch && activeCategory !== 'eBooks';
     });
-  }, [products, activeCategory, searchQuery]);
+  }, [products, activeCategory, searchQuery, categories]);
 
   const filteredEBooks = useMemo(() => {
     return ebooks.filter(eb => {
@@ -200,9 +205,6 @@ export const MainStore: React.FC<MainStoreProps> = ({ initialFilter = 'All', isC
         <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-brand-dark font-normal">
           The Hair Apothecary
         </h1>
-        <p className="font-sans text-xs sm:text-sm text-[#6C5347]/80 max-w-xl mx-auto leading-relaxed">
-          Premium formulas and guides curated exclusively for dry, fragile 4C natural patterns. Formulated for moisture and growth retention.
-        </p>
       </div>
 
       {/* Search and Filter Area (Mobile sticky row and desktop grid) */}

@@ -19,9 +19,10 @@ export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openC
   const navItems = [
     { label: 'Home', key: 'home' },
     { label: 'Shop Essentials', key: 'shop' },
+    { label: 'Services', key: 'services' },
     { label: 'Watch Tutorials', key: 'tutorials' },
     { label: 'Gallery', key: 'gallery' },
-    { label: 'Our Story', key: 'story' },
+    { label: 'About', key: 'about' },
     { label: 'Contact', key: 'contact' },
   ];
 
