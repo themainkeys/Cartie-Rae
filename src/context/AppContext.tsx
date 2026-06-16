@@ -44,6 +44,7 @@ interface AppContextType {
   
   // Gallery Operations
   addGalleryItem: (item: Omit<PhotoGalleryItem, 'id'>) => void;
+  updateGalleryItem: (id: string, updated: Partial<Omit<PhotoGalleryItem, 'id'>>) => void;
   deleteGalleryItem: (id: string) => void;
   
   // Blog Operations
@@ -426,6 +427,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setGallery(prev => [newItem, ...prev]);
   };
 
+  const updateGalleryItem = (id: string, updated: Partial<Omit<PhotoGalleryItem, 'id'>>) => {
+    setGallery(prev => prev.map(item => item.id === id ? { ...item, ...updated } : item));
+  };
+
   const deleteGalleryItem = (id: string) => {
     setGallery(prev => prev.filter(item => item.id !== id));
   };
@@ -652,7 +657,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addEBook, updateEBook, deleteEBook,
       addProduct, updateProduct, deleteProduct,
       addVideo, updateVideo, deleteVideo,
-      addGalleryItem, deleteGalleryItem,
+      addGalleryItem, updateGalleryItem, deleteGalleryItem,
       addBlogPost, updateBlogPost, deleteBlogPost, likeBlogPost,
       addDiscountCode, deleteDiscountCode,
       updateHomepageContent,

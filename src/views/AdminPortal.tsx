@@ -329,7 +329,7 @@ export const AdminPortal: React.FC = () => {
     addEBook, updateEBook, deleteEBook,
     addProduct, updateProduct, deleteProduct,
     addVideo, updateVideo, deleteVideo,
-    addGalleryItem, deleteGalleryItem,
+    addGalleryItem, updateGalleryItem, deleteGalleryItem,
     addDiscountCode, deleteDiscountCode,
     updateHomepageContent, fulfillOrder, loginAdmin, logoutAdmin,
     respondToContactRequest, deleteContactRequest, updateContactRequestStatus,
@@ -391,6 +391,7 @@ export const AdminPortal: React.FC = () => {
   }, [vidUrl]);
 
   const [isAddingGallery, setIsAddingGallery] = useState(false);
+  const [editingGalleryId, setEditingGalleryId] = useState<string | null>(null);
   const [galCaption, setGalCaption] = useState('');
   const [galCategory, setGalCategory] = useState<'Progress' | 'Hairstyles' | 'Routines'>('Progress');
   const [galImage, setGalImage] = useState('');
@@ -732,14 +733,34 @@ export const AdminPortal: React.FC = () => {
     e.preventDefault();
     if (!galCaption || !galImage) return;
     if (!checkPermission(['super_admin', 'content_manager'])) return;
-    addGalleryItem({
-      image: galImage,
-      caption: galCaption,
-      category: galCategory
-    });
+    
+    if (editingGalleryId) {
+      updateGalleryItem(editingGalleryId, {
+        image: galImage,
+        caption: galCaption,
+        category: galCategory
+      });
+      setEditingGalleryId(null);
+      triggerToast('Lookbook photo updated successfully.');
+    } else {
+      addGalleryItem({
+        image: galImage,
+        caption: galCaption,
+        category: galCategory
+      });
+      triggerToast('Lookbook photo uploaded successfully.');
+    }
     setGalCaption('');
     setGalImage('');
     setIsAddingGallery(false);
+  };
+
+  const handleEditGalleryClick = (item: PhotoGalleryItem) => {
+    setEditingGalleryId(item.id);
+    setGalCaption(item.caption);
+    setGalCategory(item.category);
+    setGalImage(item.image);
+    setIsAddingGallery(true);
   };
 
   const handleAdminAssetUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -2705,17 +2726,30 @@ export const AdminPortal: React.FC = () => {
                     Image Gallery Showcase
                   </h3>
                   <button
-                    onClick={() => setIsAddingGallery(!isAddingGallery)}
-                    className="flex items-center gap-1 text-[11px] uppercase tracking-wider font-extrabold text-white bg-brand-rose hover:bg-brand-berry px-3.5 py-1.5 rounded-full transition-all focus:outline-none"
+                    onClick={() => {
+                      if (isAddingGallery && editingGalleryId) {
+                        setEditingGalleryId(null);
+                        setGalCaption('');
+                        setGalImage('');
+                      } else {
+                        setIsAddingGallery(!isAddingGallery);
+                        setEditingGalleryId(null);
+                        setGalCaption('');
+                        setGalImage('');
+                      }
+                    }}
+                    className="flex items-center gap-1 text-[11px] uppercase tracking-wider font-extrabold text-white bg-brand-rose hover:bg-brand-berry px-3.5 py-1.5 rounded-full transition-all focus:outline-none cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>Upload Photo</span>
+                    <span>{editingGalleryId ? "Add New Photo" : "Upload Photo"}</span>
                   </button>
                 </div>
 
                 {isAddingGallery && (
                   <form onSubmit={handleAddGallerySubmit} className="bg-brand-beige/50 border border-brand-warm-tan/40 p-5 rounded-2xl space-y-4 text-xs">
-                    <p className="font-serif font-bold text-brand-chocolate">Upload Gallery Photo:</p>
+                    <p className="font-serif font-bold text-brand-chocolate">
+                      {editingGalleryId ? "Edit Gallery Photo Details:" : "Upload Gallery Photo:"}
+                    </p>
                     <div className="space-y-3">
                       <div>
                         <label className="block text-[10px] uppercase font-bold text-[#8C6D62] mb-1">Caption Description</label>
@@ -2767,16 +2801,21 @@ export const AdminPortal: React.FC = () => {
                     <div className="flex justify-end gap-2 pt-1 text-[10.5px]">
                       <button
                         type="button"
-                        onClick={() => setIsAddingGallery(false)}
-                        className="px-3 py-1.5 border border-brand-warm-tan hover:bg-brand-cream rounded"
+                        onClick={() => {
+                          setIsAddingGallery(false);
+                          setEditingGalleryId(null);
+                          setGalCaption('');
+                          setGalImage('');
+                        }}
+                        className="px-3 py-1.5 border border-brand-warm-tan hover:bg-brand-cream rounded cursor-pointer"
                       >
                         Cancel
                       </button>
                       <button
                         type="submit"
-                        className="px-4 py-1.5 bg-brand-chocolate hover:bg-brand-dark text-white rounded font-bold uppercase"
+                        className="px-4 py-1.5 bg-brand-chocolate hover:bg-brand-dark text-white rounded font-bold uppercase cursor-pointer"
                       >
-                        Publish Photo
+                        {editingGalleryId ? "Save Changes" : "Publish Photo"}
                       </button>
                     </div>
                   </form>
@@ -2790,7 +2829,7 @@ export const AdminPortal: React.FC = () => {
                         <th className="p-3">Photo</th>
                         <th className="p-3">Caption description</th>
                         <th className="p-3">Section</th>
-                        <th className="p-3 text-center">Fulfill</th>
+                        <th className="p-3 text-center">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-brand-warm-tan/10 text-brand-dark/80">
@@ -2801,7 +2840,13 @@ export const AdminPortal: React.FC = () => {
                           </td>
                           <td className="p-3 font-semibold line-clamp-1 max-w-[200px]">{gObj.caption}</td>
                           <td className="p-3 font-mono">{gObj.category}</td>
-                          <td className="p-3 text-center">
+                          <td className="p-3 text-center space-x-1.5 whitespace-nowrap">
+                            <button
+                              onClick={() => handleEditGalleryClick(gObj)}
+                              className="p-1 px-2.5 bg-brand-cream hover:bg-brand-rose text-brand-dark hover:text-white rounded border border-brand-warm-tan/20 text-[11px] font-bold transition duration-200 cursor-pointer"
+                            >
+                              Edit
+                            </button>
                             <button
                               onClick={() => {
                                 if (confirm(`Remove photo "${gObj.caption}"?`)) {
@@ -2810,9 +2855,9 @@ export const AdminPortal: React.FC = () => {
                                   }
                                 }
                               }}
-                              className="p-1 px-2.5 bg-brand-pink-light hover:bg-brand-rose text-brand-rose hover:text-white rounded-md text-[11px] font-bold transition duration-200"
+                              className="p-1 px-2.5 bg-brand-pink-light hover:bg-brand-rose text-brand-rose hover:text-white rounded text-[11px] font-bold transition duration-200 cursor-pointer"
                             >
-                              Dismiss
+                              Delete
                             </button>
                           </td>
                         </tr>
