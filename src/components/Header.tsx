@@ -18,10 +18,10 @@ export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openC
 
   const navItems = [
     { label: 'Home', key: 'home' },
-    { label: 'Shop Essentials', key: 'shop' },
+    { label: 'Shop', key: 'shop' },
     { label: 'Services', key: 'services' },
-    { label: 'Watch Tutorials', key: 'tutorials' },
-    { label: 'Gallery', key: 'gallery' },
+    { label: 'Visuals', key: 'tutorials' },
+    { label: 'Lookbook', key: 'gallery' },
     { label: 'About', key: 'about' },
     { label: 'Contact', key: 'contact' },
   ];
@@ -83,7 +83,7 @@ export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openC
                   Cartiae Rae
                 </span>
                 <span className="font-sans text-[8px] uppercase tracking-[0.25em] text-brand-dark/40 mt-1 transition-colors group-hover:text-brand-rose/60">
-                  Hair Education
+                  eBooks &amp; Services
                 </span>
               </button>
             </div>
@@ -139,7 +139,7 @@ export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openC
                 Cartiae Rae
               </span>
               <span className="font-sans text-[8px] uppercase tracking-[0.25em] text-brand-dark/40 mt-0.5 transition-colors group-hover:text-brand-rose/60">
-                Hair Education
+                eBooks &amp; Services
               </span>
             </button>
 

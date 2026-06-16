@@ -75,7 +75,7 @@ ${downloadLinks.map(link => `- ${link.ebookId} Guide: ${window.location.origin}/
 
 If you have any questions or require support, please contact orders@cartiaerae.com.
 
-Cartiae Rae Hair Education
+Cartiae Rae Studio
 =========================================
     `);
   }

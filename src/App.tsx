@@ -162,10 +162,10 @@ const Homepage: React.FC<{
               <BookOpen className="w-5 h-5" />
             </div>
             <h3 className="font-serif text-lg font-normal text-brand-dark group-hover:text-brand-rose transition-colors">
-              The 4C Growth Blueprint
+              Shop the eBook
             </h3>
             <p className="font-sans text-xs text-[#6C5347]/85 line-clamp-2 leading-relaxed">
-              Step-by-step master guides detailing how to grow, hydrate, and retain fragile 4C natural coils.
+              Get immediate access to the step-by-step master guides detailing how to grow, hydrate, and retain fragile 4C natural coils.
             </p>
           </div>
           <span className="font-sans text-[10px] uppercase tracking-widest text-[#B11B41] font-bold mt-4 block">
@@ -184,14 +184,14 @@ const Homepage: React.FC<{
               <Compass className="w-5 h-5" />
             </div>
             <h3 className="font-serif text-lg font-normal text-brand-dark group-hover:text-brand-rose transition-colors">
-              1-on-1 Virtual Coaching
+              Virtual Coaching &amp; Services
             </h3>
             <p className="font-sans text-xs text-[#6C5347]/85 line-clamp-2 leading-relaxed">
-              Book private consultations for hair assessment reviews or social media branding strategies.
+              Book private 1-on-1 virtual strategy calls ($100) with Cartiae Rae for personalized hair assessments or brand growth coaching.
             </p>
           </div>
           <span className="font-sans text-[10px] uppercase tracking-widest text-[#B11B41] font-bold mt-4 block">
-            Book Call &rarr;
+            Book Session ($100) &rarr;
           </span>
         </motion.div>
 
@@ -206,14 +206,14 @@ const Homepage: React.FC<{
               <Video className="w-5 h-5" />
             </div>
             <h3 className="font-serif text-lg font-normal text-brand-dark group-hover:text-brand-rose transition-colors">
-              Lookbook &amp; Tutorials
+              Watch Visuals
             </h3>
             <p className="font-sans text-xs text-[#6C5347]/85 line-clamp-2 leading-relaxed">
-              Step into the studio to watch regimen walkthroughs, hairstyle grids, and journey lookbooks.
+              Step into the studio to browse high-definition regimens, hairstyle lookbooks, and length retention walk-throughs.
             </p>
           </div>
           <span className="font-sans text-[10px] uppercase tracking-widest text-[#B11B41] font-bold mt-4 block">
-            Watch Visuals &rarr;
+            Step Into the Studio &rarr;
           </span>
         </motion.div>
 
@@ -231,14 +231,14 @@ const Homepage: React.FC<{
               <ShoppingBag className="w-5 h-5" />
             </div>
             <h3 className="font-serif text-lg font-normal text-brand-dark group-hover:text-brand-rose transition-colors">
-              The Apothecary Shop
+              Shop the Studio
             </h3>
             <p className="font-sans text-xs text-[#6C5347]/85 line-clamp-2 leading-relaxed">
-              Curated essentials, guides, and tools designed for high-performance moisture retention.
+              Explore curated essentials, guides, and tools designed for high-performance moisture retention.
             </p>
           </div>
           <span className="font-sans text-[10px] uppercase tracking-widest text-[#B11B41] font-bold mt-4 block">
-            Shop Essentials &rarr;
+            Browse Shop &rarr;
           </span>
         </motion.div>
       </motion.section>
