@@ -81,7 +81,7 @@ interface AppContextType {
   fulfillOrder: (id: string) => void;
   
   // Admin auth
-  loginAdmin: (password: string) => boolean;
+  loginAdmin: (email: string, password: string) => boolean;
   logoutAdmin: () => void;
 
   // Settings & Preferences
@@ -618,15 +618,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // --- Admin Auth ---
-  const loginAdmin = (password: string): boolean => {
-    let user: AdminUser | null = null;
-    if (password === 'admin' || password === 'cartiae123') {
-      user = { id: 'adm-001', name: 'Cartiae Rae', email: 'admin@cartiaerae.com', role: 'super_admin' };
-    } else if (password === 'manager') {
-      user = { id: 'adm-002', name: 'Elena Vance (Manager)', email: 'manager@cartiaerae.com', role: 'store_manager' };
-    } else if (password === 'content') {
-      user = { id: 'adm-003', name: 'Brianna Smith (Editor)', email: 'content@cartiaerae.com', role: 'content_manager' };
-    }
+  // Credential pairs: email must match password role exactly
+  const ADMIN_CREDENTIALS = [
+    { email: 'admin@cartiaerae.com', passwords: ['admin', 'cartiae123'], user: { id: 'adm-001', name: 'Cartiae Rae', email: 'admin@cartiaerae.com', role: 'super_admin' as const } },
+    { email: 'manager@cartiaerae.com', passwords: ['manager'], user: { id: 'adm-002', name: 'Elena Vance (Manager)', email: 'manager@cartiaerae.com', role: 'store_manager' as const } },
+    { email: 'content@cartiaerae.com', passwords: ['content'], user: { id: 'adm-003', name: 'Brianna Smith (Editor)', email: 'content@cartiaerae.com', role: 'content_manager' as const } },
+  ];
+
+  const loginAdmin = (email: string, password: string): boolean => {
+    const match = ADMIN_CREDENTIALS.find(
+      (cred) => cred.email.toLowerCase() === email.trim().toLowerCase() && cred.passwords.includes(password)
+    );
+    const user: AdminUser | null = match ? match.user : null;
 
     if (user) {
       setIsAdminLoggedIn(true);

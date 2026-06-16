@@ -218,12 +218,13 @@ const VideoGridCard: React.FC<VideoGridCardProps> = ({
                   allow="autoplay; encrypted-media"
                 />
               )}
+              {/* TikTok cannot autoplay in cross-origin iframes — show thumbnail instead */}
               {resolved.type === 'tiktok' && (
-                <iframe
-                  title={video.title}
-                  src={`${resolved.url}?autoplay=1&mute=1`}
-                  className="absolute inset-0 w-full h-full scale-[1.15] pointer-events-none object-cover"
-                  allow="autoplay; encrypted-media"
+                <img
+                  src={video.thumbnailUrl}
+                  alt={video.title}
+                  referrerPolicy="no-referrer"
+                  className="absolute inset-0 w-full h-full object-cover"
                 />
               )}
               {resolved.type === 'direct' && (
@@ -385,7 +386,7 @@ const VideoGridCard: React.FC<VideoGridCardProps> = ({
 
 export const VideoGallery: React.FC = () => {
   const { videos, products, ebooks, addToCart, triggerToast, prefersReducedMotion } = useApp();
-  const [activeCategory, setActiveCategory] = useState<'All' | 'Wash Day' | 'Styling' | 'Growth Tips' | 'Protective Styles'>('All');
+  const [activeCategory, setActiveCategory] = useState<'All' | 'Wash Day' | 'Styling' | 'Growth Tips' | 'Protective Styles' | 'Product Reviews' | 'Tutorials'>('All');
   
   // Immersive Modal State
   const [activePlaybackVideoId, setActivePlaybackVideoId] = useState<string | null>(null);
@@ -843,16 +844,34 @@ export const VideoGallery: React.FC = () => {
                     allowFullScreen
                   />
                 )}
-                {activeVideoResolved.type === 'tiktok' && (
-                  <iframe
-                    key={`tt-${activeVideo.id}`}
-                    title={activeVideo.title}
-                    src={`${activeVideoResolved.url}?autoplay=1&mute=${isMuted ? 1 : 0}`}
-                    className="absolute inset-0 w-full h-full object-cover"
-                    allow="autoplay; encrypted-media"
-                    allowFullScreen
-                  />
-                )}
+                {/* TikTok: show thumbnail card with direct link — TikTok blocks cross-origin iframe embeds */}
+                {activeVideoResolved.type === 'tiktok' && (() => {
+                  const tiktokUrl = `https://www.tiktok.com/@cartiaerae/video/${activeVideoResolved.id}`;
+                  return (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black gap-5 px-6">
+                      <img
+                        src={activeVideo.thumbnailUrl}
+                        alt={activeVideo.title}
+                        referrerPolicy="no-referrer"
+                        className="w-full max-h-[55%] object-cover rounded-xl opacity-70"
+                      />
+                      <div className="text-center space-y-3">
+                        <p className="font-sans text-[10px] uppercase tracking-widest text-white/60 font-bold">TikTok Content</p>
+                        <p className="font-serif text-sm text-white leading-snug">{activeVideo.title}</p>
+                        <a
+                          href={tiktokUrl}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className="inline-flex items-center gap-2 bg-[#FAF6F0] hover:bg-brand-rose text-brand-dark hover:text-white px-5 py-2.5 rounded-xl text-[10px] uppercase font-extrabold tracking-widest transition-all duration-300 shadow-md"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current" aria-hidden="true"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.34 6.34 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.27 8.27 0 0 0 4.84 1.56V6.78a4.85 4.85 0 0 1-1.07-.09z"/></svg>
+                          Open on TikTok
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })()}
                 {activeVideoResolved.type === 'direct' && (
                   <video
                     key={`dir-${activeVideo.id}`}

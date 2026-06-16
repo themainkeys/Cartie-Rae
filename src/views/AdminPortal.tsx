@@ -514,9 +514,9 @@ export const AdminPortal: React.FC = () => {
       setAuthError('Please enter a valid administrative staff email.');
       return;
     }
-    const success = loginAdmin(password);
+    const success = loginAdmin(email, password);
     if (!success) {
-      setAuthError('Incorrect system staff administrative credentials or password.');
+      setAuthError('Incorrect staff email or password. Access denied.');
     } else {
       setEmail('');
       setPassword('');
@@ -895,11 +895,9 @@ export const AdminPortal: React.FC = () => {
           {authError && <p className="text-brand-rose text-xs mt-4 font-bold bg-[#FDF1F2] border border-brand-rose/10 p-2.5 rounded-xl">{authError}</p>}
           
           <div className="mt-8 pt-6 border-t border-[#E5D5C8]/50 text-[10.5px] text-[#A67E6B] font-medium leading-relaxed">
-            🔒 Standalone Sandbox Simulation Mode Active.<br />
-            Use <strong className="font-bold">any email</strong> with one of these passwords to test roles:<br />
-            • <strong className="font-bold text-brand-rose">admin</strong> (Super Admin role)<br />
-            • <strong className="font-bold text-brand-rose">manager</strong> (Store Manager role)<br />
-            • <strong className="font-bold text-brand-rose">content</strong> (Content Manager role)
+            🔒 Authorized Staff Access Only.<br />
+            Use your assigned staff email and password to sign in.<br />
+            Contact the site owner if you need access credentials.
           </div>
         </div>
       ) : (

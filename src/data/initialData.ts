@@ -585,7 +585,7 @@ export const initialGallery: PhotoGalleryItem[] = [
   },
   {
     id: 'gal-9',
-    image: 'https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&q=80&w=600',
+    image: '/our-story.jpeg',
     caption: 'Morning hydration routine checking coils and styling self-care habits.',
     category: 'Routines'
   },
@@ -718,7 +718,7 @@ export const initialHomepageContent: HomepageContent = {
   heroHeadline: 'Healthy 4C Hair Starts With the Right Routine',
   heroSubheadline: 'Learn simple, real, and effective hair care routines from Cartiae Rae — built for short, fine, natural 4C hair.',
   aboutHeadline: 'Relatable, Natural & Proven 4C Solutions',
-  aboutStory: 'For years, I believed my tightly coiled 4C hair was destined to stay dry, short, and difficult to manage. I was constantlly told that length was impossible for our texture. But through rigorous research, hydration protocols, and simple breakage-prevention methods, I cracked the code to healthy retention. Now, my goal is to hand you the exact master tools, eBooks, and botanical formulas to make your hair care simple, therapeutic, and deeply rewarding.',
+  aboutStory: 'For years, I believed my tightly coiled 4C hair was destined to stay dry, short, and difficult to manage. I was constantly told that length was impossible for our texture. But through rigorous research, hydration protocols, and simple breakage-prevention methods, I cracked the code to healthy retention. Now, my goal is to hand you the exact master tools, eBooks, and botanical formulas to make your hair care simple, therapeutic, and deeply rewarding.',
   promoQuote: 'Cartiae’s methods are a game changer. My hair has never felt this soft or looked this healthy. The eBooks are incredibly detailed and the oil smells heavenly!',
   promoAuthor: 'Maya J., Loyal Customer'
 };
