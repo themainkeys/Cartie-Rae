@@ -414,8 +414,8 @@ export const VideoGallery: React.FC = () => {
   const modalContainerRef = useRef<HTMLDivElement>(null);
   const touchStartY = useRef(0);
 
-  const categories: ('All' | 'Wash Day' | 'Styling' | 'Growth Tips' | 'Protective Styles')[] = [
-    'All', 'Wash Day', 'Styling', 'Growth Tips', 'Protective Styles'
+  const categories: ('All' | 'Wash Day' | 'Styling' | 'Growth Tips' | 'Protective Styles' | 'Product Reviews' | 'Tutorials')[] = [
+    'All', 'Wash Day', 'Styling', 'Growth Tips', 'Protective Styles', 'Product Reviews', 'Tutorials'
   ];
 
   const filteredVideos = useMemo(() => {

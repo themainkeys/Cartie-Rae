@@ -63,6 +63,57 @@ const resolveVideoSource = (url: string) => {
   };
 };
 
+const compressImage = (file: File, maxWidth = 1000, maxHeight = 1000, quality = 0.75): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith('image/')) {
+      reject(new Error('File is not an image'));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(event.target?.result as string);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve(compressedDataUrl);
+      };
+      img.onerror = (err) => {
+        reject(err);
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.onerror = (err) => {
+      reject(err);
+    };
+    reader.readAsDataURL(file);
+  });
+};
+
 interface ImageDropzoneProps {
   imageValue: string;
   onImageChange: (image: string) => void;
@@ -84,12 +135,18 @@ const ImageDropzone: React.FC<ImageDropzoneProps> = ({ imageValue, onImageChange
     }
   };
 
-  const processFile = (file: File) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      onImageChange(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+  const processFile = async (file: File) => {
+    try {
+      const compressed = await compressImage(file);
+      onImageChange(compressed);
+    } catch (error) {
+      console.error("Failed to compress image:", error);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        onImageChange(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -225,23 +282,22 @@ const VideoDropzone: React.FC<VideoDropzoneProps> = ({ videoValue, onVideoChange
         className="hidden"
       />
       {videoValue && videoValue.startsWith('blob:') ? (
-        <div className="flex items-center gap-3 w-full" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-3 w-full">
           <div className="w-12 h-12 rounded-lg border border-brand-warm-tan/20 bg-black flex items-center justify-center overflow-hidden shrink-0">
             <video src={videoValue} className="w-full h-full object-cover" muted playsInline />
           </div>
           <div className="text-left flex-1 min-w-0">
             <p className="text-[10px] font-bold text-brand-chocolate truncate">{label} Loaded</p>
-            <p className="text-[9px] text-[#A67E6B] font-medium">Local blob ready to upload</p>
+            <p className="text-[9px] text-[#A67E6B] font-medium">Click anywhere to replace file</p>
           </div>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="text-[9px] text-brand-rose font-bold bg-brand-pink-light/50 px-2 py-1 rounded hover:bg-brand-rose hover:text-white transition-colors"
+          <span
+            className="text-[9px] text-brand-rose font-bold bg-brand-pink-light/50 px-2 py-1 rounded hover:bg-brand-rose hover:text-white transition-colors whitespace-nowrap"
           >
             Replace
-          </button>
+          </span>
         </div>
       ) : videoValue ? (
-        <div className="flex items-center gap-3 w-full" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-3 w-full">
           <div className="w-12 h-12 rounded-lg border border-brand-warm-tan/20 bg-black flex items-center justify-center overflow-hidden shrink-0">
             {videoValue.includes('youtube.com') || videoValue.includes('youtu.be') || videoValue.includes('tiktok.com') ? (
               <Video className="w-5 h-5 text-brand-rose" />
@@ -251,14 +307,13 @@ const VideoDropzone: React.FC<VideoDropzoneProps> = ({ videoValue, onVideoChange
           </div>
           <div className="text-left flex-1 min-w-0">
             <p className="text-[10px] font-bold text-brand-chocolate truncate">Linked Video URL active</p>
-            <p className="text-[9px] text-[#8C6D62] truncate">{videoValue}</p>
+            <p className="text-[9px] text-[#8C6D62] truncate">Click anywhere to upload file</p>
           </div>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="text-[9px] text-brand-rose font-bold bg-brand-pink-light/50 px-2 py-1 rounded hover:bg-brand-rose hover:text-white transition-colors"
+          <span
+            className="text-[9px] text-brand-rose font-bold bg-brand-pink-light/50 px-2 py-1 rounded hover:bg-brand-rose hover:text-white transition-colors whitespace-nowrap"
           >
             Upload file
-          </button>
+          </span>
         </div>
       ) : (
         <div className="flex flex-col items-center text-center">
@@ -433,12 +488,14 @@ export const AdminPortal: React.FC = () => {
   const [editProdCategory, setEditProdCategory] = useState('Hair Oils');
   const [editProdStock, setEditProdStock] = useState('0');
   const [editProdPrice, setEditProdPrice] = useState('0.00');
+  const [editProdImage, setEditProdImage] = useState('');
 
   const [editingEBookId, setEditingEBookId] = useState<string | null>(null);
   const [editEbName, setEditEbName] = useState('');
   const [editEbPages, setEditEbPages] = useState('120');
   const [editEbPrice, setEditEbPrice] = useState('0.00');
   const [editEbSize, setEditEbSize] = useState('10 MB');
+  const [editEbImage, setEditEbImage] = useState('');
 
   // --- Calculations ---
   const totalSales = orders.reduce((acc, order) => acc + order.total, 0);
@@ -529,7 +586,7 @@ export const AdminPortal: React.FC = () => {
   };
 
   const handleSaveProduct = (id: string) => {
-    if (!checkPermission(['super_admin', 'store_manager'])) return;
+    if (!checkPermission(['super_admin', 'store_manager', 'content_manager'])) return;
     const orig = products.find(p => p.id === id);
     if (!orig) return;
     updateProduct(id, {
@@ -538,21 +595,23 @@ export const AdminPortal: React.FC = () => {
       price: parseFloat(editProdPrice) || 0,
       stockCount: parseInt(editProdStock) || 0,
       stockStatus: (parseInt(editProdStock) || 0) > 15 ? 'In Stock' : 'Low Stock',
+      image: editProdImage || orig.image,
     });
     setEditingProductId(null);
   };
 
   const handleStartEditProduct = (p: Product) => {
-    if (!checkPermission(['super_admin', 'store_manager'])) return;
+    if (!checkPermission(['super_admin', 'store_manager', 'content_manager'])) return;
     setEditingProductId(p.id);
     setEditProdName(p.name);
     setEditProdCategory(p.category);
     setEditProdStock(p.stockCount.toString());
     setEditProdPrice(p.price.toString());
+    setEditProdImage(p.image);
   };
 
   const handleSaveEBook = (id: string) => {
-    if (!checkPermission(['super_admin', 'store_manager'])) return;
+    if (!checkPermission(['super_admin', 'store_manager', 'content_manager'])) return;
     const orig = ebooks.find(e => e.id === id);
     if (!orig) return;
     updateEBook(id, {
@@ -560,17 +619,19 @@ export const AdminPortal: React.FC = () => {
       pages: parseInt(editEbPages) || 120,
       price: parseFloat(editEbPrice) || 0,
       fileSize: editEbSize,
+      image: editEbImage || orig.image,
     });
     setEditingEBookId(null);
   };
 
   const handleStartEditEBook = (e: EBook) => {
-    if (!checkPermission(['super_admin', 'store_manager'])) return;
+    if (!checkPermission(['super_admin', 'store_manager', 'content_manager'])) return;
     setEditingEBookId(e.id);
     setEditEbName(e.name);
     setEditEbPages(e.pages.toString());
     setEditEbPrice(e.price.toString());
     setEditEbSize(e.fileSize);
+    setEditEbImage(e.image);
   };
 
   const handleAddDiscountSubmit = (e: React.FormEvent) => {
@@ -1322,7 +1383,44 @@ export const AdminPortal: React.FC = () => {
                         return (
                           <tr key={p.id} className="hover:bg-brand-cream/30">
                             <td className="p-3">
-                              <img src={p.image} referrerPolicy="no-referrer" alt={p.name} className="w-10 h-10 object-cover rounded border border-brand-warm-tan/30" />
+                              {isEditing ? (
+                                <div className="relative group cursor-pointer w-10 h-10">
+                                  <img
+                                    src={editProdImage || p.image}
+                                    referrerPolicy="no-referrer"
+                                    alt={p.name}
+                                    className="w-10 h-10 object-cover rounded border border-brand-rose/40"
+                                  />
+                                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded">
+                                    <Camera className="w-3.5 h-3.5 text-white" />
+                                  </div>
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="absolute inset-0 opacity-0 cursor-pointer"
+                                    onChange={async (e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) {
+                                        try {
+                                          const compressed = await compressImage(file);
+                                          setEditProdImage(compressed);
+                                        } catch (err) {
+                                          const reader = new FileReader();
+                                          reader.onloadend = () => setEditProdImage(reader.result as string);
+                                          reader.readAsDataURL(file);
+                                        }
+                                      }
+                                    }}
+                                  />
+                                </div>
+                              ) : (
+                                <img
+                                  src={p.image}
+                                  referrerPolicy="no-referrer"
+                                  alt={p.name}
+                                  className="w-10 h-10 object-cover rounded border border-brand-warm-tan/30"
+                                />
+                              )}
                             </td>
                             <td className="p-3">
                               {isEditing ? (
@@ -1388,13 +1486,13 @@ export const AdminPortal: React.FC = () => {
                                 <div className="flex justify-center gap-1.5">
                                   <button
                                     onClick={() => handleSaveProduct(p.id)}
-                                    className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-bold"
+                                    className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-bold cursor-pointer"
                                   >
                                     Save
                                   </button>
                                   <button
                                     onClick={() => setEditingProductId(null)}
-                                    className="px-2.5 py-1 bg-brand-cream border border-[#E5D5C8] text-brand-chocolate rounded text-[11px] font-bold"
+                                    className="px-2.5 py-1 bg-brand-cream border border-[#E5D5C8] text-brand-chocolate rounded text-[11px] font-bold cursor-pointer"
                                   >
                                     Cancel
                                   </button>
@@ -1403,7 +1501,7 @@ export const AdminPortal: React.FC = () => {
                                 <div className="flex justify-center gap-1.5">
                                   <button
                                     onClick={() => handleStartEditProduct(p)}
-                                    className="p-1 px-2.5 bg-brand-cream hover:bg-brand-beige text-brand-chocolate rounded-md font-bold transition duration-250 border border-brand-warm-tan/30"
+                                    className="p-1 px-2.5 bg-brand-cream hover:bg-brand-beige text-brand-chocolate rounded-md font-bold transition duration-250 border border-brand-warm-tan/30 cursor-pointer"
                                   >
                                     Edit
                                   </button>
@@ -1411,12 +1509,12 @@ export const AdminPortal: React.FC = () => {
                                     id={`delete-prod-list-${p.id}`}
                                     onClick={() => {
                                       if (confirm(`Delete physical "${p.name}" from catalog?`)) {
-                                        if (checkPermission(['super_admin', 'store_manager'])) {
+                                        if (checkPermission(['super_admin', 'store_manager', 'content_manager'])) {
                                           deleteProduct(p.id);
                                         }
                                       }
                                     }}
-                                    className="p-1 px-2.5 bg-brand-pink-light hover:bg-brand-rose text-brand-rose hover:text-white rounded-md font-bold transition duration-250"
+                                    className="p-1 px-2.5 bg-brand-pink-light hover:bg-brand-rose text-brand-rose hover:text-white rounded-md font-bold transition duration-250 cursor-pointer"
                                   >
                                     Delete
                                   </button>
@@ -1558,7 +1656,44 @@ export const AdminPortal: React.FC = () => {
                         return (
                           <tr key={e.id} className="hover:bg-brand-cream/30">
                             <td className="p-3">
-                              <img src={e.image} referrerPolicy="no-referrer" alt={e.name} className="w-9 h-11 object-cover rounded border border-brand-warm-tan/30" />
+                              {isEditing ? (
+                                <div className="relative group cursor-pointer w-9 h-11">
+                                  <img
+                                    src={editEbImage || e.image}
+                                    referrerPolicy="no-referrer"
+                                    alt={e.name}
+                                    className="w-9 h-11 object-cover rounded border border-brand-rose/40"
+                                  />
+                                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded">
+                                    <Camera className="w-3.5 h-3.5 text-white" />
+                                  </div>
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="absolute inset-0 opacity-0 cursor-pointer"
+                                    onChange={async (e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) {
+                                        try {
+                                          const compressed = await compressImage(file);
+                                          setEditEbImage(compressed);
+                                        } catch (err) {
+                                          const reader = new FileReader();
+                                          reader.onloadend = () => setEditEbImage(reader.result as string);
+                                          reader.readAsDataURL(file);
+                                        }
+                                      }
+                                    }}
+                                  />
+                                </div>
+                              ) : (
+                                <img
+                                  src={e.image}
+                                  referrerPolicy="no-referrer"
+                                  alt={e.name}
+                                  className="w-9 h-11 object-cover rounded border border-brand-warm-tan/30"
+                                />
+                              )}
                             </td>
                             <td className="p-3">
                               {isEditing ? (
@@ -1617,13 +1752,13 @@ export const AdminPortal: React.FC = () => {
                                 <div className="flex justify-center gap-1.5">
                                   <button
                                     onClick={() => handleSaveEBook(e.id)}
-                                    className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-bold"
+                                    className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-bold cursor-pointer"
                                   >
                                     Save
                                   </button>
                                   <button
                                     onClick={() => setEditingEBookId(null)}
-                                    className="px-2.5 py-1 bg-brand-cream border border-[#E5D5C8] text-brand-chocolate rounded text-[11px] font-bold"
+                                    className="px-2.5 py-1 bg-brand-cream border border-[#E5D5C8] text-brand-chocolate rounded text-[11px] font-bold cursor-pointer"
                                   >
                                     Cancel
                                   </button>
@@ -1632,7 +1767,7 @@ export const AdminPortal: React.FC = () => {
                                 <div className="flex justify-center gap-1.5">
                                   <button
                                     onClick={() => handleStartEditEBook(e)}
-                                    className="p-1 px-2.5 bg-brand-cream hover:bg-brand-beige text-brand-chocolate rounded-md font-bold transition duration-250 border border-brand-warm-tan/30"
+                                    className="p-1 px-2.5 bg-brand-cream hover:bg-brand-beige text-brand-chocolate rounded-md font-bold transition duration-250 border border-brand-warm-tan/30 cursor-pointer"
                                   >
                                     Edit
                                   </button>
@@ -1640,12 +1775,12 @@ export const AdminPortal: React.FC = () => {
                                     id={`delete-ebook-list-${e.id}`}
                                     onClick={() => {
                                       if (confirm(`Remove digital textbook "${e.name}" from catalog?`)) {
-                                        if (checkPermission(['super_admin', 'store_manager'])) {
+                                        if (checkPermission(['super_admin', 'store_manager', 'content_manager'])) {
                                           deleteEBook(e.id);
                                         }
                                       }
                                     }}
-                                    className="p-1 px-2.5 bg-brand-pink-light hover:bg-brand-rose text-brand-rose hover:text-white rounded-md font-bold transition duration-250"
+                                    className="p-1 px-2.5 bg-brand-pink-light hover:bg-brand-rose text-brand-rose hover:text-white rounded-md font-bold transition duration-250 cursor-pointer"
                                   >
                                     Delete
                                   </button>
@@ -2639,7 +2774,7 @@ export const AdminPortal: React.FC = () => {
                               <button
                                 onClick={() => {
                                   if (confirm(`Remove video "${vid.title}"?`)) {
-                                    if (checkPermission(['super_admin', 'content_manager'])) {
+                                    if (checkPermission(['super_admin', 'store_manager', 'content_manager'])) {
                                       deleteVideo(vid.id);
                                     }
                                   }
@@ -2848,7 +2983,7 @@ export const AdminPortal: React.FC = () => {
                             <button
                               onClick={() => {
                                 if (confirm(`Remove photo "${gObj.caption}"?`)) {
-                                  if (checkPermission(['super_admin', 'content_manager'])) {
+                                  if (checkPermission(['super_admin', 'store_manager', 'content_manager'])) {
                                     deleteGalleryItem(gObj.id);
                                   }
                                 }
