@@ -12,10 +12,7 @@ import { AdminPortal } from './views/AdminPortal';
 import { ServicesPage } from './views/ServicesPage';
 import { CartDrawer } from './components/CartDrawer';
 import { motion, AnimatePresence, useInView } from 'motion/react';
-import { 
-  ArrowRight, ArrowUp, Sparkles, BookOpen, Droplet, Star, ShieldCheck, 
-  Clock, Heart, Compass, CheckCircle2, Check, Send, ShoppingBag, Video
-} from 'lucide-react';
+import { ArrowUp, BookOpen, Compass, ShoppingBag, Video } from 'lucide-react';
 
 const getRevealContainer = (prefersReducedMotion: boolean) => ({
   hidden: { opacity: 0 },
@@ -206,7 +203,7 @@ const Homepage: React.FC<{
               <Video className="w-5 h-5" />
             </div>
             <h3 className="font-serif text-lg font-normal text-brand-dark group-hover:text-brand-rose transition-colors">
-              Watch Visuals
+              Visuals
             </h3>
             <p className="font-sans text-xs text-[#6C5347]/85 line-clamp-2 leading-relaxed">
               Step into the studio to browse high-definition regimens, hairstyle lookbooks, and length retention walk-throughs.

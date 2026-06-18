@@ -88,6 +88,11 @@ export const Footer: React.FC<FooterProps> = ({ setActivePart }) => {
                 </button>
               </li>
               <li>
+                <button onClick={() => setActivePart('gallery')} className="hover:text-brand-rose focus:outline-none transition-colors">
+                  Lookbook
+                </button>
+              </li>
+              <li>
                 <button onClick={() => setActivePart('about')} className="hover:text-brand-rose focus:outline-none transition-colors">
                   About
                 </button>

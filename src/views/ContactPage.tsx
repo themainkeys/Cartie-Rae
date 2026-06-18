@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { 
   Send, Calendar, Sparkles, ShieldCheck, 
-  MessageSquare, Camera, ChevronDown, Check
+  MessageSquare, ChevronDown, Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -18,12 +18,6 @@ export const ContactPage: React.FC = () => {
 
   // Accordion state
   const [openedFaq, setOpenedFaq] = useState<number | null>(0);
-
-  // VIP Appointments state
-  const [apptTier, setApptTier] = useState<'Standard (15 min Zoom)' | 'Elite Routine Review (45 min Zoom)'>('Standard (15 min Zoom)');
-  const [apptDate, setApptDate] = useState('');
-  const [apptTime, setApptTime] = useState('');
-  const [apptSuccess, setApptSuccess] = useState(false);
 
   const faqs = [
     {
@@ -58,16 +52,6 @@ export const ContactPage: React.FC = () => {
     setTimeout(() => setMsgSuccess(false), 5000);
   };
 
-  const handleBookAppt = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!apptDate || !apptTime) return;
-    setApptSuccess(true);
-    setTimeout(() => {
-      setApptSuccess(false);
-      setApptDate('');
-      setApptTime('');
-    }, 5000);
-  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -174,91 +158,39 @@ export const ContactPage: React.FC = () => {
           </AnimatePresence>
         </div>
 
-        {/* Right Column: Virtual consultation scheduler */}
+        {/* Right Column: Services referral card */}
         <div className="lg:col-span-5 space-y-6">
           <div className="bg-brand-dark text-brand-cream border border-brand-chocolate/40 rounded-3xl p-6 space-y-5 text-left">
             <div className="flex items-center gap-2 border-b border-white/10 pb-3 select-none">
               <Calendar className="w-5 h-5 text-brand-pink" />
-              <h3 className="font-serif text-lg font-bold text-white">Book a Virtual Consultation</h3>
+              <h3 className="font-serif text-lg font-bold text-white">Book a Private Session</h3>
             </div>
 
             <p className="font-sans text-[11px] text-brand-beige/70 leading-relaxed">
-              Book a live 1-on-1 Zoom call with Cartiae to examine your texture under real-time lighting, inspect cuticle condition, and tailor a custom length retention plan.
+              Ready to go deeper? Book a private 1-on-1 virtual strategy call with Cartiae Rae — available as a Hair Assessment Guidance Call or a Social Media Growth Coaching Call.
             </p>
 
-            <form onSubmit={handleBookAppt} className="space-y-4">
-              <div>
-                <label className="block text-[9.5px] uppercase font-bold text-brand-pink tracking-wider mb-1.5">Select Consultation Tier</label>
-                <select
-                  id="appt-tier"
-                  value={apptTier}
-                  onChange={(e) => setApptTier(e.target.value as any)}
-                  className="w-full px-4 py-3 bg-brand-chocolate/40 border border-[#FAF6F0]/20 text-[#FAF6F0] text-xs rounded-xl focus:outline-none cursor-pointer"
-                >
-                  <option>Standard (15 min Zoom) — $25.00</option>
-                  <option>Elite Routine Review (45 min Zoom) — $75.00</option>
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-3">
+              <div className="flex items-start gap-3 bg-brand-chocolate/25 rounded-2xl p-4">
+                <Sparkles className="w-4 h-4 text-brand-pink shrink-0 mt-0.5" />
                 <div>
-                  <label className="block text-[9.5px] uppercase font-bold text-brand-pink tracking-wider mb-1.5">Pick Date</label>
-                  <input
-                    id="appt-date"
-                    type="date"
-                    required
-                    value={apptDate}
-                    onChange={(e) => setApptDate(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-brand-chocolate/40 border border-[#FAF6F0]/20 text-white text-xs rounded-xl focus:outline-none font-mono text-center cursor-pointer"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[9.5px] uppercase font-bold text-brand-pink tracking-wider mb-1.5">Pick Time Slot</label>
-                  <select
-                    id="appt-time"
-                    required
-                    value={apptTime}
-                    onChange={(e) => setApptTime(e.target.value)}
-                    className="w-full px-4 py-3 bg-brand-chocolate/40 border border-[#FAF6F0]/20 text-white text-xs rounded-xl focus:outline-none cursor-pointer"
-                  >
-                    <option value="">Choose...</option>
-                    <option value="10:00 AM">10:00 AM EDT</option>
-                    <option value="12:30 PM">12:30 PM EDT</option>
-                    <option value="03:00 PM">03:00 PM EDT</option>
-                    <option value="05:30 PM">05:30 PM EDT</option>
-                  </select>
+                  <p className="font-serif text-sm text-white font-semibold">Hair Assessment Guidance Call</p>
+                  <p className="font-sans text-[10px] text-brand-beige/60 mt-0.5">Personalized routine review, goal setting &amp; long-term growth strategy.</p>
                 </div>
               </div>
+              <div className="flex items-start gap-3 bg-brand-chocolate/25 rounded-2xl p-4">
+                <Sparkles className="w-4 h-4 text-brand-pink shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-serif text-sm text-white font-semibold">Social Media Growth Coaching Call</p>
+                  <p className="font-sans text-[10px] text-brand-beige/60 mt-0.5">Brand strategy, content pillars &amp; visibility roadmap.</p>
+                </div>
+              </div>
+            </div>
 
-              <motion.button
-                id="appt-submit-btn"
-                type="submit"
-                whileHover={{ scale: prefersReducedMotion ? 1 : 1.01 }}
-                whileTap={{ scale: prefersReducedMotion ? 1 : 0.99 }}
-                className="w-full bg-brand-rose hover:bg-brand-berry text-white py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
-              >
-                <Calendar className="w-4 h-4 text-brand-pink" />
-                <span>Book Booking Slot</span>
-              </motion.button>
-            </form>
-
-            <AnimatePresence>
-              {apptSuccess && (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  className="p-4 rounded-xl bg-brand-chocolate/50 border border-brand-pink/30 text-xs text-center space-y-1 text-white select-none mt-4"
-                >
-                  <p className="font-serif font-bold text-brand-pink flex items-center justify-center gap-1">
-                    <Sparkles className="w-4 h-4 text-brand-pink animate-spin" /> Booking Complete!
-                  </p>
-                  <p className="text-[10px] text-brand-beige/80 mt-1">
-                    A Zoom scheduling invitation has been sent directly to your account.
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <div className="pt-2 border-t border-white/10">
+              <p className="font-mono text-2xl font-bold text-white">$100<span className="text-sm font-sans font-normal text-brand-beige/50 ml-1">/ session</span></p>
+              <p className="font-sans text-[10px] text-brand-beige/50 mt-1">Virtual Zoom • Confirmation within 24 hrs</p>
+            </div>
           </div>
 
           <div className="bg-brand-cream border border-brand-warm-tan/30 rounded-2xl p-4 text-[11px] text-[#8C6D62] font-semibold space-y-2 text-left select-none">
@@ -267,7 +199,7 @@ export const ContactPage: React.FC = () => {
               <span>SECURE PRIVATE CALL LINK</span>
             </p>
             <p className="leading-relaxed text-[10.5px]">
-              All conversations are discrete. We inspect follicles in high-contrast detail, analyzing breakage lines without judgment. You are in safe expert hands.
+              All conversations are discrete. Meeting details delivered by email within 24 hours of booking confirmation.
             </p>
           </div>
         </div>

@@ -420,7 +420,7 @@ export const initialVideos: TikTokVideo[] = [
   },
   {
     id: 'vid-12',
-    title: 'Flat Cornrows Base for Beginners',
+    title: 'Protective Style Foundation',
     views: '11.8k',
     category: 'Protective Styles',
     videoUrl: 'https://www.tiktok.com/@cartiaerae/video/7628994030386334989',

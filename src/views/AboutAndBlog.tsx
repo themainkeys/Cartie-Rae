@@ -10,10 +10,10 @@ export const AboutAndBlog: React.FC = () => {
       {/* Page Title */}
       <div className="text-center mb-16 space-y-3">
         <span className="font-sans text-[10px] uppercase tracking-[0.35em] text-brand-rose font-bold block">
-          Meet the Founder
+          About
         </span>
         <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-brand-dark font-normal">
-          Our Story &amp; Philosophy
+          About Cartiae Rae
         </h1>
         <p className="font-sans text-xs sm:text-sm text-[#6C5347]/80 max-w-xl mx-auto leading-relaxed">
           Simple steps, healthy hair habits, and real results.
