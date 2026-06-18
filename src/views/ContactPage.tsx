@@ -64,7 +64,7 @@ export const ContactPage: React.FC = () => {
         <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-brand-dark mt-4">
           Contact &amp; Personal Coaching
         </h1>
-        <p className="font-sans text-xs sm:text-sm text-[#6B5145] mt-3 max-w-xl mx-auto leading-relaxed">
+        <p className="font-sans text-xs sm:text-sm text-zinc-400 mt-3 max-w-xl mx-auto leading-relaxed">
           Have an inquiry about tracking or desire a comprehensive personal schedule review? Reach out below or request a digital Zoom meeting directly.
         </p>
       </div>
@@ -82,7 +82,7 @@ export const ContactPage: React.FC = () => {
           <form onSubmit={handleMessageSubmit} className="space-y-4 text-left">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-[10.5px] uppercase font-bold text-brand-chocolate mb-1.5">Your Full Name *</label>
+                <label className="block text-[10.5px] uppercase font-bold text-zinc-500 mb-1.5">Your Full Name *</label>
                 <input
                   id="contact-name"
                   type="text"
@@ -94,7 +94,7 @@ export const ContactPage: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-[10.5px] uppercase font-bold text-brand-chocolate mb-1.5">Email Address *</label>
+                <label className="block text-[10.5px] uppercase font-bold text-zinc-500 mb-1.5">Email Address *</label>
                 <input
                   id="contact-email"
                   type="email"
@@ -106,7 +106,7 @@ export const ContactPage: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-[10.5px] uppercase font-bold text-brand-chocolate mb-1.5">Phone Number</label>
+                <label className="block text-[10.5px] uppercase font-bold text-zinc-500 mb-1.5">Phone Number</label>
                 <input
                   id="contact-phone"
                   type="tel"
@@ -193,7 +193,7 @@ export const ContactPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-brand-cream border border-brand-warm-tan/30 rounded-2xl p-4 text-[11px] text-[#8C6D62] font-semibold space-y-2 text-left select-none">
+          <div className="bg-brand-cream border border-brand-warm-tan/30 rounded-2xl p-4 text-[11px] text-zinc-400 font-semibold space-y-2 text-left select-none">
             <p className="flex items-center gap-2 text-brand-rose">
               <ShieldCheck className="w-4 h-4 shrink-0" />
               <span>SECURE PRIVATE CALL LINK</span>
@@ -224,7 +224,7 @@ export const ContactPage: React.FC = () => {
                 className="p-4 sm:p-5 flex items-center justify-between text-left select-none text-brand-dark font-serif text-sm font-semibold hover:text-brand-rose transition-colors"
               >
                 <span>{faq.q}</span>
-                <ChevronDown className={`w-4 h-4 text-[#8C6D62] transition-transform duration-300 shrink-0 ml-4 ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-4 h-4 text-zinc-400 transition-transform duration-300 shrink-0 ml-4 ${isOpen ? 'rotate-180' : ''}`} />
               </div>
 
               {/* Collapsed body with height animation */}
@@ -237,7 +237,7 @@ export const ContactPage: React.FC = () => {
                     transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
                     className="overflow-hidden border-t border-brand-warm-tan/10 bg-brand-cream"
                   >
-                    <p className="px-4 sm:px-5 pb-5 pt-3 text-xs text-[#6B5145] leading-relaxed font-sans text-left">
+                    <p className="px-4 sm:px-5 pb-5 pt-3 text-xs text-zinc-500 leading-relaxed font-sans text-left">
                       {faq.a}
                     </p>
                   </motion.div>

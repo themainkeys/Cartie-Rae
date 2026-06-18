@@ -200,10 +200,10 @@ export const MainStore: React.FC<MainStoreProps> = ({ initialFilter = 'All', isC
       {/* Banner introduction with text design */}
       <div className="text-center mb-16 space-y-3">
         <span className="font-sans text-[10px] uppercase tracking-[0.3em] text-brand-rose font-bold block">
-          Editorial Curation
+          Digital Guides &amp; Essentials
         </span>
         <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-brand-dark font-normal">
-          The Hair Apothecary
+          Shop Essentials
         </h1>
       </div>
 

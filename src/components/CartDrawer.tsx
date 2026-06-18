@@ -690,7 +690,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                       <span className="text-[10px] font-mono uppercase bg-brand-pink-light tracking-widest text-[#B11B41] font-bold px-3 py-1.5 rounded-xl inline-block mt-2 border border-brand-rose/25 select-none">
                         Receipt Code: {createdOrder.id}
                       </span>
-                      <p className="font-sans text-[11px] text-[#5C453C]/90 leading-relaxed mt-2.5 max-w-xs mx-auto">
+                      <p className="font-sans text-[11px] text-zinc-500 leading-relaxed mt-2.5 max-w-xs mx-auto">
                         Thank you for trusting Cartiae Rae. We have sent a confirmation email copy to <strong className="font-bold underline text-brand-rose">{createdOrder.customerEmail}</strong>!
                       </p>
                     </div>

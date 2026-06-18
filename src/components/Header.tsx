@@ -280,8 +280,8 @@ export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openC
               </div>
 
               {/* Menu Footer */}
-              <div className="w-full bg-[#FAF6F0] py-8 border-t border-brand-warm-tan/15 text-center px-6">
-                <p className="font-sans text-[10px] uppercase tracking-[0.2em] text-[#6C5347]/70">
+              <div className="w-full bg-brand-cream py-8 border-t border-brand-warm-tan/15 text-center px-6">
+                <p className="font-sans text-[10px] uppercase tracking-[0.2em] text-zinc-400">
                   Cartiae Rae Hair Studio • Healthy Hair Regimens Made Simple
                 </p>
                 {isAdminLoggedIn ? (
