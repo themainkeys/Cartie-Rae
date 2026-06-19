@@ -377,12 +377,13 @@ const AnimatedAdminCounter: React.FC<{
 
 export const AdminPortal: React.FC = () => {
   const {
-    ebooks, products, discountCodes, homepageContent, newsletterSignups, orders, isAdminLoggedIn, currentAdminUser,
+    ebooks, products, blogs, discountCodes, homepageContent, newsletterSignups, orders, isAdminLoggedIn, currentAdminUser,
     videos, gallery, contactRequests,
     addEBook, updateEBook, deleteEBook,
     addProduct, updateProduct, deleteProduct,
     addVideo, updateVideo, deleteVideo,
     addGalleryItem, updateGalleryItem, deleteGalleryItem,
+    deleteBlogPost,
     addDiscountCode, deleteDiscountCode,
     updateHomepageContent, fulfillOrder, loginAdmin, logoutAdmin,
     respondToContactRequest, deleteContactRequest, updateContactRequestStatus,
@@ -1509,6 +1510,7 @@ export const AdminPortal: React.FC = () => {
                                       if (confirm(`Delete physical "${p.name}" from catalog?`)) {
                                         if (checkPermission(['super_admin', 'store_manager', 'content_manager'])) {
                                           deleteProduct(p.id);
+                                          triggerToast(`🗑 "${p.name}" removed from the product catalog.`, 'success');
                                         }
                                       }
                                     }}
@@ -1775,6 +1777,7 @@ export const AdminPortal: React.FC = () => {
                                       if (confirm(`Remove digital textbook "${e.name}" from catalog?`)) {
                                         if (checkPermission(['super_admin', 'store_manager', 'content_manager'])) {
                                           deleteEBook(e.id);
+                                          triggerToast(`🗑 "${e.name}" removed from the eBook catalog.`, 'success');
                                         }
                                       }
                                     }}
@@ -1993,6 +1996,7 @@ export const AdminPortal: React.FC = () => {
                               if (confirm(`Remove promo Coupon "${c.code}" completely?`)) {
                                 if (checkPermission(['super_admin'])) {
                                   deleteDiscountCode(c.id);
+                                  triggerToast(`🗑 Discount code "${c.code}" deleted.`, 'success');
                                 }
                               }
                             }}
@@ -2213,6 +2217,69 @@ export const AdminPortal: React.FC = () => {
                   ✓ Website Text Copy updated successfully on CMS live environment!
                 </p>
               )}
+            </div>
+          )}
+
+          {/* ============================================= */}
+          {/* CMS COMPONENT: BLOG POSTS MANAGEMENT TABLE   */}
+          {/* ============================================= */}
+          {activeTab === 'design' && designSub === 'cms' && blogs.length > 0 && (
+            <div className="bg-white border border-[#E5D5C8]/80 rounded-3xl p-6 sm:p-8 space-y-4 shadow-[0_4px_25px_-4px_rgba(74,43,32,0.02)] animate-fade-in">
+              <div className="flex justify-between items-center border-b border-[#E5D5C8]/30 pb-3">
+                <h3 className="font-serif text-base sm:text-lg font-bold text-brand-dark flex items-center gap-2">
+                  <span className="w-1.5 h-6 bg-brand-rose rounded-full"></span>
+                  Blog Articles Management
+                </h3>
+                <span className="text-[10px] text-[#A67E6B] bg-brand-cream border border-[#E5D5C8]/60 px-3 py-1 rounded-full font-bold">
+                  {blogs.length} Post{blogs.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+              <div className="overflow-x-auto border border-brand-warm-tan/20 rounded-xl bg-white">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-brand-beige/50 border-b border-brand-warm-tan/20 text-[#8C6D62] font-semibold">
+                      <th className="p-3">Cover</th>
+                      <th className="p-3">Title</th>
+                      <th className="p-3">Category</th>
+                      <th className="p-3">Date</th>
+                      <th className="p-3 text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-brand-warm-tan/10 text-brand-dark/80">
+                    {blogs.map((post) => (
+                      <tr key={post.id} className="hover:bg-brand-cream/30">
+                        <td className="p-3">
+                          <img
+                            src={post.image}
+                            referrerPolicy="no-referrer"
+                            alt=""
+                            className="w-10 h-10 object-cover rounded border border-brand-warm-tan/20"
+                          />
+                        </td>
+                        <td className="p-3 font-semibold line-clamp-1 max-w-[220px]">{post.title}</td>
+                        <td className="p-3 font-mono">{post.category}</td>
+                        <td className="p-3 text-[#A67E6B]">{post.date}</td>
+                        <td className="p-3 text-center">
+                          <button
+                            id={`delete-blog-${post.id}`}
+                            onClick={() => {
+                              if (confirm(`Remove blog post "${post.title}"?`)) {
+                                if (checkPermission(['super_admin', 'content_manager'])) {
+                                  deleteBlogPost(post.id);
+                                  triggerToast(`🗑 "${post.title}" removed from blog.`, 'success');
+                                }
+                              }
+                            }}
+                            className="p-1 px-2.5 bg-brand-pink-light hover:bg-brand-rose text-brand-rose hover:text-white rounded-md font-bold transition duration-250 cursor-pointer"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
@@ -2774,6 +2841,7 @@ export const AdminPortal: React.FC = () => {
                                   if (confirm(`Remove video "${vid.title}"?`)) {
                                     if (checkPermission(['super_admin', 'store_manager', 'content_manager'])) {
                                       deleteVideo(vid.id);
+                                      triggerToast(`🗑 "${vid.title}" removed from the video feed.`, 'success');
                                     }
                                   }
                                 }}
@@ -2983,6 +3051,7 @@ export const AdminPortal: React.FC = () => {
                                 if (confirm(`Remove photo "${gObj.caption}"?`)) {
                                   if (checkPermission(['super_admin', 'store_manager', 'content_manager'])) {
                                     deleteGalleryItem(gObj.id);
+                                    triggerToast(`🗑 "${gObj.caption}" removed from the Lookbook.`, 'success');
                                   }
                                 }
                               }}
@@ -3238,6 +3307,7 @@ export const AdminPortal: React.FC = () => {
                               onClick={() => {
                                 if (confirm('Permanently delete this customer query?')) {
                                   deleteContactRequest(req.id);
+                                  triggerToast('🗑 Contact inquiry deleted.', 'success');
                                 }
                               }}
                               className="p-1 px-2.5 bg-white hover:bg-red-50 text-brand-rose hover:text-red-700 border border-[#E9D9D3] rounded-lg text-[10px] font-extrabold uppercase transition duration-150 focus:outline-none"
