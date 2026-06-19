@@ -112,3 +112,40 @@ Copy the generated `deployId` from the terminal output, update it in `scratch/de
 node scratch/deploy.js
 ```
 This promotes your draft build to the live production URL.
+
+---
+
+## ⚠️ Backend Status — Current Data Persistence (Important)
+
+> **The current version of the site uses browser `localStorage` for all admin data.**  
+> This is a functional demo/prototype system — not a production database.
+
+### What This Means For You
+
+All products, eBooks, videos, gallery items, blog posts, discount codes, orders, and contact requests you manage through the Admin Portal are saved **only in the browser on the device you're using**.
+
+| Limitation | Explanation |
+|---|---|
+| **Not multi-device** | Admin changes on your laptop are not visible on your phone or another computer |
+| **Not persistent across browsers** | Clearing browser cache or using a different browser wipes all data |
+| **Customers can't reach you** | Contact form submissions and orders are stored on the customer's browser only — you cannot see them from another device |
+| **No real payments** | Stripe checkout is built and structured but the server-side session creation is commented out — no money is actually collected |
+
+### What You Currently Can Do Safely
+
+✅ Manage your admin catalog (products, eBooks) as a single-device demo  
+✅ Upload and delete videos, gallery photos, blog posts  
+✅ Test the full checkout flow in simulation mode  
+✅ Review the contact form UI and submission flow  
+
+### What's Required for Full Production
+
+To run the site as a real, multi-device business platform you will need:
+
+1. **A real database** — Supabase (recommended), Firebase, or Postgres
+2. **Backend API functions** — Netlify Functions or a separate Express/Node server
+3. **Stripe backend** — a server function to call `stripe.checkout.sessions.create()` and return the redirect URL
+4. **Email delivery** — SendGrid or Postmark integration to send eBook download links automatically
+5. **Secure admin authentication** — JWT tokens with server-side session validation instead of hardcoded passwords
+
+Contact your developer when you're ready to connect a real backend.
