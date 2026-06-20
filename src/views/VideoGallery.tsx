@@ -2,8 +2,8 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { TikTokVideo } from '../types';
 import { 
-  Play, Pause, Heart, Bookmark, Share2, MessageSquare, ShoppingBag, 
-  X, Send, Sparkles, Volume2, VolumeX, Eye, Clock, ChevronLeft, ChevronRight
+  Play, Heart, Bookmark, Share2, ShoppingBag, 
+  X, Send, Volume2, VolumeX, Eye, Clock, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -209,7 +209,7 @@ const VideoGridCard: React.FC<VideoGridCardProps> = ({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onClick={handleClick}
-      className="w-full aspect-[9/16] max-w-[310px] sm:max-w-[320px] rounded-[32px] border border-brand-warm-tan/25 relative flex flex-col justify-end overflow-hidden bg-brand-cream shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-500 cursor-pointer select-none"
+      className="w-full aspect-[9/16] max-w-full sm:max-w-[260px] rounded-[32px] border border-brand-warm-tan/25 relative flex flex-col justify-end overflow-hidden bg-brand-cream shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-500 cursor-pointer select-none"
     >
       <style>{`
         @keyframes progressLoop {
@@ -268,8 +268,8 @@ const VideoGridCard: React.FC<VideoGridCardProps> = ({
                   className="absolute inset-0 w-full h-full object-cover"
                 />
               )}
-              {/* Click shield */}
-              <div className="absolute inset-0 bg-transparent z-15" />
+              {/* Click shield — stops iframe from stealing pointer events */}
+              <div className="absolute inset-0 bg-transparent z-20" />
             </motion.div>
           ) : (
             <motion.div
@@ -295,7 +295,7 @@ const VideoGridCard: React.FC<VideoGridCardProps> = ({
                   </span>
                 ) : (
                   <span className="p-3 bg-[#FAF6F0]/90 backdrop-blur-sm text-brand-rose rounded-full shadow-md">
-                    <Play className="w-4.5 h-4.5 fill-brand-rose ml-0.5" />
+                    <Play className="w-[18px] h-[18px] fill-brand-rose ml-0.5" />
                   </span>
                 )}
               </div>
@@ -375,8 +375,8 @@ const VideoGridCard: React.FC<VideoGridCardProps> = ({
         )}
       </div>
 
-      {/* Right-Aligned Floating Social Actions Panel */}
-      <div className="absolute right-3.5 bottom-6 z-25 flex flex-col items-center gap-3.5 text-white pointer-events-auto">
+      {/* Right-Aligned Floating Social Actions Panel — hidden on mobile (actions available in modal) */}
+      <div className="hidden sm:flex absolute right-3.5 bottom-6 z-20 flex-col items-center gap-3.5 text-white pointer-events-auto">
         {/* Like Action */}
         <div className="flex flex-col items-center">
           <button
@@ -384,7 +384,7 @@ const VideoGridCard: React.FC<VideoGridCardProps> = ({
               e.stopPropagation();
               onLike();
             }}
-            className={`w-8.5 h-8.5 rounded-full bg-black/30 hover:bg-brand-rose/90 backdrop-blur-md transition-all flex items-center justify-center border border-white/10 shadow-md cursor-pointer ${
+            className={`w-8 h-8 rounded-full bg-black/30 hover:bg-brand-rose/90 backdrop-blur-md transition-all flex items-center justify-center border border-white/10 shadow-md cursor-pointer ${
               isLiked ? 'text-brand-rose bg-[#FAF6F0]' : 'text-white'
             }`}
           >
@@ -400,7 +400,7 @@ const VideoGridCard: React.FC<VideoGridCardProps> = ({
               e.stopPropagation();
               onSave();
             }}
-            className={`w-8.5 h-8.5 rounded-full bg-black/30 hover:bg-brand-rose/90 backdrop-blur-md transition-all flex items-center justify-center border border-white/10 shadow-md cursor-pointer ${
+            className={`w-8 h-8 rounded-full bg-black/30 hover:bg-brand-rose/90 backdrop-blur-md transition-all flex items-center justify-center border border-white/10 shadow-md cursor-pointer ${
               isSaved ? 'text-brand-rose bg-[#FAF6F0]' : 'text-white'
             }`}
           >
@@ -416,7 +416,7 @@ const VideoGridCard: React.FC<VideoGridCardProps> = ({
               e.stopPropagation();
               onShare();
             }}
-            className="w-8.5 h-8.5 rounded-full bg-black/30 hover:bg-brand-rose/90 backdrop-blur-md transition-all flex items-center justify-center border border-white/10 shadow-md cursor-pointer text-white"
+            className="w-8 h-8 rounded-full bg-black/30 hover:bg-brand-rose/90 backdrop-blur-md transition-all flex items-center justify-center border border-white/10 shadow-md cursor-pointer text-white"
             title="Copy Share Link"
           >
             <Share2 className="w-3.5 h-3.5" />
@@ -768,7 +768,7 @@ export const VideoGallery: React.FC = () => {
       <div className="w-full flex justify-center py-4">
         {filteredVideos.length > 0 ? (
           <div 
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10 lg:gap-14 w-full max-w-6xl justify-items-center px-4 pb-16"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6 w-full max-w-7xl justify-items-center px-4 sm:px-4 pb-16"
           >
             {filteredVideos.map((video) => {
               const isLiked = !!likedMap[video.id];
