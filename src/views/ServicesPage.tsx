@@ -8,59 +8,9 @@ interface ServicesPageProps {
 }
 
 export const ServicesPage: React.FC<ServicesPageProps> = ({ openCart }) => {
-  const { addToCart, prefersReducedMotion } = useApp();
+  const { addToCart, prefersReducedMotion, services } = useApp();
 
-  const services = [
-    {
-      id: 'service-1',
-      name: 'Hair Assessment Guidance Call',
-      price: 100.00,
-      image: 'https://images.unsplash.com/photo-1595959183075-c1d0a5113cc3?auto=format&fit=crop&q=80&w=800',
-      description: 'This one-hour personalized session provides an assessment of the client\'s hair, routine, and growth challenges. It complements the "31 Days to Success" eBook by helping clients understand their hair needs, proper products, daily routines, and long-term healthy growth strategies.',
-      included: [
-        'Introduction & Hair Assessment',
-        'Identify Hair Goals',
-        'Establish Hair Routine',
-        'Long-Term Hair Strategy'
-      ],
-      benefits: [
-        'Personalized recap',
-        'Additional tools/templates',
-        'Option for discounted follow-up coaching'
-      ],
-      notice: [
-        'Confirmation may take up to 24 hours',
-        'High-risk purchases may require verification',
-        'Meeting link delivered by email',
-        'Correct email address required'
-      ],
-      disclaimer: 'This is a virtual consultation. Not a physical product. All digital purchases are non-refundable.'
-    },
-    {
-      id: 'service-2',
-      name: 'Social Media Growth Coaching Call',
-      price: 100.00,
-      image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&q=80&w=800',
-      description: 'A one-hour strategy session focused on social media growth, branding, and content strategy. Topics include content review, growth obstacles, personalized roadmap, visibility strategy, and consistency planning.',
-      included: [
-        'Goal setting',
-        'Brand & niche identification',
-        'Content pillars',
-        'Long-term growth strategy'
-      ],
-      benefits: [
-        'Personalized recap',
-        'Templates and resources',
-        'Optional follow-up coaching'
-      ],
-      notice: [
-        'Confirmation within 24 hours',
-        'High-risk purchases may require verification',
-        'Meeting link sent by email'
-      ],
-      disclaimer: 'Virtual consultation only. Not a physical product. Digital purchases are non-refundable.'
-    }
-  ];
+
 
   const handleBookSession = (service: typeof services[0]) => {
     addToCart({

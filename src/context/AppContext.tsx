@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { EBook, Product, TikTokVideo, PhotoGalleryItem, BlogPost, DiscountCode, CartItem, Order, NewsletterSignup, HomepageContent, WishlistItem, ContactRequest, AdminUser } from '../types';
-import { initialEBooks, initialProducts, initialVideos, initialGallery, initialBlogPosts, initialDiscountCodes, initialHomepageContent } from '../data/initialData';
+import { EBook, Product, TikTokVideo, PhotoGalleryItem, BlogPost, DiscountCode, CartItem, Order, NewsletterSignup, HomepageContent, WishlistItem, ContactRequest, AdminUser, Service } from '../types';
+import { initialEBooks, initialProducts, initialVideos, initialGallery, initialBlogPosts, initialDiscountCodes, initialHomepageContent, initialServices } from '../data/initialData';
 
 // ─── Tombstone helpers ──────────────────────────────────────────────────────
 // A "tombstone" is a persisted Set of deleted IDs per entity type.
@@ -94,6 +94,10 @@ interface AppContextType {
   
   // CMS Home/About
   updateHomepageContent: (content: Partial<HomepageContent>) => void;
+
+  // Services
+  services: Service[];
+  updateService: (id: string, patch: Partial<Service>) => void;
   
   // Newsletter Signups
   signupNewsletter: (email: string) => boolean;
@@ -224,6 +228,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [homepageContent, setHomepageContent] = useState<HomepageContent>(() => {
     const local = localStorage.getItem('cartiae_home');
     return local ? JSON.parse(local) : initialHomepageContent;
+  });
+
+  const [services, setServices] = useState<Service[]>(() => {
+    const local = localStorage.getItem('cartiae_services');
+    return local ? JSON.parse(local) : initialServices;
   });
 
   const [newsletterSignups, setNewsletterSignups] = useState<NewsletterSignup[]>(() => {
@@ -359,6 +368,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => { localStorage.setItem('cartiae_blogs', JSON.stringify(blogs)); }, [blogs]);
   useEffect(() => { localStorage.setItem('cartiae_discounts', JSON.stringify(discountCodes)); }, [discountCodes]);
   useEffect(() => { localStorage.setItem('cartiae_home', JSON.stringify(homepageContent)); }, [homepageContent]);
+  useEffect(() => { localStorage.setItem('cartiae_services', JSON.stringify(services)); }, [services]);
   useEffect(() => { localStorage.setItem('cartiae_newsletter', JSON.stringify(newsletterSignups)); }, [newsletterSignups]);
   useEffect(() => { localStorage.setItem('cartiae_cart', JSON.stringify(cart)); }, [cart]);
   useEffect(() => { localStorage.setItem('cartiae_orders', JSON.stringify(orders)); }, [orders]);
@@ -524,6 +534,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // --- CMS Content ---
   const updateHomepageContent = (content: Partial<HomepageContent>) => {
     setHomepageContent(prev => ({ ...prev, ...content }));
+  };
+
+  const updateService = (id: string, patch: Partial<Service>) => {
+    setServices(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s));
   };
 
   // --- Newsletter Signups ---
@@ -704,7 +718,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   return (
     <AppContext.Provider value={{
-      ebooks, products, videos, gallery, blogs, discountCodes, homepageContent, newsletterSignups, cart, orders, appliedDiscount, isAdminLoggedIn, currentAdminUser, wishlist,
+      ebooks, products, videos, gallery, blogs, discountCodes, homepageContent, services, newsletterSignups, cart, orders, appliedDiscount, isAdminLoggedIn, currentAdminUser, wishlist,
       contactRequests,
       toast, triggerToast,
       addEBook, updateEBook, deleteEBook,
@@ -714,6 +728,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addBlogPost, updateBlogPost, deleteBlogPost, likeBlogPost,
       addDiscountCode, deleteDiscountCode,
       updateHomepageContent,
+      updateService,
       signupNewsletter,
       addToCart, removeFromCart, updateCartQuantity, applyPromoCode, clearCart,
       addToWishlist, removeFromWishlist, moveToWishlist, moveToCart,
