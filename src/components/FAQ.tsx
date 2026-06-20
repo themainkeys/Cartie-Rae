@@ -69,7 +69,7 @@ export const FAQ: React.FC = () => {
 
       <motion.div 
         variants={revealItem}
-        className="space-y-2 bg-[#FAF6F0] p-6 sm:p-8 border border-brand-warm-tan/20 rounded-sm"
+        className="space-y-2 bg-brand-cream p-6 sm:p-8 border border-brand-warm-tan/20 rounded-sm"
       >
         {faqs.map((faq, index) => {
           const isOpen = openIndex === index;
@@ -106,7 +106,7 @@ export const FAQ: React.FC = () => {
                     transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
                     className="overflow-hidden"
                   >
-                    <p className="font-sans text-xs sm:text-sm text-[#5C453C]/90 leading-relaxed pb-4 pt-1 pr-6">
+                    <p className="font-sans text-xs sm:text-sm text-zinc-500 leading-relaxed pb-4 pt-1 pr-6">
                       {faq.answer}
                     </p>
                   </motion.div>

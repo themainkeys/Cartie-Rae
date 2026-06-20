@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../context/AppContext';
 import { Product, EBook, DiscountCode, TikTokVideo, PhotoGalleryItem, ContactRequest, AdminRole } from '../types';
@@ -6,7 +6,8 @@ import {
   ShieldCheck, Lock, LogOut, CheckCircle2, TrendingUp, ShoppingBag, 
   BookOpen, Mail, BadgePercent, Settings, Book, Package, Plus, 
   Trash2, Edit, Save, ToggleLeft, ToggleRight, ListFilter, RotateCcw, Sparkles,
-  Video, Image, MessageSquare, Phone, MapPin, Camera, Eye, Archive, Inbox, Check
+  Video, Image, MessageSquare, Phone, MapPin, Camera, Eye, Archive, Inbox, Check,
+  Globe, Radio
 } from 'lucide-react';
 
 // Resolve video types and parameters for YT, TikTok, or direct video
@@ -377,12 +378,13 @@ const AnimatedAdminCounter: React.FC<{
 
 export const AdminPortal: React.FC = () => {
   const {
-    ebooks, products, discountCodes, homepageContent, newsletterSignups, orders, isAdminLoggedIn, currentAdminUser,
+    ebooks, products, blogs, discountCodes, homepageContent, newsletterSignups, orders, isAdminLoggedIn, currentAdminUser,
     videos, gallery, contactRequests,
     addEBook, updateEBook, deleteEBook,
     addProduct, updateProduct, deleteProduct,
     addVideo, updateVideo, deleteVideo,
     addGalleryItem, updateGalleryItem, deleteGalleryItem,
+    deleteBlogPost,
     addDiscountCode, deleteDiscountCode,
     updateHomepageContent, fulfillOrder, loginAdmin, logoutAdmin,
     respondToContactRequest, deleteContactRequest, updateContactRequestStatus,
@@ -459,6 +461,28 @@ export const AdminPortal: React.FC = () => {
   const [cmsSuccess, setCmsSuccess] = useState(false);
   const [showLivePreview, setShowLivePreview] = useState(false);
 
+  // Track whether CMS local state differs from saved context state (dirty detection)
+  const hasCmsDirty = useMemo(() => {
+    return (
+      cmsHeroHead !== homepageContent.heroHeadline ||
+      cmsHeroSub  !== homepageContent.heroSubheadline ||
+      cmsAboutHead !== homepageContent.aboutHeadline ||
+      cmsAboutStory !== homepageContent.aboutStory ||
+      cmsPromoQuote !== homepageContent.promoQuote ||
+      cmsPromoAuthor !== homepageContent.promoAuthor
+    );
+  }, [cmsHeroHead, cmsHeroSub, cmsAboutHead, cmsAboutStory, cmsPromoQuote, cmsPromoAuthor, homepageContent]);
+
+  // Debounced auto-save CMS fields — fires 800ms after last keystroke
+  const cmsDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const autoSaveCms = useCallback((patch: Partial<typeof homepageContent>) => {
+    if (cmsDebounceRef.current) clearTimeout(cmsDebounceRef.current);
+    cmsDebounceRef.current = setTimeout(() => {
+      updateHomepageContent(patch);
+    }, 800);
+  }, [updateHomepageContent]);
+
+
   // New catalog item drawers
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const [prodName, setProdName] = useState('');
@@ -482,6 +506,9 @@ export const AdminPortal: React.FC = () => {
   const [discPercent, setDiscPercent] = useState('20');
   const [discDesc, setDiscDesc] = useState('');
 
+  // Derived: are there any unsaved/pending changes?
+  const hasOpenForm = isAddingVideo || isAddingProduct || isAddingEBook;
+  const hasUnsavedChanges = hasCmsDirty || hasOpenForm;
   // Inline editing states
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [editProdName, setEditProdName] = useState('');
@@ -514,9 +541,9 @@ export const AdminPortal: React.FC = () => {
       setAuthError('Please enter a valid administrative staff email.');
       return;
     }
-    const success = loginAdmin(password);
+    const success = loginAdmin(email, password);
     if (!success) {
-      setAuthError('Incorrect system staff administrative credentials or password.');
+      setAuthError('Incorrect staff email or password. Access denied.');
     } else {
       setEmail('');
       setPassword('');
@@ -534,8 +561,95 @@ export const AdminPortal: React.FC = () => {
       promoQuote: cmsPromoQuote,
       promoAuthor: cmsPromoAuthor
     });
+    if (cmsDebounceRef.current) clearTimeout(cmsDebounceRef.current);
     setCmsSuccess(true);
+    triggerToast('✓ Homepage content saved — live on storefront now!', 'success');
     setTimeout(() => setCmsSuccess(false), 3000);
+  };
+
+  // Save ALL pending changes at once (CMS fields + any open forms)
+  const handleSaveAll = () => {
+    let saved = 0;
+
+    // 1. Save CMS if dirty
+    if (hasCmsDirty && checkPermission(['super_admin', 'content_manager'])) {
+      if (cmsDebounceRef.current) clearTimeout(cmsDebounceRef.current);
+      updateHomepageContent({
+        heroHeadline: cmsHeroHead,
+        heroSubheadline: cmsHeroSub,
+        aboutHeadline: cmsAboutHead,
+        aboutStory: cmsAboutStory,
+        promoQuote: cmsPromoQuote,
+        promoAuthor: cmsPromoAuthor
+      });
+      setCmsSuccess(true);
+      setTimeout(() => setCmsSuccess(false), 3000);
+      saved++;
+    }
+
+    // 2. If video form is open with a title + URL, auto-submit it
+    if (isAddingVideo && vidTitle.trim() && vidUrl.trim()) {
+      const newVideo = {
+        title: vidTitle.trim(),
+        views: vidViews,
+        category: vidCategory,
+        videoUrl: vidUrl.trim(),
+        thumbnailUrl: vidThumb || '/about-portrait.jpg',
+        description: vidDescription,
+        relatedIds: vidRelatedIds,
+        isFeatured: vidIsFeatured,
+        status: vidStatus as 'draft' | 'published' | 'scheduled',
+        scheduledAt: vidScheduledAt || undefined,
+      };
+      if (editingVideoId) {
+        updateVideo(editingVideoId, newVideo);
+      } else {
+        addVideo({ ...newVideo, id: `vid-${Date.now()}` } as any);
+      }
+      setIsAddingVideo(false);
+      saved++;
+    }
+
+    // 3. If product form is open with a name, auto-submit it
+    if (isAddingProduct && prodName.trim()) {
+      addProduct({
+        id: `prod-${Date.now()}`,
+        name: prodName,
+        price: parseFloat(prodPrice) || 0,
+        description: prodDesc,
+        category: prodCategory,
+        image: prodImage,
+        stockStatus: (parseInt(prodStock) || 0) > 15 ? 'In Stock' : 'Low Stock',
+        stockCount: parseInt(prodStock) || 0
+      });
+      setProdName(''); setProdPrice('19.99'); setProdDesc(''); setProdStock('50');
+      setIsAddingProduct(false);
+      saved++;
+    }
+
+    // 4. If eBook form is open with a name, auto-submit it
+    if (isAddingEBook && ebName.trim()) {
+      addEBook({
+        id: `ebook-${Date.now()}`,
+        name: ebName,
+        price: parseFloat(ebPrice) || 0,
+        description: ebDesc,
+        image: ebImage,
+        pages: parseInt(ebPages) || 120,
+        fileSize: ebSize,
+        benefits: ['Detailed step-by-step master hair guides', 'Porosity hydration logs and charts', 'Maximum hair follicle safety guidelines'],
+        pdfUrl: `${ebName.toLowerCase().replace(/\s+/g, '_')}_guide.pdf`
+      });
+      setEbName(''); setEbPrice('14.99'); setEbDesc(''); setEbPages('100'); setEbSize('10 MB');
+      setIsAddingEBook(false);
+      saved++;
+    }
+
+    if (saved > 0) {
+      triggerToast(`✓ ${saved} change${saved > 1 ? 's' : ''} saved — everything is live on storefront!`, 'success');
+    } else {
+      triggerToast('Everything is already up to date ✓', 'info');
+    }
   };
 
   const handleAddProductSubmit = (e: React.FormEvent) => {
@@ -895,8 +1009,9 @@ export const AdminPortal: React.FC = () => {
           {authError && <p className="text-brand-rose text-xs mt-4 font-bold bg-[#FDF1F2] border border-brand-rose/10 p-2.5 rounded-xl">{authError}</p>}
           
           <div className="mt-8 pt-6 border-t border-[#E5D5C8]/50 text-[10.5px] text-[#A67E6B] font-medium leading-relaxed">
-            <Lock className="w-3 h-3 inline-block mr-1 -mt-0.5 text-brand-rose" />
-            Private staff area. Authorized personnel only.
+            🔒 Authorized Staff Access Only.<br />
+            Use your assigned staff email and password to sign in.<br />
+            Contact the site owner if you need access credentials.
           </div>
         </div>
       ) : (
@@ -923,15 +1038,64 @@ export const AdminPortal: React.FC = () => {
               </h1>
             </div>
 
-            <button
-              id="admin-logout-btn"
-              onClick={logoutAdmin}
-              className="flex items-center justify-center gap-1.5 self-start px-4.5 py-2.5 text-xs font-bold text-[#4A2B20] hover:text-white bg-brand-cream hover:bg-brand-rose border border-[#E5D5C8] rounded-xl transition-all duration-200 focus:outline-none shadow-xs hover:border-transparent"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>Exit Console</span>
-            </button>
+            {/* Header action buttons */}
+            <div className="flex items-center gap-2 self-start flex-wrap">
+              {/* View Storefront link */}
+              <a
+                href="/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-600 hover:text-white border border-emerald-200 hover:border-transparent rounded-xl transition-all duration-200 focus:outline-none shadow-xs"
+              >
+                <Globe className="w-3.5 h-3.5" />
+                <span>View Storefront</span>
+              </a>
+
+              <button
+                id="admin-logout-btn"
+                onClick={logoutAdmin}
+                className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-bold text-[#4A2B20] hover:text-white bg-brand-cream hover:bg-brand-rose border border-[#E5D5C8] rounded-xl transition-all duration-200 focus:outline-none shadow-xs hover:border-transparent"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Exit Console</span>
+              </button>
+            </div>
           </div>
+
+          {/* ── Floating "Save All & Publish" bar ── appears when unsaved changes exist */}
+          <AnimatePresence>
+            {hasUnsavedChanges && (
+              <motion.div
+                initial={{ opacity: 0, y: -12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
+                className="flex items-center justify-between gap-4 bg-[#1C1410] border border-brand-chocolate/60 px-5 py-3 rounded-2xl shadow-xl"
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-400" />
+                  </span>
+                  <p className="text-[11px] font-semibold text-white/90">
+                    {hasOpenForm && hasCmsDirty
+                      ? 'Unsaved changes — content edits & open form'
+                      : hasCmsDirty
+                      ? 'Homepage content has unsaved edits'
+                      : 'Open form has unsaved data'}
+                  </p>
+                </div>
+                <button
+                  id="admin-save-all-btn"
+                  onClick={handleSaveAll}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-brand-rose hover:bg-[#C11A3F] text-white text-[11px] font-extrabold uppercase tracking-widest rounded-xl transition-all duration-200 shadow-md hover:scale-[1.02] active:scale-[0.98] focus:outline-none whitespace-nowrap"
+                >
+                  <Radio className="w-3.5 h-3.5 animate-pulse" />
+                  Save All &amp; Publish
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Quick Stats Metric Cards banner */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -1508,6 +1672,7 @@ export const AdminPortal: React.FC = () => {
                                       if (confirm(`Delete physical "${p.name}" from catalog?`)) {
                                         if (checkPermission(['super_admin', 'store_manager', 'content_manager'])) {
                                           deleteProduct(p.id);
+                                          triggerToast(`🗑 "${p.name}" removed from the product catalog.`, 'success');
                                         }
                                       }
                                     }}
@@ -1774,6 +1939,7 @@ export const AdminPortal: React.FC = () => {
                                       if (confirm(`Remove digital textbook "${e.name}" from catalog?`)) {
                                         if (checkPermission(['super_admin', 'store_manager', 'content_manager'])) {
                                           deleteEBook(e.id);
+                                          triggerToast(`🗑 "${e.name}" removed from the eBook catalog.`, 'success');
                                         }
                                       }
                                     }}
@@ -1992,6 +2158,7 @@ export const AdminPortal: React.FC = () => {
                               if (confirm(`Remove promo Coupon "${c.code}" completely?`)) {
                                 if (checkPermission(['super_admin'])) {
                                   deleteDiscountCode(c.id);
+                                  triggerToast(`🗑 Discount code "${c.code}" deleted.`, 'success');
                                 }
                               }
                             }}
@@ -2101,7 +2268,7 @@ export const AdminPortal: React.FC = () => {
                       <textarea
                         rows={2}
                         value={cmsHeroHead}
-                        onChange={(e) => setCmsHeroHead(e.target.value)}
+                        onChange={(e) => { setCmsHeroHead(e.target.value); autoSaveCms({ heroHeadline: e.target.value }); }}
                         className="w-full px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark font-semibold leading-normal transition-all duration-150"
                       />
                     </div>
@@ -2110,7 +2277,7 @@ export const AdminPortal: React.FC = () => {
                       <textarea
                         rows={2}
                         value={cmsHeroSub}
-                        onChange={(e) => setCmsHeroSub(e.target.value)}
+                        onChange={(e) => { setCmsHeroSub(e.target.value); autoSaveCms({ heroSubheadline: e.target.value }); }}
                         className="w-full px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark transition-all duration-150"
                       />
                     </div>
@@ -2122,7 +2289,7 @@ export const AdminPortal: React.FC = () => {
                       <input
                         type="text"
                         value={cmsAboutHead}
-                        onChange={(e) => setCmsAboutHead(e.target.value)}
+                        onChange={(e) => { setCmsAboutHead(e.target.value); autoSaveCms({ aboutHeadline: e.target.value }); }}
                         className="w-full px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark font-medium transition-all duration-150"
                       />
                     </div>
@@ -2131,7 +2298,7 @@ export const AdminPortal: React.FC = () => {
                       <input
                         type="text"
                         value={cmsPromoQuote}
-                        onChange={(e) => setCmsPromoQuote(e.target.value)}
+                        onChange={(e) => { setCmsPromoQuote(e.target.value); autoSaveCms({ promoQuote: e.target.value }); }}
                         className="w-full px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark transition-all duration-150"
                       />
                     </div>
@@ -2143,7 +2310,7 @@ export const AdminPortal: React.FC = () => {
                       <input
                         type="text"
                         value={cmsPromoAuthor}
-                        onChange={(e) => setCmsPromoAuthor(e.target.value)}
+                        onChange={(e) => { setCmsPromoAuthor(e.target.value); autoSaveCms({ promoAuthor: e.target.value }); }}
                         className="w-full px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark transition-all duration-150"
                       />
                     </div>
@@ -2154,13 +2321,19 @@ export const AdminPortal: React.FC = () => {
                     <textarea
                       rows={6}
                       value={cmsAboutStory}
-                      onChange={(e) => setCmsAboutStory(e.target.value)}
+                      onChange={(e) => { setCmsAboutStory(e.target.value); autoSaveCms({ aboutStory: e.target.value }); }}
                       className="w-full px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark leading-relaxed transition-all duration-150"
                     />
                   </div>
 
                   <div className="flex items-center justify-between pt-3 border-t border-brand-warm-tan/20">
-                    <span className="text-[10px] text-[#A67E6B]">🔒 Changes take effect instantly globally on homepage view.</span>
+                    <span className="text-[10px] text-[#A67E6B] flex items-center gap-1.5">
+                      <span className="relative flex h-1.5 w-1.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" />
+                      </span>
+                      Auto-saves 800ms after typing · Instant on storefront
+                    </span>
                     
                     <button
                       id="save-cms-copy-btn"
@@ -2168,7 +2341,7 @@ export const AdminPortal: React.FC = () => {
                       className="bg-brand-rose hover:bg-brand-berry text-white py-2 px-6 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 focus:outline-none transition-all duration-150"
                     >
                       <Save className="w-4 h-4" />
-                      <span>Apply Site Text Commit</span>
+                      <span>Save &amp; Publish Now</span>
                     </button>
                   </div>
                 </form>
@@ -2212,6 +2385,69 @@ export const AdminPortal: React.FC = () => {
                   ✓ Website Text Copy updated successfully on CMS live environment!
                 </p>
               )}
+            </div>
+          )}
+
+          {/* ============================================= */}
+          {/* CMS COMPONENT: BLOG POSTS MANAGEMENT TABLE   */}
+          {/* ============================================= */}
+          {activeTab === 'design' && designSub === 'cms' && blogs.length > 0 && (
+            <div className="bg-white border border-[#E5D5C8]/80 rounded-3xl p-6 sm:p-8 space-y-4 shadow-[0_4px_25px_-4px_rgba(74,43,32,0.02)] animate-fade-in">
+              <div className="flex justify-between items-center border-b border-[#E5D5C8]/30 pb-3">
+                <h3 className="font-serif text-base sm:text-lg font-bold text-brand-dark flex items-center gap-2">
+                  <span className="w-1.5 h-6 bg-brand-rose rounded-full"></span>
+                  Blog Articles Management
+                </h3>
+                <span className="text-[10px] text-[#A67E6B] bg-brand-cream border border-[#E5D5C8]/60 px-3 py-1 rounded-full font-bold">
+                  {blogs.length} Post{blogs.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+              <div className="overflow-x-auto border border-brand-warm-tan/20 rounded-xl bg-white">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-brand-beige/50 border-b border-brand-warm-tan/20 text-[#8C6D62] font-semibold">
+                      <th className="p-3">Cover</th>
+                      <th className="p-3">Title</th>
+                      <th className="p-3">Category</th>
+                      <th className="p-3">Date</th>
+                      <th className="p-3 text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-brand-warm-tan/10 text-brand-dark/80">
+                    {blogs.map((post) => (
+                      <tr key={post.id} className="hover:bg-brand-cream/30">
+                        <td className="p-3">
+                          <img
+                            src={post.image}
+                            referrerPolicy="no-referrer"
+                            alt=""
+                            className="w-10 h-10 object-cover rounded border border-brand-warm-tan/20"
+                          />
+                        </td>
+                        <td className="p-3 font-semibold line-clamp-1 max-w-[220px]">{post.title}</td>
+                        <td className="p-3 font-mono">{post.category}</td>
+                        <td className="p-3 text-[#A67E6B]">{post.date}</td>
+                        <td className="p-3 text-center">
+                          <button
+                            id={`delete-blog-${post.id}`}
+                            onClick={() => {
+                              if (confirm(`Remove blog post "${post.title}"?`)) {
+                                if (checkPermission(['super_admin', 'content_manager'])) {
+                                  deleteBlogPost(post.id);
+                                  triggerToast(`🗑 "${post.title}" removed from blog.`, 'success');
+                                }
+                              }
+                            }}
+                            className="p-1 px-2.5 bg-brand-pink-light hover:bg-brand-rose text-brand-rose hover:text-white rounded-md font-bold transition duration-250 cursor-pointer"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
@@ -2303,182 +2539,118 @@ export const AdminPortal: React.FC = () => {
                       {editingVideoId ? `Edit Video Masterclass` : 'Add New Video Masterclass'}
                     </p>
                     <div className="space-y-4">
+                      {/* ── 1. Video Link (most important — shown first) ── */}
+                      <div className="space-y-2">
+                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate">Video Link *</label>
+                        <input
+                          id="vid-url-input"
+                          type="url"
+                          required
+                          value={vidUrl}
+                          onChange={(e) => {
+                            setVidUrl(e.target.value);
+                            setUploadedVideoFile(null);
+                          }}
+                          placeholder="https://www.tiktok.com/@username/video/... or YouTube or MP4 link"
+                          className="w-full px-3 py-2.5 bg-brand-cream border border-brand-warm-tan/30 rounded-lg focus:outline-none font-mono text-[11px] placeholder:text-brand-dark/30"
+                        />
+                        {/* Live type detection badge */}
+                        {vidUrl.trim() && (() => {
+                          const res = resolveVideoSource(vidUrl);
+                          if (res.type === 'tiktok') return <span className="inline-flex items-center gap-1 bg-black text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"><svg viewBox="0 0 24 24" className="w-2.5 h-2.5 fill-white"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.34 6.34 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.27 8.27 0 0 0 4.84 1.56V6.78a4.85 4.85 0 0 1-1.07-.09z"/></svg> TikTok detected</span>;
+                          if (res.type === 'youtube') return <span className="inline-flex items-center gap-1 bg-red-600 text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">🔴 YouTube{vidUrl.includes('/shorts/') ? ' Shorts' : ''} detected</span>;
+                          if (res.type === 'direct') return <span className="inline-flex items-center gap-1 bg-zinc-700 text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">■ MP4 / Direct video detected</span>;
+                          return null;
+                        })()}
+                        <p className="text-[9px] text-brand-dark/40 leading-relaxed">
+                          Paste any TikTok, YouTube, YouTube Shorts, or direct MP4 link. No embed code needed.
+                        </p>
+                      </div>
+
+                      {/* ── 2. Video Title ── */}
                       <div>
-                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Video Title Headline</label>
+                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Video Title *</label>
                         <input
                           type="text"
                           required
                           value={vidTitle}
                           onChange={(e) => setVidTitle(e.target.value)}
                           placeholder="e.g. 3 Steps to Seal Low Porosity 4C Hair"
-                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none"
+                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded-lg focus:outline-none"
                         />
                       </div>
-                      
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {vidStatus !== 'draft' && vidStatus !== 'scheduled' && (
-                          <div>
-                            <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Simulated Views (e.g. 24.8K)</label>
-                            <input
-                              type="text"
-                              required
-                              value={vidViews}
-                              onChange={(e) => setVidViews(e.target.value)}
-                              className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none font-mono"
-                            />
-                          </div>
-                        )}
-                        <div className={vidStatus === 'draft' || vidStatus === 'scheduled' ? 'col-span-2' : ''}>
-                          <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Collection Topic</label>
-                          <select
-                            value={vidCategory}
-                            onChange={(e) => setVidCategory(e.target.value as any)}
-                            className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none font-semibold text-brand-chocolate"
-                          >
-                            <option>Wash Day</option>
-                            <option>Styling</option>
-                            <option>Protective Styles</option>
-                            <option>Growth Tips</option>
-                            <option>Product Reviews</option>
-                            <option>Tutorials</option>
-                          </select>
-                        </div>
+
+                      {/* ── 3. Category ── */}
+                      <div>
+                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Category</label>
+                        <select
+                          value={vidCategory}
+                          onChange={(e) => setVidCategory(e.target.value as any)}
+                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded-lg focus:outline-none font-semibold text-brand-chocolate"
+                        >
+                          <option>Wash Day</option>
+                          <option>Styling</option>
+                          <option>Protective Styles</option>
+                          <option>Growth Tips</option>
+                          <option>Product Reviews</option>
+                          <option>Tutorials</option>
+                        </select>
                       </div>
 
+                      {/* ── 4. Description (optional) ── */}
                       <div>
-                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Video Description</label>
+                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Description <span className="text-brand-dark/40 font-normal normal-case">(optional)</span></label>
                         <textarea
                           value={vidDescription}
                           onChange={(e) => setVidDescription(e.target.value)}
-                          placeholder="Enter coily hair-care step-by-step description..."
+                          placeholder="Short description shown in the modal lightbox..."
                           rows={2}
-                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none"
+                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded-lg focus:outline-none resize-none"
                         />
                       </div>
 
-                      {/* Video Media Section */}
-                      <div className="space-y-2.5">
-                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate">Video Media File</label>
-                        <VideoDropzone
-                          videoValue={vidUrl}
-                          onVideoChange={(newUrl, file) => {
-                            setVidUrl(newUrl);
-                            if (file) {
-                              setUploadedVideoFile(file);
-                              // Auto-generate title from filename if title is empty
-                              if (!vidTitle) {
-                                const cleanName = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
-                                setVidTitle(cleanName.charAt(0).toUpperCase() + cleanName.slice(1));
-                              }
-                            } else {
-                              setUploadedVideoFile(null);
-                            }
-                          }}
-                          label="Upload Video"
-                          prefersReducedMotion={prefersReducedMotion}
+                      {/* ── 5. Thumbnail URL (optional) ── */}
+                      <div>
+                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Thumbnail URL <span className="text-brand-dark/40 font-normal normal-case">(optional — auto-generated for YouTube)</span></label>
+                        <input
+                          type="url"
+                          value={uploadedThumbFile ? '' : vidThumb}
+                          onChange={(e) => { setVidThumb(e.target.value); setUploadedThumbFile(null); }}
+                          placeholder="https://images.unsplash.com/... or any image URL"
+                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded-lg focus:outline-none font-mono text-[11px]"
                         />
-                        
-                        <div>
-                          <label className="block text-[10px] uppercase font-bold text-[#8C6D62] mb-1">Paste TikTok or YouTube Link (Alternative)</label>
-                          <input
-                            type="url"
-                            value={uploadedVideoFile ? '' : vidUrl}
-                            onChange={(e) => {
-                              setVidUrl(e.target.value);
-                              setUploadedVideoFile(null);
-                            }}
-                            placeholder={uploadedVideoFile ? "Local file active. Paste link to override." : "https://www.tiktok.com/@username/video/... or YouTube link"}
-                            disabled={!!uploadedVideoFile}
-                            className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none font-mono disabled:opacity-50"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Thumbnail Section */}
-                      <div className="space-y-2.5">
-                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate">Video Poster Thumbnail</label>
-                        <ImageDropzone
-                          imageValue={vidThumb}
-                          onImageChange={(newThumb) => {
-                            setVidThumb(newThumb);
-                            const simulatedFile = new File([], "custom_thumbnail.png", { type: "image/png" });
-                            setUploadedThumbFile(simulatedFile);
-                          }}
-                          label="Upload Thumbnail"
-                          prefersReducedMotion={prefersReducedMotion}
-                        />
-
-                        <div>
-                          <label className="block text-[10px] uppercase font-bold text-[#8C6D62] mb-1">Reference Poster Thumbnail URL (Alternative)</label>
-                          <input
-                            type="url"
-                            value={uploadedThumbFile ? '' : vidThumb}
-                            onChange={(e) => {
-                              setVidThumb(e.target.value);
-                              setUploadedThumbFile(null);
-                            }}
-                            placeholder={uploadedThumbFile ? "Local thumbnail active. Paste link to override." : "https://images.unsplash.com/..."}
-                            disabled={!!uploadedThumbFile}
-                            className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none font-mono disabled:opacity-50"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Publishing Controls */}
-                      <div className="space-y-2.5 pt-1">
-                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Publishing Status</label>
-                        <div className="grid grid-cols-3 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setVidStatus('draft')}
-                            className={`py-2 px-3 rounded text-center border font-bold transition-all text-[10px] uppercase tracking-wider ${
-                              vidStatus === 'draft'
-                                ? 'bg-brand-chocolate text-white border-brand-chocolate shadow-xs'
-                                : 'bg-brand-cream text-brand-chocolate border-brand-warm-tan/30 hover:bg-brand-beige/25'
-                            }`}
-                          >
-                            Save Draft
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setVidStatus('published')}
-                            className={`py-2 px-3 rounded text-center border font-bold transition-all text-[10px] uppercase tracking-wider ${
-                              vidStatus === 'published'
-                                ? 'bg-brand-chocolate text-white border-brand-chocolate shadow-xs'
-                                : 'bg-brand-cream text-brand-chocolate border-brand-warm-tan/30 hover:bg-brand-beige/25'
-                            }`}
-                          >
-                            Publish Now
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setVidStatus('scheduled')}
-                            className={`py-2 px-3 rounded text-center border font-bold transition-all text-[10px] uppercase tracking-wider ${
-                              vidStatus === 'scheduled'
-                                ? 'bg-brand-chocolate text-white border-brand-chocolate shadow-xs'
-                                : 'bg-brand-cream text-brand-chocolate border-brand-warm-tan/30 hover:bg-brand-beige/25'
-                            }`}
-                          >
-                            Schedule
-                          </button>
-                        </div>
-
-                        {vidStatus === 'scheduled' && (
-                          <div className="animate-fadeIn">
-                            <label className="block text-[10px] uppercase font-bold text-[#8C6D62] mb-1">Release Date & Time</label>
-                            <input
-                              type="datetime-local"
-                              required
-                              value={vidScheduledAt}
-                              onChange={(e) => setVidScheduledAt(e.target.value)}
-                              className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none font-sans font-semibold text-brand-chocolate"
-                            />
-                          </div>
+                        {vidThumb && !uploadedThumbFile && (
+                          <img src={vidThumb} alt="thumb preview" referrerPolicy="no-referrer" className="mt-2 h-16 w-10 object-cover rounded border border-brand-warm-tan/20" />
                         )}
                       </div>
 
-                      {/* Featured Video Toggle */}
-                      <div className="flex items-center gap-2 py-1 border-t border-brand-warm-tan/20 pt-2">
+                      {/* ── 6. Publishing Status ── */}
+                      <div className="space-y-2">
+                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate">Status</label>
+                        <div className="grid grid-cols-3 gap-2">
+                          <button type="button" onClick={() => setVidStatus('draft')}
+                            className={`py-2 px-3 rounded-lg text-center border font-bold transition-all text-[10px] uppercase tracking-wider ${ vidStatus === 'draft' ? 'bg-brand-chocolate text-white border-brand-chocolate' : 'bg-brand-cream text-brand-chocolate border-brand-warm-tan/30 hover:bg-brand-beige/25' }`}
+                          >Draft</button>
+                          <button type="button" onClick={() => setVidStatus('published')}
+                            className={`py-2 px-3 rounded-lg text-center border font-bold transition-all text-[10px] uppercase tracking-wider ${ vidStatus === 'published' ? 'bg-brand-chocolate text-white border-brand-chocolate' : 'bg-brand-cream text-brand-chocolate border-brand-warm-tan/30 hover:bg-brand-beige/25' }`}
+                          >Published</button>
+                          <button type="button" onClick={() => setVidStatus('scheduled')}
+                            className={`py-2 px-3 rounded-lg text-center border font-bold transition-all text-[10px] uppercase tracking-wider ${ vidStatus === 'scheduled' ? 'bg-brand-chocolate text-white border-brand-chocolate' : 'bg-brand-cream text-brand-chocolate border-brand-warm-tan/30 hover:bg-brand-beige/25' }`}
+                          >Schedule</button>
+                        </div>
+                        {vidStatus === 'scheduled' && (
+                          <input
+                            type="datetime-local"
+                            required
+                            value={vidScheduledAt}
+                            onChange={(e) => setVidScheduledAt(e.target.value)}
+                            className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded-lg focus:outline-none font-semibold text-brand-chocolate"
+                          />
+                        )}
+                      </div>
+
+                      {/* ── 7. Featured toggle ── */}
+                      <div className="flex items-center gap-2">
                         <input
                           type="checkbox"
                           id="vid-featured-toggle"
@@ -2487,54 +2659,75 @@ export const AdminPortal: React.FC = () => {
                           className="rounded text-brand-rose focus:ring-brand-rose cursor-pointer animate-none"
                         />
                         <label htmlFor="vid-featured-toggle" className="text-[10px] uppercase font-bold text-brand-chocolate cursor-pointer select-none">
-                          Featured Video (Priority Placement)
+                          Pin as Featured video
                         </label>
                       </div>
 
-                      {/* Related Products & eBooks Selector */}
-                      <div>
-                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Shop Routine Products / eBooks Used</label>
-                        <div className="bg-brand-cream border border-brand-warm-tan/30 p-2.5 rounded-lg max-h-36 overflow-y-auto space-y-1 text-[10px]">
-                          {products.map(p => (
-                            <label key={p.id} className="flex items-center gap-2 cursor-pointer text-brand-dark py-0.5 hover:bg-brand-beige/25 px-1 rounded select-none">
+                      {/* ── 8. Advanced (collapsible) ── */}
+                      <details className="border border-brand-warm-tan/30 rounded-lg">
+                        <summary className="px-3 py-2 text-[10px] uppercase font-bold text-brand-chocolate cursor-pointer select-none hover:bg-brand-beige/30 rounded-lg">
+                          ▸ Advanced Options (related products, views, file upload)
+                        </summary>
+                        <div className="px-3 pb-4 pt-3 space-y-4">
+                          {/* Simulated views */}
+                          {vidStatus === 'published' && (
+                            <div>
+                              <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Display Views (e.g. 12.5k)</label>
                               <input
-                                type="checkbox"
-                                checked={vidRelatedIds.includes(p.id)}
-                                onChange={(evt) => {
-                                  if (evt.target.checked) {
-                                    setVidRelatedIds(prev => [...prev, p.id]);
-                                  } else {
-                                    setVidRelatedIds(prev => prev.filter(id => id !== p.id));
-                                  }
-                                }}
-                                className="rounded text-brand-rose focus:ring-brand-rose"
+                                type="text"
+                                value={vidViews}
+                                onChange={(e) => setVidViews(e.target.value)}
+                                className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none font-mono"
                               />
-                              <span className="truncate flex-1 font-medium font-sans text-[#543F35]">
-                                [Product] {p.name} - ${p.price.toFixed(2)}
-                              </span>
-                            </label>
-                          ))}
-                          {ebooks.map(eb => (
-                            <label key={eb.id} className="flex items-center gap-2 cursor-pointer text-brand-dark py-0.5 hover:bg-brand-beige/25 px-1 rounded select-none">
-                              <input
-                                type="checkbox"
-                                checked={vidRelatedIds.includes(eb.id)}
-                                onChange={(evt) => {
-                                  if (evt.target.checked) {
-                                    setVidRelatedIds(prev => [...prev, eb.id]);
-                                  } else {
-                                    setVidRelatedIds(prev => prev.filter(id => id !== eb.id));
+                            </div>
+                          )}
+                          {/* Related Products & eBooks */}
+                          <div>
+                            <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Link Products / eBooks</label>
+                            <div className="bg-brand-cream border border-brand-warm-tan/30 p-2.5 rounded-lg max-h-36 overflow-y-auto space-y-1 text-[10px]">
+                              {products.map(p => (
+                                <label key={p.id} className="flex items-center gap-2 cursor-pointer text-brand-dark py-0.5 hover:bg-brand-beige/25 px-1 rounded select-none">
+                                  <input type="checkbox" checked={vidRelatedIds.includes(p.id)}
+                                    onChange={(evt) => { if (evt.target.checked) setVidRelatedIds(prev => [...prev, p.id]); else setVidRelatedIds(prev => prev.filter(id => id !== p.id)); }}
+                                    className="rounded text-brand-rose focus:ring-brand-rose"
+                                  />
+                                  <span className="truncate flex-1 font-medium font-sans text-[#543F35]">[Product] {p.name} — ${p.price.toFixed(2)}</span>
+                                </label>
+                              ))}
+                              {ebooks.map(eb => (
+                                <label key={eb.id} className="flex items-center gap-2 cursor-pointer text-brand-dark py-0.5 hover:bg-brand-beige/25 px-1 rounded select-none">
+                                  <input type="checkbox" checked={vidRelatedIds.includes(eb.id)}
+                                    onChange={(evt) => { if (evt.target.checked) setVidRelatedIds(prev => [...prev, eb.id]); else setVidRelatedIds(prev => prev.filter(id => id !== eb.id)); }}
+                                    className="rounded text-brand-rose focus:ring-brand-rose"
+                                  />
+                                  <span className="truncate flex-1 font-medium font-sans text-brand-rose">[eBook] {eb.name} — ${eb.price.toFixed(2)}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                          {/* File upload option */}
+                          <div className="space-y-2">
+                            <label className="block text-[10px] uppercase font-bold text-[#8C6D62]">Upload Video File (alternative to link)</label>
+                            <VideoDropzone
+                              videoValue={vidUrl}
+                              onVideoChange={(newUrl, file) => {
+                                setVidUrl(newUrl);
+                                if (file) {
+                                  setUploadedVideoFile(file);
+                                  if (!vidTitle) {
+                                    const cleanName = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
+                                    setVidTitle(cleanName.charAt(0).toUpperCase() + cleanName.slice(1));
                                   }
-                                }}
-                                className="rounded text-brand-rose focus:ring-brand-rose"
-                              />
-                              <span className="truncate flex-1 font-medium font-sans text-brand-rose">
-                                [eBook] {eb.name} - ${eb.price.toFixed(2)}
-                              </span>
-                            </label>
-                          ))}
+                                } else {
+                                  setUploadedVideoFile(null);
+                                }
+                              }}
+                              label="Upload Video"
+                              prefersReducedMotion={prefersReducedMotion}
+                            />
+                          </div>
                         </div>
-                      </div>
+                      </details>
 
                       {/* Video Player Live Preview */}
                       {vidUrl && (
@@ -2773,6 +2966,7 @@ export const AdminPortal: React.FC = () => {
                                   if (confirm(`Remove video "${vid.title}"?`)) {
                                     if (checkPermission(['super_admin', 'store_manager', 'content_manager'])) {
                                       deleteVideo(vid.id);
+                                      triggerToast(`🗑 "${vid.title}" removed from the video feed.`, 'success');
                                     }
                                   }
                                 }}
@@ -2982,6 +3176,7 @@ export const AdminPortal: React.FC = () => {
                                 if (confirm(`Remove photo "${gObj.caption}"?`)) {
                                   if (checkPermission(['super_admin', 'store_manager', 'content_manager'])) {
                                     deleteGalleryItem(gObj.id);
+                                    triggerToast(`🗑 "${gObj.caption}" removed from the Lookbook.`, 'success');
                                   }
                                 }
                               }}
@@ -3237,6 +3432,7 @@ export const AdminPortal: React.FC = () => {
                               onClick={() => {
                                 if (confirm('Permanently delete this customer query?')) {
                                   deleteContactRequest(req.id);
+                                  triggerToast('🗑 Contact inquiry deleted.', 'success');
                                 }
                               }}
                               className="p-1 px-2.5 bg-white hover:bg-red-50 text-brand-rose hover:text-red-700 border border-[#E9D9D3] rounded-lg text-[10px] font-extrabold uppercase transition duration-150 focus:outline-none"

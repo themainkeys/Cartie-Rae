@@ -5,39 +5,45 @@
   --font-sans: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", monospace;
   
-  --color-brand-cream: #FAF6F0;
-  --color-brand-beige: #F3EAE1;
-  --color-brand-warm-tan: #E5D5C8;
-  --color-brand-pink-light: #FCEBEA;
-  --color-brand-pink: #ECA2A2;
-  --color-brand-rose: #C2395A;
-  --color-brand-berry: #B11B41;
-  --color-brand-chocolate: #4A2B20;
-  --color-brand-dark: #25130D;
+  /* ─── Neutral / Base Palette (replaces all brown tones) ─── */
+  --color-brand-cream:     #FAFAFA;   /* zinc-50  — near white */
+  --color-brand-beige:     #F4F4F5;   /* zinc-100 — soft light gray */
+  --color-brand-warm-tan:  #D4D4D8;   /* zinc-300 — subtle border gray */
+  --color-brand-chocolate: #52525B;   /* zinc-600 — mid charcoal */
+  --color-brand-dark:      #18181B;   /* zinc-950 — true charcoal/near-black */
+
+  /* ─── Pink Accent Palette (unchanged) ─── */
+  --color-brand-pink-light: #FFF0F3;  /* soft blush */
+  --color-brand-pink:       #ECA2A2;  /* dusty rose */
+  --color-brand-rose:       #C2395A;  /* primary accent rose */
+  --color-brand-berry:      #B11B41;  /* deep rose hover */
 }
 
-/* Base resets & custom smooth behaviors */
+/* ─── Base resets & color rendering ─── */
 html {
   font-family: var(--font-sans);
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color-scheme: light;
+  text-rendering: optimizeLegibility;
 }
 
 body {
-  background-color: #FAF6F0;
-  color: #25130D;
+  background-color: #FAFAFA;
+  color: #18181B;
 }
 
-/* Custom scrollbar */
+/* ─── Custom scrollbar ─── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #FAF6F0;
+  background: #FAFAFA;
 }
 ::-webkit-scrollbar-thumb {
-  background: #E5D5C8;
+  background: #D4D4D8;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {

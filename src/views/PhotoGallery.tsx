@@ -10,23 +10,30 @@ export const PhotoGallery: React.FC = () => {
   const [selectedPhoto, setSelectedPhoto] = useState<PhotoGalleryItem | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // Direction tracking for image slider
+  // Direction tracking for image slider in lightbox modal
   const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);
 
-  // Simple liking simulations for individual gallery photos
-  const [likesCount, setLikesCount] = useState<Record<string, number>>({});
-  const [hasLiked, setHasLiked] = useState<Record<string, boolean>>({});
-
-  // View Mode: 'slider' (default Lookbook) vs 'grid' (traditional masonry)
-  const [viewMode, setViewMode] = useState<'slider' | 'grid'>('grid');
-  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  // Gallery likes — persisted to localStorage so they survive page refresh
+  const [likesCount, setLikesCount] = useState<Record<string, number>>(() => {
+    try { return JSON.parse(localStorage.getItem('cartiae_gallery_likes') || '{}'); } catch { return {}; }
+  });
+  const [hasLiked, setHasLiked] = useState<Record<string, boolean>>(() => {
+    try { return JSON.parse(localStorage.getItem('cartiae_gallery_liked') || '{}'); } catch { return {}; }
+  });
 
   // Pagination count for grid mode
   const [visibleCount, setVisibleCount] = useState(12);
 
+  // Persist likes whenever they change
+  useEffect(() => {
+    localStorage.setItem('cartiae_gallery_likes', JSON.stringify(likesCount));
+  }, [likesCount]);
+  useEffect(() => {
+    localStorage.setItem('cartiae_gallery_liked', JSON.stringify(hasLiked));
+  }, [hasLiked]);
+
   useEffect(() => {
     setVisibleCount(12);
-    setCurrentSlideIndex(0);
   }, [activeCategory]);
 
   const categories: ('All' | 'Progress' | 'Hairstyles' | 'Routines')[] = [
@@ -41,10 +48,6 @@ export const PhotoGallery: React.FC = () => {
     return filteredPhotos.slice(0, visibleCount);
   }, [filteredPhotos, visibleCount]);
 
-  const currentPhoto = useMemo(() => {
-    if (filteredPhotos.length === 0) return null;
-    return filteredPhotos[currentSlideIndex % filteredPhotos.length];
-  }, [filteredPhotos, currentSlideIndex]);
 
   const handleLike = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -96,14 +99,12 @@ export const PhotoGallery: React.FC = () => {
   const handleNextSlide = () => {
     if (filteredPhotos.length <= 1) return;
     setSlideDirection('right');
-    setCurrentSlideIndex(prev => (prev + 1) % filteredPhotos.length);
     setCopied(false);
   };
 
   const handlePrevSlide = () => {
     if (filteredPhotos.length <= 1) return;
     setSlideDirection('left');
-    setCurrentSlideIndex(prev => (prev - 1 + filteredPhotos.length) % filteredPhotos.length);
     setCopied(false);
   };
 
@@ -139,17 +140,11 @@ export const PhotoGallery: React.FC = () => {
         } else if (e.key === 'Escape') {
           setSelectedPhoto(null);
         }
-      } else if (viewMode === 'slider') {
-        if (e.key === 'ArrowRight') {
-          handleNextSlide();
-        } else if (e.key === 'ArrowLeft') {
-          handlePrevSlide();
-        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedPhoto, filteredPhotos, viewMode, currentSlideIndex]);
+  }, [selectedPhoto, filteredPhotos]);
 
   const slideVariants = {
     enter: (direction: 'left' | 'right' | null) => ({

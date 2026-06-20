@@ -69,7 +69,7 @@ export const Footer: React.FC<FooterProps> = ({ setActivePart }) => {
           {/* Column 2: Quick Links */}
           <div className="md:col-span-3">
             <h5 className="font-serif text-xs font-semibold uppercase tracking-[0.2em] text-brand-rose mb-4">
-              Explore Education
+              Explore
             </h5>
             <ul className="space-y-2.5 font-sans text-xs text-brand-beige/70">
               <li>
@@ -84,7 +84,12 @@ export const Footer: React.FC<FooterProps> = ({ setActivePart }) => {
               </li>
               <li>
                 <button onClick={() => setActivePart('tutorials')} className="hover:text-brand-rose focus:outline-none transition-colors">
-                  Video Tutorials
+                  Visuals
+                </button>
+              </li>
+              <li>
+                <button onClick={() => setActivePart('gallery')} className="hover:text-brand-rose focus:outline-none transition-colors">
+                  Lookbook
                 </button>
               </li>
               <li>

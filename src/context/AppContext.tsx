@@ -2,6 +2,41 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { EBook, Product, TikTokVideo, PhotoGalleryItem, BlogPost, DiscountCode, CartItem, Order, NewsletterSignup, HomepageContent, WishlistItem, ContactRequest, AdminUser } from '../types';
 import { initialEBooks, initialProducts, initialVideos, initialGallery, initialBlogPosts, initialDiscountCodes, initialHomepageContent } from '../data/initialData';
 
+// ─── Tombstone helpers ──────────────────────────────────────────────────────
+// A "tombstone" is a persisted Set of deleted IDs per entity type.
+// This prevents seeded/demo data from re-appearing after page refresh.
+const TOMBSTONE_KEYS = {
+  products:  'cartiae_deleted_products',
+  ebooks:    'cartiae_deleted_ebooks',
+  videos:    'cartiae_deleted_videos',
+  gallery:   'cartiae_deleted_gallery',
+  blogs:     'cartiae_deleted_blogs',
+  discounts: 'cartiae_deleted_discounts',
+  contacts:  'cartiae_deleted_contacts',
+} as const;
+
+function readTombstones(key: string): Set<string> {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? new Set<string>(JSON.parse(raw)) : new Set<string>();
+  } catch {
+    return new Set<string>();
+  }
+}
+
+function writeTombstone(key: string, id: string): void {
+  const set = readTombstones(key);
+  set.add(id);
+  localStorage.setItem(key, JSON.stringify(Array.from(set)));
+}
+
+function filterTombstoned<T extends { id: string }>(items: T[], tombstoneKey: string): T[] {
+  const deleted = readTombstones(tombstoneKey);
+  if (deleted.size === 0) return items;
+  return items.filter(item => !deleted.has(item.id));
+}
+// ────────────────────────────────────────────────────────────────────────────
+
 interface AppContextType {
   ebooks: EBook[];
   products: Product[];
@@ -81,7 +116,7 @@ interface AppContextType {
   fulfillOrder: (id: string) => void;
   
   // Admin auth
-  loginAdmin: (password: string) => boolean;
+  loginAdmin: (email: string, password: string) => boolean;
   logoutAdmin: () => void;
 
   // Settings & Preferences
@@ -96,42 +131,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // --- States with LocalStorage Initialization ---
   const [ebooks, setEbooks] = useState<EBook[]>(() => {
     const local = localStorage.getItem('cartiae_ebooks');
-    return local ? JSON.parse(local) : initialEBooks;
+    const base: EBook[] = local ? JSON.parse(local) : initialEBooks;
+    return filterTombstoned(base, TOMBSTONE_KEYS.ebooks);
   });
 
   const [products, setProducts] = useState<Product[]>(() => {
     const local = localStorage.getItem('cartiae_products');
-    return local ? JSON.parse(local) : initialProducts;
+    const base: Product[] = local ? JSON.parse(local) : initialProducts;
+    return filterTombstoned(base, TOMBSTONE_KEYS.products);
   });
 
   const [videos, setVideos] = useState<TikTokVideo[]>(() => {
     const local = localStorage.getItem('cartiae_videos');
+    let base: TikTokVideo[];
     if (local) {
       try {
-        let parsed = JSON.parse(local) as TikTokVideo[];
-        return parsed.map(item => {
+        const parsed = JSON.parse(local) as TikTokVideo[];
+        base = parsed.map(item => {
           if (item.thumbnailUrl && item.thumbnailUrl.includes('photo-1608139556157-196be06511fc')) {
             return { ...item, thumbnailUrl: '/about-portrait.jpg' };
-          }
-          // Reset/migrate URL of seed videos if they have old/dead placeholder URLs
-          const initialMatch = initialVideos.find(v => v.id === item.id);
-          if (initialMatch && item.videoUrl !== initialMatch.videoUrl) {
-            return { ...item, videoUrl: initialMatch.videoUrl };
           }
           return item;
         });
       } catch (e) {
-        return initialVideos;
+        base = initialVideos;
       }
+    } else {
+      base = initialVideos;
     }
-    return initialVideos;
+    return filterTombstoned(base, TOMBSTONE_KEYS.videos);
   });
 
   const [gallery, setGallery] = useState<PhotoGalleryItem[]>(() => {
+    const tombstoned = readTombstones(TOMBSTONE_KEYS.gallery);
     const local = localStorage.getItem('cartiae_gallery');
+    let base: PhotoGalleryItem[];
     if (local) {
       try {
-        let parsed = JSON.parse(local) as PhotoGalleryItem[];
+        const parsed = JSON.parse(local) as PhotoGalleryItem[];
         const mapped = parsed.map(item => {
           if (item.id === 'gal-5' && item.image.includes('photo-1509967419530-da38b4704bc6')) {
             return { ...item, image: '/hero-portrait.jpg' };
@@ -139,40 +176,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           return item;
         });
 
-        // Seed new lookbook photos (gal-11 to gal-20) if missing from local storage
+        // Seed new lookbook photos (gal-11 to gal-20) only if not already tombstoned
         const parsedIds = new Set(mapped.map(g => g.id));
         const newSeedIds = [
           'gal-11', 'gal-12', 'gal-13', 'gal-14', 'gal-15',
           'gal-16', 'gal-17', 'gal-18', 'gal-19', 'gal-20'
         ];
-        const missingNewSeeds = initialGallery.filter(g => newSeedIds.includes(g.id) && !parsedIds.has(g.id));
-        if (missingNewSeeds.length > 0) {
-          return [...missingNewSeeds, ...mapped];
-        }
-        return mapped;
+        const missingNewSeeds = initialGallery.filter(
+          g => newSeedIds.includes(g.id) && !parsedIds.has(g.id) && !tombstoned.has(g.id)
+        );
+        base = missingNewSeeds.length > 0 ? [...missingNewSeeds, ...mapped] : mapped;
       } catch (e) {
-        return initialGallery;
+        base = initialGallery;
       }
+    } else {
+      base = initialGallery;
     }
-    return initialGallery;
+    return base.filter(item => !tombstoned.has(item.id));
   });
 
   const [blogs, setBlogs] = useState<BlogPost[]>(() => {
     const local = localStorage.getItem('cartiae_blogs');
+    let base: BlogPost[];
     if (local) {
       try {
         const parsed = JSON.parse(local) as BlogPost[];
-        return parsed.map(item => {
+        base = parsed.map(item => {
           if (item.image && item.image.includes('photo-1608139556157-196be06511fc')) {
             return { ...item, image: '/about-portrait.jpg' };
           }
           return item;
         });
       } catch (e) {
-        return initialBlogPosts;
+        base = initialBlogPosts;
       }
+    } else {
+      base = initialBlogPosts;
     }
-    return initialBlogPosts;
+    return filterTombstoned(base, TOMBSTONE_KEYS.blogs);
   });
 
   const [discountCodes, setDiscountCodes] = useState<DiscountCode[]>(() => {
@@ -356,6 +397,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteContactRequest = (id: string) => {
+    writeTombstone(TOMBSTONE_KEYS.contacts, id);
     setContactRequests(prev => prev.filter(req => req.id !== id));
   };
 
@@ -377,7 +419,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteEBook = (id: string) => {
+    writeTombstone(TOMBSTONE_KEYS.ebooks, id);
     setEbooks(prev => prev.filter(item => item.id !== id));
+    // Remove stale references from cart and wishlist
+    setCart(prev => prev.filter(item => item.id !== id));
+    setWishlist(prev => prev.filter(item => item.id !== id));
   };
 
   // --- Product Operations ---
@@ -394,7 +440,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteProduct = (id: string) => {
+    writeTombstone(TOMBSTONE_KEYS.products, id);
     setProducts(prev => prev.filter(item => item.id !== id));
+    // Remove stale references from cart and wishlist
+    setCart(prev => prev.filter(item => item.id !== id));
+    setWishlist(prev => prev.filter(item => item.id !== id));
   };
 
   // --- Video Operations ---
@@ -411,6 +461,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteVideo = (id: string) => {
+    writeTombstone(TOMBSTONE_KEYS.videos, id);
     setVideos(prev => prev.filter(item => item.id !== id));
   };
 
@@ -428,6 +479,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteGalleryItem = (id: string) => {
+    writeTombstone(TOMBSTONE_KEYS.gallery, id);
     setGallery(prev => prev.filter(item => item.id !== id));
   };
 
@@ -447,6 +499,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteBlogPost = (id: string) => {
+    writeTombstone(TOMBSTONE_KEYS.blogs, id);
     setBlogs(prev => prev.filter(post => post.id !== id));
   };
 
@@ -464,6 +517,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteDiscountCode = (id: string) => {
+    writeTombstone(TOMBSTONE_KEYS.discounts, id);
     setDiscountCodes(prev => prev.filter(item => item.id !== id));
   };
 
@@ -618,15 +672,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // --- Admin Auth ---
-  const loginAdmin = (password: string): boolean => {
-    let user: AdminUser | null = null;
-    if (password === 'admin' || password === 'cartiae123') {
-      user = { id: 'adm-001', name: 'Cartiae Rae', email: 'admin@cartiaerae.com', role: 'super_admin' };
-    } else if (password === 'manager') {
-      user = { id: 'adm-002', name: 'Elena Vance (Manager)', email: 'manager@cartiaerae.com', role: 'store_manager' };
-    } else if (password === 'content') {
-      user = { id: 'adm-003', name: 'Brianna Smith (Editor)', email: 'content@cartiaerae.com', role: 'content_manager' };
-    }
+  // Credential pairs: email must match password role exactly
+  const ADMIN_CREDENTIALS = [
+    { email: 'admin@cartiaerae.com', passwords: ['admin', 'cartiae123'], user: { id: 'adm-001', name: 'Cartiae Rae', email: 'admin@cartiaerae.com', role: 'super_admin' as const } },
+    { email: 'manager@cartiaerae.com', passwords: ['manager'], user: { id: 'adm-002', name: 'Elena Vance (Manager)', email: 'manager@cartiaerae.com', role: 'store_manager' as const } },
+    { email: 'content@cartiaerae.com', passwords: ['content'], user: { id: 'adm-003', name: 'Brianna Smith (Editor)', email: 'content@cartiaerae.com', role: 'content_manager' as const } },
+  ];
+
+  const loginAdmin = (email: string, password: string): boolean => {
+    const match = ADMIN_CREDENTIALS.find(
+      (cred) => cred.email.toLowerCase() === email.trim().toLowerCase() && cred.passwords.includes(password)
+    );
+    const user: AdminUser | null = match ? match.user : null;
 
     if (user) {
       setIsAdminLoggedIn(true);

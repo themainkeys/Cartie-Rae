@@ -10,12 +10,12 @@ export const AboutAndBlog: React.FC = () => {
       {/* Page Title */}
       <div className="text-center mb-16 space-y-3">
         <span className="font-sans text-[10px] uppercase tracking-[0.35em] text-brand-rose font-bold block">
-          Meet the Founder
+          About
         </span>
         <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-brand-dark font-normal">
-          Our Story &amp; Philosophy
+          About Cartiae Rae
         </h1>
-        <p className="font-sans text-xs sm:text-sm text-[#6C5347]/80 max-w-xl mx-auto leading-relaxed">
+        <p className="font-sans text-xs sm:text-sm text-zinc-400 max-w-xl mx-auto leading-relaxed">
           Simple steps, healthy hair habits, and real results.
         </p>
       </div>
@@ -25,7 +25,7 @@ export const AboutAndBlog: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           {/* Image side */}
           <div className="lg:col-span-5 relative">
-            <div className="aspect-[4/5] overflow-hidden border border-brand-warm-tan/20 bg-[#FAF6F0]">
+            <div className="aspect-[4/5] overflow-hidden border border-brand-warm-tan/20 bg-brand-beige">
               <img
                 src="/about-portrait.jpg"
                 alt="Cartiae Portrait"
@@ -36,7 +36,7 @@ export const AboutAndBlog: React.FC = () => {
             {/* Simple highlighted sticker */}
             <div className="absolute -bottom-4 -right-4 bg-brand-dark text-white p-4 shadow-md max-w-[180px] hidden sm:block">
               <Sparkles className="w-4 h-4 text-brand-rose mb-1" />
-              <p className="font-serif text-xs font-normal text-[#FAF6F0]">Natural &amp; Simple</p>
+              <p className="font-serif text-xs font-normal text-white">Natural &amp; Simple</p>
               <p className="text-[10px] text-brand-beige/80 mt-0.5 leading-normal">
                 Regimens made easy for real daily life.
               </p>
@@ -56,7 +56,7 @@ export const AboutAndBlog: React.FC = () => {
 
             {/* Simple Quote panel */}
             <div className="p-6 bg-brand-beige/30 border-l-2 border-brand-rose">
-              <p className="font-serif italic text-xs sm:text-sm text-[#5C453C]">
+              <p className="font-serif italic text-xs sm:text-sm text-zinc-500">
                 &ldquo;{homepageContent.promoQuote}&rdquo;
               </p>
               <p className="font-sans text-[10px] uppercase font-bold text-brand-rose mt-2">
