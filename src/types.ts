@@ -139,8 +139,10 @@ export interface NewsletterSignup {
 export interface HomepageContent {
   heroHeadline: string;
   heroSubheadline: string;
+  heroImageUrl: string;
   aboutHeadline: string;
   aboutStory: string;
+  aboutImageUrl: string;
   promoQuote: string;
   promoAuthor: string;
 }
