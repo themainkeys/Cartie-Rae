@@ -150,6 +150,7 @@ const VideoGridCard: React.FC<VideoGridCardProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const resolved = useMemo(() => resolveVideoSource(video.videoUrl), [video.videoUrl]);
+  const isTikTok = resolved.type === 'tiktok';
 
   const duration = useMemo(() => {
     const sum = video.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
@@ -157,6 +158,7 @@ const VideoGridCard: React.FC<VideoGridCardProps> = ({
     return `0:${sec}`;
   }, [video.id]);
 
+  // Desktop hover: 300ms delay before preview starts
   const handleMouseEnter = () => {
     if (!window.matchMedia('(hover: hover)').matches) return;
     hoverTimeoutRef.current = setTimeout(() => {
@@ -176,6 +178,24 @@ const VideoGridCard: React.FC<VideoGridCardProps> = ({
     }
   };
 
+  /**
+   * Mobile click handler:
+   * - Touch devices: no hover capability → first tap = preview, second tap = modal
+   * - Desktop (hover capable): click always opens modal; hover handles preview
+   */
+  const handleClick = () => {
+    const isTouch = !window.matchMedia('(hover: hover)').matches;
+    if (isTouch) {
+      if (!isPlayingPreview) {
+        onHoverStart(); // first tap: start preview
+      } else {
+        onClick(); // second tap: open modal
+      }
+    } else {
+      onClick(); // desktop: always open modal on click
+    }
+  };
+
   useEffect(() => {
     return () => {
       if (hoverTimeoutRef.current) {
@@ -188,7 +208,7 @@ const VideoGridCard: React.FC<VideoGridCardProps> = ({
     <div
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      onClick={onClick}
+      onClick={handleClick}
       className="w-full aspect-[9/16] max-w-[310px] sm:max-w-[320px] rounded-[32px] border border-brand-warm-tan/25 relative flex flex-col justify-end overflow-hidden bg-brand-cream shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-500 cursor-pointer select-none"
     >
       <style>{`
@@ -218,14 +238,23 @@ const VideoGridCard: React.FC<VideoGridCardProps> = ({
                   allow="autoplay; encrypted-media"
                 />
               )}
-              {/* TikTok cannot autoplay in cross-origin iframes — show thumbnail instead */}
+              {/* TikTok cannot autoplay in cross-origin iframes — show thumbnail + TikTok badge */}
               {resolved.type === 'tiktok' && (
-                <img
-                  src={video.thumbnailUrl}
-                  alt={video.title}
-                  referrerPolicy="no-referrer"
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
+                <div className="absolute inset-0 w-full h-full">
+                  <img
+                    src={video.thumbnailUrl}
+                    alt={video.title}
+                    referrerPolicy="no-referrer"
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                  {/* TikTok badge overlay */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="flex items-center gap-1.5 bg-black/70 backdrop-blur-sm text-white text-[9px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border border-white/20 shadow">
+                      <svg viewBox="0 0 24 24" className="w-3 h-3 fill-white" aria-hidden="true"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.34 6.34 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.27 8.27 0 0 0 4.84 1.56V6.78a4.85 4.85 0 0 1-1.07-.09z"/></svg>
+                      Open on TikTok ↗
+                    </span>
+                  </div>
+                </div>
               )}
               {resolved.type === 'direct' && (
                 <video
@@ -257,11 +286,18 @@ const VideoGridCard: React.FC<VideoGridCardProps> = ({
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-cover"
               />
-              {/* Play overlay hover indicator */}
+              {/* Play overlay — different for TikTok vs playable */}
               <div className="absolute inset-0 flex items-center justify-center bg-brand-dark/10 hover:bg-brand-dark/20 transition-all duration-300">
-                <span className="p-3 bg-[#FAF6F0]/90 backdrop-blur-sm text-brand-rose rounded-full shadow-md">
-                  <Play className="w-4.5 h-4.5 fill-brand-rose ml-0.5" />
-                </span>
+                {isTikTok ? (
+                  <span className="flex items-center gap-1.5 bg-black/60 backdrop-blur-sm text-white text-[9px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border border-white/20">
+                    <svg viewBox="0 0 24 24" className="w-3 h-3 fill-white" aria-hidden="true"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.34 6.34 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.27 8.27 0 0 0 4.84 1.56V6.78a4.85 4.85 0 0 1-1.07-.09z"/></svg>
+                    View on TikTok
+                  </span>
+                ) : (
+                  <span className="p-3 bg-[#FAF6F0]/90 backdrop-blur-sm text-brand-rose rounded-full shadow-md">
+                    <Play className="w-4.5 h-4.5 fill-brand-rose ml-0.5" />
+                  </span>
+                )}
               </div>
             </motion.div>
           )}
@@ -307,28 +343,36 @@ const VideoGridCard: React.FC<VideoGridCardProps> = ({
         <h3 className="font-serif text-xs sm:text-[13px] font-bold text-[#FAF6F0] line-clamp-1 leading-snug tracking-wide mt-1.5">
           {video.title}
         </h3>
-        
-        <p className="font-sans text-[9.5px] text-[#EDE3DE]/85 line-clamp-2 leading-relaxed mt-0.5">
-          {video.description || 'Exclusive Cartiae Rae natural hair styling guidelines and masterclass routines.'}
-        </p>
 
         <div className="text-[9px] text-[#EDE3DE]/70 font-semibold font-mono flex items-center gap-2 mt-1 select-none">
           <span className="flex items-center gap-0.5"><Eye className="w-3.5 h-3.5" /> {video.views}</span>
-          <span>•</span>
-          <span className="flex items-center gap-0.5"><Clock className="w-3.5 h-3.5" /> {duration}</span>
+          {!isTikTok && (
+            <>
+              <span>•</span>
+              <span className="flex items-center gap-0.5"><Clock className="w-3.5 h-3.5" /> {duration}</span>
+            </>
+          )}
         </div>
 
-        {/* Shop Routine Button */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onClick(); // Opens detail lightbox modal
-          }}
-          className="mt-2.5 bg-[#FAF6F0] hover:bg-brand-rose text-brand-dark hover:text-white px-3 py-1.5 rounded-xl text-[9px] uppercase font-extrabold tracking-widest transition-all duration-300 flex items-center gap-1 cursor-pointer w-fit pointer-events-auto shadow-sm hover:scale-[1.02] active:scale-[0.98]"
-        >
-          <ShoppingBag className="w-3 h-3 shrink-0" />
-          <span>Shop Routine ({relatedItemsCount})</span>
-        </button>
+        {/* Shop Routine Button — only shown when linked products/eBooks exist */}
+        {relatedItemsCount > 0 && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              // On touch: if not yet previewing, open preview first; otherwise go to modal
+              const isTouch = !window.matchMedia('(hover: hover)').matches;
+              if (isTouch && !isPlayingPreview) {
+                onHoverStart();
+              } else {
+                onClick();
+              }
+            }}
+            className="mt-2.5 bg-[#FAF6F0] hover:bg-brand-rose text-brand-dark hover:text-white px-3 py-1.5 rounded-xl text-[9px] uppercase font-extrabold tracking-widest transition-all duration-300 flex items-center gap-1 cursor-pointer w-fit pointer-events-auto shadow-sm hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <ShoppingBag className="w-3 h-3 shrink-0" />
+            <span>Shop Routine ({relatedItemsCount})</span>
+          </button>
+        )}
       </div>
 
       {/* Right-Aligned Floating Social Actions Panel */}

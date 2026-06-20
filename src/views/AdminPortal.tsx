@@ -2371,182 +2371,118 @@ export const AdminPortal: React.FC = () => {
                       {editingVideoId ? `Edit Video Masterclass` : 'Add New Video Masterclass'}
                     </p>
                     <div className="space-y-4">
+                      {/* ── 1. Video Link (most important — shown first) ── */}
+                      <div className="space-y-2">
+                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate">Video Link *</label>
+                        <input
+                          id="vid-url-input"
+                          type="url"
+                          required
+                          value={vidUrl}
+                          onChange={(e) => {
+                            setVidUrl(e.target.value);
+                            setUploadedVideoFile(null);
+                          }}
+                          placeholder="https://www.tiktok.com/@username/video/... or YouTube or MP4 link"
+                          className="w-full px-3 py-2.5 bg-brand-cream border border-brand-warm-tan/30 rounded-lg focus:outline-none font-mono text-[11px] placeholder:text-brand-dark/30"
+                        />
+                        {/* Live type detection badge */}
+                        {vidUrl.trim() && (() => {
+                          const res = resolveVideoSource(vidUrl);
+                          if (res.type === 'tiktok') return <span className="inline-flex items-center gap-1 bg-black text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"><svg viewBox="0 0 24 24" className="w-2.5 h-2.5 fill-white"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.34 6.34 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.27 8.27 0 0 0 4.84 1.56V6.78a4.85 4.85 0 0 1-1.07-.09z"/></svg> TikTok detected</span>;
+                          if (res.type === 'youtube') return <span className="inline-flex items-center gap-1 bg-red-600 text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">🔴 YouTube{vidUrl.includes('/shorts/') ? ' Shorts' : ''} detected</span>;
+                          if (res.type === 'direct') return <span className="inline-flex items-center gap-1 bg-zinc-700 text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">■ MP4 / Direct video detected</span>;
+                          return null;
+                        })()}
+                        <p className="text-[9px] text-brand-dark/40 leading-relaxed">
+                          Paste any TikTok, YouTube, YouTube Shorts, or direct MP4 link. No embed code needed.
+                        </p>
+                      </div>
+
+                      {/* ── 2. Video Title ── */}
                       <div>
-                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Video Title Headline</label>
+                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Video Title *</label>
                         <input
                           type="text"
                           required
                           value={vidTitle}
                           onChange={(e) => setVidTitle(e.target.value)}
                           placeholder="e.g. 3 Steps to Seal Low Porosity 4C Hair"
-                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none"
+                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded-lg focus:outline-none"
                         />
                       </div>
-                      
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {vidStatus !== 'draft' && vidStatus !== 'scheduled' && (
-                          <div>
-                            <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Simulated Views (e.g. 24.8K)</label>
-                            <input
-                              type="text"
-                              required
-                              value={vidViews}
-                              onChange={(e) => setVidViews(e.target.value)}
-                              className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none font-mono"
-                            />
-                          </div>
-                        )}
-                        <div className={vidStatus === 'draft' || vidStatus === 'scheduled' ? 'col-span-2' : ''}>
-                          <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Collection Topic</label>
-                          <select
-                            value={vidCategory}
-                            onChange={(e) => setVidCategory(e.target.value as any)}
-                            className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none font-semibold text-brand-chocolate"
-                          >
-                            <option>Wash Day</option>
-                            <option>Styling</option>
-                            <option>Protective Styles</option>
-                            <option>Growth Tips</option>
-                            <option>Product Reviews</option>
-                            <option>Tutorials</option>
-                          </select>
-                        </div>
+
+                      {/* ── 3. Category ── */}
+                      <div>
+                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Category</label>
+                        <select
+                          value={vidCategory}
+                          onChange={(e) => setVidCategory(e.target.value as any)}
+                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded-lg focus:outline-none font-semibold text-brand-chocolate"
+                        >
+                          <option>Wash Day</option>
+                          <option>Styling</option>
+                          <option>Protective Styles</option>
+                          <option>Growth Tips</option>
+                          <option>Product Reviews</option>
+                          <option>Tutorials</option>
+                        </select>
                       </div>
 
+                      {/* ── 4. Description (optional) ── */}
                       <div>
-                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Video Description</label>
+                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Description <span className="text-brand-dark/40 font-normal normal-case">(optional)</span></label>
                         <textarea
                           value={vidDescription}
                           onChange={(e) => setVidDescription(e.target.value)}
-                          placeholder="Enter coily hair-care step-by-step description..."
+                          placeholder="Short description shown in the modal lightbox..."
                           rows={2}
-                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none"
+                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded-lg focus:outline-none resize-none"
                         />
                       </div>
 
-                      {/* Video Media Section */}
-                      <div className="space-y-2.5">
-                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate">Video Media File</label>
-                        <VideoDropzone
-                          videoValue={vidUrl}
-                          onVideoChange={(newUrl, file) => {
-                            setVidUrl(newUrl);
-                            if (file) {
-                              setUploadedVideoFile(file);
-                              // Auto-generate title from filename if title is empty
-                              if (!vidTitle) {
-                                const cleanName = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
-                                setVidTitle(cleanName.charAt(0).toUpperCase() + cleanName.slice(1));
-                              }
-                            } else {
-                              setUploadedVideoFile(null);
-                            }
-                          }}
-                          label="Upload Video"
-                          prefersReducedMotion={prefersReducedMotion}
+                      {/* ── 5. Thumbnail URL (optional) ── */}
+                      <div>
+                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Thumbnail URL <span className="text-brand-dark/40 font-normal normal-case">(optional — auto-generated for YouTube)</span></label>
+                        <input
+                          type="url"
+                          value={uploadedThumbFile ? '' : vidThumb}
+                          onChange={(e) => { setVidThumb(e.target.value); setUploadedThumbFile(null); }}
+                          placeholder="https://images.unsplash.com/... or any image URL"
+                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded-lg focus:outline-none font-mono text-[11px]"
                         />
-                        
-                        <div>
-                          <label className="block text-[10px] uppercase font-bold text-[#8C6D62] mb-1">Paste TikTok or YouTube Link (Alternative)</label>
-                          <input
-                            type="url"
-                            value={uploadedVideoFile ? '' : vidUrl}
-                            onChange={(e) => {
-                              setVidUrl(e.target.value);
-                              setUploadedVideoFile(null);
-                            }}
-                            placeholder={uploadedVideoFile ? "Local file active. Paste link to override." : "https://www.tiktok.com/@username/video/... or YouTube link"}
-                            disabled={!!uploadedVideoFile}
-                            className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none font-mono disabled:opacity-50"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Thumbnail Section */}
-                      <div className="space-y-2.5">
-                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate">Video Poster Thumbnail</label>
-                        <ImageDropzone
-                          imageValue={vidThumb}
-                          onImageChange={(newThumb) => {
-                            setVidThumb(newThumb);
-                            const simulatedFile = new File([], "custom_thumbnail.png", { type: "image/png" });
-                            setUploadedThumbFile(simulatedFile);
-                          }}
-                          label="Upload Thumbnail"
-                          prefersReducedMotion={prefersReducedMotion}
-                        />
-
-                        <div>
-                          <label className="block text-[10px] uppercase font-bold text-[#8C6D62] mb-1">Reference Poster Thumbnail URL (Alternative)</label>
-                          <input
-                            type="url"
-                            value={uploadedThumbFile ? '' : vidThumb}
-                            onChange={(e) => {
-                              setVidThumb(e.target.value);
-                              setUploadedThumbFile(null);
-                            }}
-                            placeholder={uploadedThumbFile ? "Local thumbnail active. Paste link to override." : "https://images.unsplash.com/..."}
-                            disabled={!!uploadedThumbFile}
-                            className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none font-mono disabled:opacity-50"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Publishing Controls */}
-                      <div className="space-y-2.5 pt-1">
-                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Publishing Status</label>
-                        <div className="grid grid-cols-3 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setVidStatus('draft')}
-                            className={`py-2 px-3 rounded text-center border font-bold transition-all text-[10px] uppercase tracking-wider ${
-                              vidStatus === 'draft'
-                                ? 'bg-brand-chocolate text-white border-brand-chocolate shadow-xs'
-                                : 'bg-brand-cream text-brand-chocolate border-brand-warm-tan/30 hover:bg-brand-beige/25'
-                            }`}
-                          >
-                            Save Draft
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setVidStatus('published')}
-                            className={`py-2 px-3 rounded text-center border font-bold transition-all text-[10px] uppercase tracking-wider ${
-                              vidStatus === 'published'
-                                ? 'bg-brand-chocolate text-white border-brand-chocolate shadow-xs'
-                                : 'bg-brand-cream text-brand-chocolate border-brand-warm-tan/30 hover:bg-brand-beige/25'
-                            }`}
-                          >
-                            Publish Now
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setVidStatus('scheduled')}
-                            className={`py-2 px-3 rounded text-center border font-bold transition-all text-[10px] uppercase tracking-wider ${
-                              vidStatus === 'scheduled'
-                                ? 'bg-brand-chocolate text-white border-brand-chocolate shadow-xs'
-                                : 'bg-brand-cream text-brand-chocolate border-brand-warm-tan/30 hover:bg-brand-beige/25'
-                            }`}
-                          >
-                            Schedule
-                          </button>
-                        </div>
-
-                        {vidStatus === 'scheduled' && (
-                          <div className="animate-fadeIn">
-                            <label className="block text-[10px] uppercase font-bold text-[#8C6D62] mb-1">Release Date & Time</label>
-                            <input
-                              type="datetime-local"
-                              required
-                              value={vidScheduledAt}
-                              onChange={(e) => setVidScheduledAt(e.target.value)}
-                              className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none font-sans font-semibold text-brand-chocolate"
-                            />
-                          </div>
+                        {vidThumb && !uploadedThumbFile && (
+                          <img src={vidThumb} alt="thumb preview" referrerPolicy="no-referrer" className="mt-2 h-16 w-10 object-cover rounded border border-brand-warm-tan/20" />
                         )}
                       </div>
 
-                      {/* Featured Video Toggle */}
-                      <div className="flex items-center gap-2 py-1 border-t border-brand-warm-tan/20 pt-2">
+                      {/* ── 6. Publishing Status ── */}
+                      <div className="space-y-2">
+                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate">Status</label>
+                        <div className="grid grid-cols-3 gap-2">
+                          <button type="button" onClick={() => setVidStatus('draft')}
+                            className={`py-2 px-3 rounded-lg text-center border font-bold transition-all text-[10px] uppercase tracking-wider ${ vidStatus === 'draft' ? 'bg-brand-chocolate text-white border-brand-chocolate' : 'bg-brand-cream text-brand-chocolate border-brand-warm-tan/30 hover:bg-brand-beige/25' }`}
+                          >Draft</button>
+                          <button type="button" onClick={() => setVidStatus('published')}
+                            className={`py-2 px-3 rounded-lg text-center border font-bold transition-all text-[10px] uppercase tracking-wider ${ vidStatus === 'published' ? 'bg-brand-chocolate text-white border-brand-chocolate' : 'bg-brand-cream text-brand-chocolate border-brand-warm-tan/30 hover:bg-brand-beige/25' }`}
+                          >Published</button>
+                          <button type="button" onClick={() => setVidStatus('scheduled')}
+                            className={`py-2 px-3 rounded-lg text-center border font-bold transition-all text-[10px] uppercase tracking-wider ${ vidStatus === 'scheduled' ? 'bg-brand-chocolate text-white border-brand-chocolate' : 'bg-brand-cream text-brand-chocolate border-brand-warm-tan/30 hover:bg-brand-beige/25' }`}
+                          >Schedule</button>
+                        </div>
+                        {vidStatus === 'scheduled' && (
+                          <input
+                            type="datetime-local"
+                            required
+                            value={vidScheduledAt}
+                            onChange={(e) => setVidScheduledAt(e.target.value)}
+                            className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded-lg focus:outline-none font-semibold text-brand-chocolate"
+                          />
+                        )}
+                      </div>
+
+                      {/* ── 7. Featured toggle ── */}
+                      <div className="flex items-center gap-2">
                         <input
                           type="checkbox"
                           id="vid-featured-toggle"
@@ -2555,54 +2491,75 @@ export const AdminPortal: React.FC = () => {
                           className="rounded text-brand-rose focus:ring-brand-rose cursor-pointer animate-none"
                         />
                         <label htmlFor="vid-featured-toggle" className="text-[10px] uppercase font-bold text-brand-chocolate cursor-pointer select-none">
-                          Featured Video (Priority Placement)
+                          Pin as Featured video
                         </label>
                       </div>
 
-                      {/* Related Products & eBooks Selector */}
-                      <div>
-                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Shop Routine Products / eBooks Used</label>
-                        <div className="bg-brand-cream border border-brand-warm-tan/30 p-2.5 rounded-lg max-h-36 overflow-y-auto space-y-1 text-[10px]">
-                          {products.map(p => (
-                            <label key={p.id} className="flex items-center gap-2 cursor-pointer text-brand-dark py-0.5 hover:bg-brand-beige/25 px-1 rounded select-none">
+                      {/* ── 8. Advanced (collapsible) ── */}
+                      <details className="border border-brand-warm-tan/30 rounded-lg">
+                        <summary className="px-3 py-2 text-[10px] uppercase font-bold text-brand-chocolate cursor-pointer select-none hover:bg-brand-beige/30 rounded-lg">
+                          ▸ Advanced Options (related products, views, file upload)
+                        </summary>
+                        <div className="px-3 pb-4 pt-3 space-y-4">
+                          {/* Simulated views */}
+                          {vidStatus === 'published' && (
+                            <div>
+                              <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Display Views (e.g. 12.5k)</label>
                               <input
-                                type="checkbox"
-                                checked={vidRelatedIds.includes(p.id)}
-                                onChange={(evt) => {
-                                  if (evt.target.checked) {
-                                    setVidRelatedIds(prev => [...prev, p.id]);
-                                  } else {
-                                    setVidRelatedIds(prev => prev.filter(id => id !== p.id));
-                                  }
-                                }}
-                                className="rounded text-brand-rose focus:ring-brand-rose"
+                                type="text"
+                                value={vidViews}
+                                onChange={(e) => setVidViews(e.target.value)}
+                                className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none font-mono"
                               />
-                              <span className="truncate flex-1 font-medium font-sans text-[#543F35]">
-                                [Product] {p.name} - ${p.price.toFixed(2)}
-                              </span>
-                            </label>
-                          ))}
-                          {ebooks.map(eb => (
-                            <label key={eb.id} className="flex items-center gap-2 cursor-pointer text-brand-dark py-0.5 hover:bg-brand-beige/25 px-1 rounded select-none">
-                              <input
-                                type="checkbox"
-                                checked={vidRelatedIds.includes(eb.id)}
-                                onChange={(evt) => {
-                                  if (evt.target.checked) {
-                                    setVidRelatedIds(prev => [...prev, eb.id]);
-                                  } else {
-                                    setVidRelatedIds(prev => prev.filter(id => id !== eb.id));
+                            </div>
+                          )}
+                          {/* Related Products & eBooks */}
+                          <div>
+                            <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Link Products / eBooks</label>
+                            <div className="bg-brand-cream border border-brand-warm-tan/30 p-2.5 rounded-lg max-h-36 overflow-y-auto space-y-1 text-[10px]">
+                              {products.map(p => (
+                                <label key={p.id} className="flex items-center gap-2 cursor-pointer text-brand-dark py-0.5 hover:bg-brand-beige/25 px-1 rounded select-none">
+                                  <input type="checkbox" checked={vidRelatedIds.includes(p.id)}
+                                    onChange={(evt) => { if (evt.target.checked) setVidRelatedIds(prev => [...prev, p.id]); else setVidRelatedIds(prev => prev.filter(id => id !== p.id)); }}
+                                    className="rounded text-brand-rose focus:ring-brand-rose"
+                                  />
+                                  <span className="truncate flex-1 font-medium font-sans text-[#543F35]">[Product] {p.name} — ${p.price.toFixed(2)}</span>
+                                </label>
+                              ))}
+                              {ebooks.map(eb => (
+                                <label key={eb.id} className="flex items-center gap-2 cursor-pointer text-brand-dark py-0.5 hover:bg-brand-beige/25 px-1 rounded select-none">
+                                  <input type="checkbox" checked={vidRelatedIds.includes(eb.id)}
+                                    onChange={(evt) => { if (evt.target.checked) setVidRelatedIds(prev => [...prev, eb.id]); else setVidRelatedIds(prev => prev.filter(id => id !== eb.id)); }}
+                                    className="rounded text-brand-rose focus:ring-brand-rose"
+                                  />
+                                  <span className="truncate flex-1 font-medium font-sans text-brand-rose">[eBook] {eb.name} — ${eb.price.toFixed(2)}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                          {/* File upload option */}
+                          <div className="space-y-2">
+                            <label className="block text-[10px] uppercase font-bold text-[#8C6D62]">Upload Video File (alternative to link)</label>
+                            <VideoDropzone
+                              videoValue={vidUrl}
+                              onVideoChange={(newUrl, file) => {
+                                setVidUrl(newUrl);
+                                if (file) {
+                                  setUploadedVideoFile(file);
+                                  if (!vidTitle) {
+                                    const cleanName = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
+                                    setVidTitle(cleanName.charAt(0).toUpperCase() + cleanName.slice(1));
                                   }
-                                }}
-                                className="rounded text-brand-rose focus:ring-brand-rose"
-                              />
-                              <span className="truncate flex-1 font-medium font-sans text-brand-rose">
-                                [eBook] {eb.name} - ${eb.price.toFixed(2)}
-                              </span>
-                            </label>
-                          ))}
+                                } else {
+                                  setUploadedVideoFile(null);
+                                }
+                              }}
+                              label="Upload Video"
+                              prefersReducedMotion={prefersReducedMotion}
+                            />
+                          </div>
                         </div>
-                      </div>
+                      </details>
 
                       {/* Video Player Live Preview */}
                       {vidUrl && (
