@@ -27,7 +27,7 @@ export const AboutAndBlog: React.FC = () => {
           <div className="lg:col-span-5 relative">
             <div className="aspect-[4/5] overflow-hidden border border-brand-warm-tan/20 bg-brand-beige">
               <img
-                src="/about-portrait.jpg"
+                src={homepageContent.aboutImageUrl || '/about-portrait.jpg'}
                 alt="Cartiae Portrait"
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-cover"

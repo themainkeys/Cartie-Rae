@@ -717,8 +717,10 @@ export const initialDiscountCodes: DiscountCode[] = [
 export const initialHomepageContent: HomepageContent = {
   heroHeadline: 'Healthy 4C Hair Starts With the Right Routine',
   heroSubheadline: 'Learn simple, real, and effective hair care routines from Cartiae Rae — built for short, fine, natural 4C hair.',
+  heroImageUrl: '/hero-portrait.jpg',
   aboutHeadline: 'Relatable, Natural & Proven 4C Solutions',
   aboutStory: 'For years, I believed my tightly coiled 4C hair was destined to stay dry, short, and difficult to manage. I was constantly told that length was impossible for our texture. But through rigorous research, hydration protocols, and simple breakage-prevention methods, I cracked the code to healthy retention. Now, my goal is to hand you the exact master tools, eBooks, and botanical formulas to make your hair care simple, therapeutic, and deeply rewarding.',
+  aboutImageUrl: '/about-portrait.jpg',
   promoQuote: 'Cartiae’s methods are a game changer. My hair has never felt this soft or looked this healthy. The eBooks are incredibly detailed and the oil smells heavenly!',
   promoAuthor: 'Maya J., Loyal Customer'
 };

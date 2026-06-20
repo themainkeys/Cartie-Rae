@@ -384,7 +384,7 @@ export const AdminPortal: React.FC = () => {
     addProduct, updateProduct, deleteProduct,
     addVideo, updateVideo, deleteVideo,
     addGalleryItem, updateGalleryItem, deleteGalleryItem,
-    deleteBlogPost,
+    addBlogPost, updateBlogPost, deleteBlogPost,
     addDiscountCode, deleteDiscountCode,
     updateHomepageContent, fulfillOrder, loginAdmin, logoutAdmin,
     respondToContactRequest, deleteContactRequest, updateContactRequestStatus,
@@ -454,8 +454,10 @@ export const AdminPortal: React.FC = () => {
   // CMS editor states
   const [cmsHeroHead, setCmsHeroHead] = useState(homepageContent.heroHeadline);
   const [cmsHeroSub, setCmsHeroSub] = useState(homepageContent.heroSubheadline);
+  const [cmsHeroImage, setCmsHeroImage] = useState(homepageContent.heroImageUrl || '/hero-portrait.jpg');
   const [cmsAboutHead, setCmsAboutHead] = useState(homepageContent.aboutHeadline);
   const [cmsAboutStory, setCmsAboutStory] = useState(homepageContent.aboutStory);
+  const [cmsAboutImage, setCmsAboutImage] = useState(homepageContent.aboutImageUrl || '/about-portrait.jpg');
   const [cmsPromoQuote, setCmsPromoQuote] = useState(homepageContent.promoQuote);
   const [cmsPromoAuthor, setCmsPromoAuthor] = useState(homepageContent.promoAuthor);
   const [cmsSuccess, setCmsSuccess] = useState(false);
@@ -466,12 +468,14 @@ export const AdminPortal: React.FC = () => {
     return (
       cmsHeroHead !== homepageContent.heroHeadline ||
       cmsHeroSub  !== homepageContent.heroSubheadline ||
+      cmsHeroImage !== (homepageContent.heroImageUrl || '/hero-portrait.jpg') ||
       cmsAboutHead !== homepageContent.aboutHeadline ||
       cmsAboutStory !== homepageContent.aboutStory ||
+      cmsAboutImage !== (homepageContent.aboutImageUrl || '/about-portrait.jpg') ||
       cmsPromoQuote !== homepageContent.promoQuote ||
       cmsPromoAuthor !== homepageContent.promoAuthor
     );
-  }, [cmsHeroHead, cmsHeroSub, cmsAboutHead, cmsAboutStory, cmsPromoQuote, cmsPromoAuthor, homepageContent]);
+  }, [cmsHeroHead, cmsHeroSub, cmsHeroImage, cmsAboutHead, cmsAboutStory, cmsAboutImage, cmsPromoQuote, cmsPromoAuthor, homepageContent]);
 
   // Debounced auto-save CMS fields — fires 800ms after last keystroke
   const cmsDebounceRef = useRef<NodeJS.Timeout | null>(null);
@@ -505,6 +509,17 @@ export const AdminPortal: React.FC = () => {
   const [discName, setDiscName] = useState('');
   const [discPercent, setDiscPercent] = useState('20');
   const [discDesc, setDiscDesc] = useState('');
+
+  // Blog post editing / adding states
+  const [editingBlogId, setEditingBlogId] = useState<string | null>(null);
+  const [isAddingBlog, setIsAddingBlog] = useState(false);
+  const [blogTitle, setBlogTitle] = useState('');
+  const [blogExcerpt, setBlogExcerpt] = useState('');
+  const [blogContent, setBlogContent] = useState('');
+  const [blogReadTime, setBlogReadTime] = useState('5 min read');
+  const [blogImage, setBlogImage] = useState('');
+  const [blogCategory, setBlogCategory] = useState('Growth Tips');
+  const BLOG_CATEGORIES = ['Growth Tips', 'Wash Day', 'Styling', 'Product Reviews', 'Tutorials', 'Protective Styles', 'Hair Science'] as const;
 
   // Derived: are there any unsaved/pending changes?
   const hasOpenForm = isAddingVideo || isAddingProduct || isAddingEBook;
@@ -2391,65 +2406,241 @@ export const AdminPortal: React.FC = () => {
           {/* ============================================= */}
           {/* CMS COMPONENT: BLOG POSTS MANAGEMENT TABLE   */}
           {/* ============================================= */}
-          {activeTab === 'design' && designSub === 'cms' && blogs.length > 0 && (
+          {/* ============================================= */}
+          {/* CMS COMPONENT: BLOG POSTS MANAGEMENT TABLE   */}
+          {/* ============================================= */}
+          {activeTab === 'design' && designSub === 'cms' && (
             <div className="bg-white border border-[#E5D5C8]/80 rounded-3xl p-6 sm:p-8 space-y-4 shadow-[0_4px_25px_-4px_rgba(74,43,32,0.02)] animate-fade-in">
+              {/* Header */}
               <div className="flex justify-between items-center border-b border-[#E5D5C8]/30 pb-3">
                 <h3 className="font-serif text-base sm:text-lg font-bold text-brand-dark flex items-center gap-2">
                   <span className="w-1.5 h-6 bg-brand-rose rounded-full"></span>
                   Blog Articles Management
                 </h3>
-                <span className="text-[10px] text-[#A67E6B] bg-brand-cream border border-[#E5D5C8]/60 px-3 py-1 rounded-full font-bold">
-                  {blogs.length} Post{blogs.length !== 1 ? 's' : ''}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-[#A67E6B] bg-brand-cream border border-[#E5D5C8]/60 px-3 py-1 rounded-full font-bold">
+                    {blogs.length} Post{blogs.length !== 1 ? 's' : ''}
+                  </span>
+                  <button
+                    id="admin-add-blog-btn"
+                    onClick={() => {
+                      if (!checkPermission(['super_admin', 'content_manager'])) return;
+                      setBlogTitle(''); setBlogExcerpt(''); setBlogContent('');
+                      setBlogReadTime('5 min read'); setBlogImage(''); setBlogCategory('Growth Tips');
+                      setEditingBlogId(null);
+                      setIsAddingBlog(true);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-rose hover:bg-brand-berry text-white text-[10.5px] font-bold uppercase tracking-wider rounded-xl transition-all duration-150 focus:outline-none"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    New Post
+                  </button>
+                </div>
               </div>
-              <div className="overflow-x-auto border border-brand-warm-tan/20 rounded-xl bg-white">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-brand-beige/50 border-b border-brand-warm-tan/20 text-[#8C6D62] font-semibold">
-                      <th className="p-3">Cover</th>
-                      <th className="p-3">Title</th>
-                      <th className="p-3">Category</th>
-                      <th className="p-3">Date</th>
-                      <th className="p-3 text-center">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-brand-warm-tan/10 text-brand-dark/80">
-                    {blogs.map((post) => (
-                      <tr key={post.id} className="hover:bg-brand-cream/30">
-                        <td className="p-3">
-                          <img
-                            src={post.image}
-                            referrerPolicy="no-referrer"
-                            alt=""
-                            className="w-10 h-10 object-cover rounded border border-brand-warm-tan/20"
-                          />
-                        </td>
-                        <td className="p-3 font-semibold line-clamp-1 max-w-[220px]">{post.title}</td>
-                        <td className="p-3 font-mono">{post.category}</td>
-                        <td className="p-3 text-[#A67E6B]">{post.date}</td>
-                        <td className="p-3 text-center">
-                          <button
-                            id={`delete-blog-${post.id}`}
-                            onClick={() => {
-                              if (confirm(`Remove blog post "${post.title}"?`)) {
-                                if (checkPermission(['super_admin', 'content_manager'])) {
-                                  deleteBlogPost(post.id);
-                                  triggerToast(`🗑 "${post.title}" removed from blog.`, 'success');
-                                }
-                              }
-                            }}
-                            className="p-1 px-2.5 bg-brand-pink-light hover:bg-brand-rose text-brand-rose hover:text-white rounded-md font-bold transition duration-250 cursor-pointer"
-                          >
-                            Delete
-                          </button>
-                        </td>
+
+              {/* Add New Blog Form */}
+              <AnimatePresence>
+                {isAddingBlog && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.25 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-2xl p-5 space-y-4">
+                      <p className="text-[10.5px] font-extrabold uppercase tracking-widest text-brand-rose flex items-center gap-1.5">
+                        <Book className="w-3.5 h-3.5" /> New Blog Post
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                        <div className="sm:col-span-2">
+                          <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Title *</label>
+                          <input type="text" value={blogTitle} onChange={e => setBlogTitle(e.target.value)} placeholder="Post title..." className="w-full px-3 py-2 bg-white border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 text-brand-dark" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Category</label>
+                          <select value={blogCategory} onChange={e => setBlogCategory(e.target.value)} className="w-full px-3 py-2 bg-white border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 text-brand-dark">
+                            {BLOG_CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Read Time</label>
+                          <input type="text" value={blogReadTime} onChange={e => setBlogReadTime(e.target.value)} placeholder="e.g. 5 min read" className="w-full px-3 py-2 bg-white border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 text-brand-dark" />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Cover Image URL</label>
+                          <input type="text" value={blogImage} onChange={e => setBlogImage(e.target.value)} placeholder="https://..." className="w-full px-3 py-2 bg-white border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 text-brand-dark" />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Excerpt / Subtitle</label>
+                          <input type="text" value={blogExcerpt} onChange={e => setBlogExcerpt(e.target.value)} placeholder="Short description shown in previews..." className="w-full px-3 py-2 bg-white border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 text-brand-dark" />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Full Article Body *</label>
+                          <textarea rows={6} value={blogContent} onChange={e => setBlogContent(e.target.value)} placeholder="Write the full blog post content here..." className="w-full px-3 py-2 bg-white border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 text-brand-dark leading-relaxed" />
+                        </div>
+                      </div>
+                      <div className="flex justify-end gap-2 pt-2">
+                        <button onClick={() => setIsAddingBlog(false)} className="px-4 py-2 text-[10.5px] font-bold text-brand-chocolate bg-brand-cream border border-[#E5D5C8] rounded-xl hover:bg-brand-beige transition-all">Cancel</button>
+                        <button
+                          onClick={() => {
+                            if (!blogTitle.trim() || !blogContent.trim()) { triggerToast('Title and content are required.', 'error'); return; }
+                            addBlogPost({ title: blogTitle.trim(), excerpt: blogExcerpt.trim(), content: blogContent.trim(), readTime: blogReadTime, image: blogImage || 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&q=80&w=800', category: blogCategory });
+                            triggerToast(`✓ "${blogTitle}" published to blog!`, 'success');
+                            setIsAddingBlog(false);
+                          }}
+                          className="px-5 py-2 text-[10.5px] font-extrabold bg-brand-rose hover:bg-brand-berry text-white rounded-xl uppercase tracking-wider transition-all flex items-center gap-1.5 focus:outline-none"
+                        >
+                          <Save className="w-3.5 h-3.5" /> Publish Post
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Blog Table */}
+              {blogs.length === 0 ? (
+                <p className="text-[11px] text-[#A67E6B] text-center py-8">No blog posts yet. Click "New Post" to create one.</p>
+              ) : (
+                <div className="overflow-x-auto border border-brand-warm-tan/20 rounded-xl bg-white">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-brand-beige/50 border-b border-brand-warm-tan/20 text-[#8C6D62] font-semibold">
+                        <th className="p-3">Cover</th>
+                        <th className="p-3">Title</th>
+                        <th className="p-3">Category</th>
+                        <th className="p-3">Date</th>
+                        <th className="p-3 text-center">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-brand-warm-tan/10 text-brand-dark/80">
+                      {blogs.map((post) => (
+                        <React.Fragment key={post.id}>
+                          {/* Normal row */}
+                          <tr className={`hover:bg-brand-cream/30 transition-colors ${editingBlogId === post.id ? 'bg-brand-cream/40' : ''}`}>
+                            <td className="p-3">
+                              <img src={post.image} referrerPolicy="no-referrer" alt="" className="w-10 h-10 object-cover rounded border border-brand-warm-tan/20" />
+                            </td>
+                            <td className="p-3 font-semibold max-w-[200px]">
+                              <p className="line-clamp-2 leading-snug">{post.title}</p>
+                              <p className="text-[10px] text-[#A67E6B] font-normal mt-0.5">{post.readTime}</p>
+                            </td>
+                            <td className="p-3 font-mono">{post.category}</td>
+                            <td className="p-3 text-[#A67E6B]">{post.date}</td>
+                            <td className="p-3">
+                              <div className="flex items-center justify-center gap-1.5">
+                                <button
+                                  id={`edit-blog-${post.id}`}
+                                  onClick={() => {
+                                    if (editingBlogId === post.id) { setEditingBlogId(null); return; }
+                                    setBlogTitle(post.title);
+                                    setBlogExcerpt(post.excerpt);
+                                    setBlogContent(post.content);
+                                    setBlogReadTime(post.readTime);
+                                    setBlogImage(post.image);
+                                    setBlogCategory(post.category);
+                                    setIsAddingBlog(false);
+                                    setEditingBlogId(post.id);
+                                  }}
+                                  className={`px-2.5 py-1 text-[10.5px] font-bold rounded-md transition duration-150 focus:outline-none flex items-center gap-1 ${editingBlogId === post.id ? 'bg-brand-dark text-white' : 'bg-[#EEF7F1] text-emerald-700 hover:bg-emerald-600 hover:text-white'}`}
+                                >
+                                  <Edit className="w-3 h-3" />
+                                  {editingBlogId === post.id ? 'Close' : 'Edit'}
+                                </button>
+                                <button
+                                  id={`delete-blog-${post.id}`}
+                                  onClick={() => {
+                                    if (confirm(`Remove blog post "${post.title}"?`)) {
+                                      if (checkPermission(['super_admin', 'content_manager'])) {
+                                        if (editingBlogId === post.id) setEditingBlogId(null);
+                                        deleteBlogPost(post.id);
+                                        triggerToast(`🗑 "${post.title}" removed from blog.`, 'success');
+                                      }
+                                    }
+                                  }}
+                                  className="px-2.5 py-1 bg-brand-pink-light hover:bg-brand-rose text-brand-rose hover:text-white text-[10.5px] rounded-md font-bold transition duration-150 focus:outline-none flex items-center gap-1"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  Delete
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+
+                          {/* Inline edit form */}
+                          {editingBlogId === post.id && (
+                            <tr>
+                              <td colSpan={5} className="p-0">
+                                <motion.div
+                                  initial={{ opacity: 0, height: 0 }}
+                                  animate={{ opacity: 1, height: 'auto' }}
+                                  exit={{ opacity: 0, height: 0 }}
+                                  transition={{ duration: 0.2 }}
+                                  className="bg-[#FAF6F0] border-t border-brand-warm-tan/20 p-5 space-y-4"
+                                >
+                                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-brand-rose flex items-center gap-1.5">
+                                    <Edit className="w-3 h-3" /> Editing: {post.title}
+                                  </p>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                                    <div className="sm:col-span-2">
+                                      <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Title *</label>
+                                      <input type="text" value={blogTitle} onChange={e => setBlogTitle(e.target.value)} className="w-full px-3 py-2 bg-white border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 text-brand-dark" />
+                                    </div>
+                                    <div>
+                                      <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Category</label>
+                                      <select value={blogCategory} onChange={e => setBlogCategory(e.target.value)} className="w-full px-3 py-2 bg-white border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 text-brand-dark">
+                                        {BLOG_CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                                      </select>
+                                    </div>
+                                    <div>
+                                      <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Read Time</label>
+                                      <input type="text" value={blogReadTime} onChange={e => setBlogReadTime(e.target.value)} className="w-full px-3 py-2 bg-white border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 text-brand-dark" />
+                                    </div>
+                                    <div className="sm:col-span-2">
+                                      <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Cover Image URL</label>
+                                      <div className="flex gap-2 items-center">
+                                        <input type="text" value={blogImage} onChange={e => setBlogImage(e.target.value)} className="flex-1 px-3 py-2 bg-white border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 text-brand-dark" />
+                                        {blogImage && <img src={blogImage} alt="" className="w-10 h-10 object-cover rounded border border-brand-warm-tan/20 shrink-0" />}
+                                      </div>
+                                    </div>
+                                    <div className="sm:col-span-2">
+                                      <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Excerpt</label>
+                                      <input type="text" value={blogExcerpt} onChange={e => setBlogExcerpt(e.target.value)} className="w-full px-3 py-2 bg-white border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 text-brand-dark" />
+                                    </div>
+                                    <div className="sm:col-span-2">
+                                      <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Full Article Body *</label>
+                                      <textarea rows={8} value={blogContent} onChange={e => setBlogContent(e.target.value)} className="w-full px-3 py-2 bg-white border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 text-brand-dark leading-relaxed" />
+                                    </div>
+                                  </div>
+                                  <div className="flex justify-end gap-2 pt-2">
+                                    <button onClick={() => setEditingBlogId(null)} className="px-4 py-2 text-[10.5px] font-bold text-brand-chocolate bg-brand-cream border border-[#E5D5C8] rounded-xl hover:bg-brand-beige transition-all">Cancel</button>
+                                    <button
+                                      onClick={() => {
+                                        if (!blogTitle.trim() || !blogContent.trim()) { triggerToast('Title and content are required.', 'error'); return; }
+                                        updateBlogPost(post.id, { title: blogTitle.trim(), excerpt: blogExcerpt.trim(), content: blogContent.trim(), readTime: blogReadTime, image: blogImage || post.image, category: blogCategory });
+                                        triggerToast(`✓ "${blogTitle}" updated and live!`, 'success');
+                                        setEditingBlogId(null);
+                                      }}
+                                      className="px-5 py-2 text-[10.5px] font-extrabold bg-brand-rose hover:bg-brand-berry text-white rounded-xl uppercase tracking-wider transition-all flex items-center gap-1.5 focus:outline-none"
+                                    >
+                                      <Save className="w-3.5 h-3.5" /> Save Changes
+                                    </button>
+                                  </div>
+                                </motion.div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
+
+
 
           {/* =================================================== */}
           {/* OVERVIEW SYSTEM COMPONENT: SUBSCRIBERS EMAIL DIRECTORY */}

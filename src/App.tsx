@@ -103,7 +103,7 @@ const Homepage: React.FC<{
         className="relative w-full aspect-[4/5] sm:aspect-[3/2] lg:aspect-[16/9] overflow-hidden bg-brand-beige"
       >
         <img
-          src="/hero-portrait.jpg"
+          src={homepageContent.heroImageUrl || '/hero-portrait.jpg'}
           alt="Cartiae Rae"
           className="w-full h-full object-cover object-top select-none"
         />
