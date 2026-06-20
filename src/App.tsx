@@ -10,6 +10,8 @@ import { AboutAndBlog } from './views/AboutAndBlog';
 import { ContactPage } from './views/ContactPage';
 import { AdminPortal } from './views/AdminPortal';
 import { ServicesPage } from './views/ServicesPage';
+import { CheckoutSuccess } from './views/CheckoutSuccess';
+import { CheckoutCancel } from './views/CheckoutCancel';
 import { CartDrawer } from './components/CartDrawer';
 import { motion, AnimatePresence, useInView } from 'motion/react';
 import { ArrowUp, BookOpen, Compass, ShoppingBag, Video } from 'lucide-react';
@@ -245,7 +247,12 @@ export const AppContent: React.FC = () => {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('product') || params.get('ebook')) {
+    const path = window.location.pathname;
+    if (path === '/checkout/success') {
+      setActivePart('checkout-success');
+    } else if (path === '/checkout/cancel') {
+      setActivePart('checkout-cancel');
+    } else if (params.get('product') || params.get('ebook')) {
       setActivePart('shop');
     }
   }, []);
@@ -327,6 +334,14 @@ export const AppContent: React.FC = () => {
 
             {activePart === 'admin' && (
               <AdminPortal />
+            )}
+
+            {activePart === 'checkout-success' && (
+              <CheckoutSuccess openCart={openCart} setActivePart={setActivePart} />
+            )}
+
+            {activePart === 'checkout-cancel' && (
+              <CheckoutCancel openCart={openCart} setActivePart={setActivePart} />
             )}
           </motion.div>
         </AnimatePresence>
