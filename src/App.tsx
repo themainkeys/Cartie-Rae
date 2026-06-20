@@ -105,7 +105,7 @@ const Homepage: React.FC<{
         <img
           src="/hero-portrait.jpg"
           alt="Cartiae Rae"
-          className="w-full h-full object-cover object-top select-none"
+          className="w-full h-full object-cover object-center select-none"
         />
         {/* Gradient overlay — bottom for text legibility */}
         <div className="absolute inset-0 bg-gradient-to-t from-brand-dark/65 via-brand-dark/10 to-transparent" />
