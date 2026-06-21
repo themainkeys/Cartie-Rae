@@ -13,6 +13,7 @@ const TOMBSTONE_KEYS = {
   blogs:     'cartiae_deleted_blogs',
   discounts: 'cartiae_deleted_discounts',
   contacts:  'cartiae_deleted_contacts',
+  services:  'cartiae_deleted_services',
 } as const;
 
 function readTombstones(key: string): Set<string> {
@@ -98,6 +99,7 @@ interface AppContextType {
   // Services
   services: Service[];
   updateService: (id: string, patch: Partial<Service>) => void;
+  deleteService: (id: string) => void;
   
   // Newsletter Signups
   signupNewsletter: (email: string) => boolean;
@@ -232,7 +234,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [services, setServices] = useState<Service[]>(() => {
     const local = localStorage.getItem('cartiae_services');
-    return local ? JSON.parse(local) : initialServices;
+    const base: Service[] = local ? JSON.parse(local) : initialServices;
+    return filterTombstoned(base, TOMBSTONE_KEYS.services);
   });
 
   const [newsletterSignups, setNewsletterSignups] = useState<NewsletterSignup[]>(() => {
@@ -540,6 +543,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setServices(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s));
   };
 
+  const deleteService = (id: string) => {
+    writeTombstone(TOMBSTONE_KEYS.services, id);
+    setServices(prev => prev.filter(s => s.id !== id));
+  };
+
   // --- Newsletter Signups ---
   const signupNewsletter = (email: string): boolean => {
     if (!email || !email.includes('@')) return false;
@@ -729,6 +737,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addDiscountCode, deleteDiscountCode,
       updateHomepageContent,
       updateService,
+      deleteService,
       signupNewsletter,
       addToCart, removeFromCart, updateCartQuantity, applyPromoCode, clearCart,
       addToWishlist, removeFromWishlist, moveToWishlist, moveToCart,

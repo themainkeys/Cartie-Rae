@@ -389,7 +389,7 @@ export const AdminPortal: React.FC = () => {
     updateHomepageContent, fulfillOrder, loginAdmin, logoutAdmin,
     respondToContactRequest, deleteContactRequest, updateContactRequestStatus,
     emailNotificationsEnabled, setEmailNotificationsEnabled, prefersReducedMotion,
-    services, updateService,
+    services, updateService, deleteService,
     triggerToast
   } = useApp();
 
@@ -487,6 +487,10 @@ export const AdminPortal: React.FC = () => {
     }, 800);
   }, [updateHomepageContent]);
 
+  // Cleanup debounce on unmount so auto-save can't fire after logout
+  useEffect(() => {
+    return () => { if (cmsDebounceRef.current) clearTimeout(cmsDebounceRef.current); };
+  }, []);
 
   // New catalog item drawers
   const [isAddingProduct, setIsAddingProduct] = useState(false);
@@ -523,7 +527,7 @@ export const AdminPortal: React.FC = () => {
   const BLOG_CATEGORIES = ['Growth Tips', 'Wash Day', 'Styling', 'Product Reviews', 'Tutorials', 'Protective Styles', 'Hair Science'] as const;
 
   // Derived: are there any unsaved/pending changes?
-  const hasOpenForm = isAddingVideo || isAddingProduct || isAddingEBook;
+  const hasOpenForm = isAddingVideo || isAddingProduct || isAddingEBook || isAddingBlog || isAddingGallery || isAddingDiscount;
   const hasUnsavedChanges = hasCmsDirty || hasOpenForm;
   // Inline editing states
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
@@ -2513,20 +2517,34 @@ export const AdminPortal: React.FC = () => {
                       />
                     </div>
 
-                    {/* Save URL button */}
-                    <button
-                      onClick={() => {
-                        if (!checkPermission(['super_admin', 'content_manager'])) return;
-                        const el = document.getElementById(`service-img-url-${svc.id}`) as HTMLInputElement;
-                        const url = el?.value?.trim();
-                        if (!url) { triggerToast('Please enter an image URL.', 'error'); return; }
-                        updateService(svc.id, { image: url });
-                        triggerToast(`✓ "${svc.name}" cover updated and live!`, 'success');
-                      }}
-                      className="w-full py-2 text-[10.5px] font-extrabold bg-brand-rose hover:bg-brand-berry text-white rounded-xl uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 focus:outline-none"
-                    >
-                      <Save className="w-3.5 h-3.5" /> Save Cover Image
-                    </button>
+                    {/* Save URL button + Delete button row */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          if (!checkPermission(['super_admin', 'content_manager'])) return;
+                          const el = document.getElementById(`service-img-url-${svc.id}`) as HTMLInputElement;
+                          const url = el?.value?.trim();
+                          if (!url) { triggerToast('Please enter an image URL.', 'error'); return; }
+                          updateService(svc.id, { image: url });
+                          triggerToast(`✓ "${svc.name}" cover updated and live!`, 'success');
+                        }}
+                        className="flex-1 py-2 text-[10.5px] font-extrabold bg-brand-rose hover:bg-brand-berry text-white rounded-xl uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 focus:outline-none"
+                      >
+                        <Save className="w-3.5 h-3.5" /> Save Cover
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (!checkPermission(['super_admin'])) return;
+                          if (!window.confirm(`Delete "${svc.name}"? This cannot be undone.`)) return;
+                          deleteService(svc.id);
+                          triggerToast(`"${svc.name}" deleted.`, 'success');
+                        }}
+                        className="px-3 py-2 text-[10.5px] font-extrabold bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl uppercase tracking-wider transition-all flex items-center justify-center gap-1 focus:outline-none"
+                        title="Delete service"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
