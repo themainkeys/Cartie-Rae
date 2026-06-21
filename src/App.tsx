@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from './context/AppContext';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
-import { FAQ } from './components/FAQ';
 import { MainStore } from './views/MainStore';
+
 import { VideoGallery } from './views/VideoGallery';
 import { PhotoGallery } from './views/PhotoGallery';
 import { AboutAndBlog } from './views/AboutAndBlog';
@@ -88,7 +88,6 @@ export const AnimatedCounter: React.FC<{ value: number; suffix?: string; prefix?
 const Homepage: React.FC<{ 
   setActivePart: (part: string) => void;
   setShopFilter: (filter: string) => void;
-  openCart: () => void;
 }> = ({ setActivePart, setShopFilter }) => {
   const { homepageContent, prefersReducedMotion } = useApp();
 
@@ -110,16 +109,21 @@ const Homepage: React.FC<{
         {/* Gradient overlay — bottom for text legibility */}
         <div className="absolute inset-0 bg-gradient-to-t from-brand-dark/65 via-brand-dark/10 to-transparent" />
 
-        {/* Name + accent line overlaid at bottom-left */}
+        {/* Name + tagline overlaid at bottom-left */}
         <motion.div
           initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: prefersReducedMotion ? 0 : 0.7, delay: prefersReducedMotion ? 0 : 0.2, ease: [0.16, 1, 0.3, 1] }}
-          className="absolute bottom-8 left-6 sm:left-10 lg:left-16 space-y-3 select-none"
+          className="absolute bottom-8 left-6 sm:left-10 lg:left-16 space-y-2 select-none"
         >
           <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl text-white tracking-tight leading-none font-normal">
             Cartiae Rae
           </h1>
+          {homepageContent.heroHeadline && (
+            <p className="font-sans text-xs sm:text-sm text-white/75 max-w-xs leading-relaxed">
+              {homepageContent.heroHeadline}
+            </p>
+          )}
           <div className="h-[1.5px] w-14 bg-brand-rose" />
         </motion.div>
       </motion.section>
@@ -299,7 +303,6 @@ export const AppContent: React.FC = () => {
               <Homepage 
                 setActivePart={setActivePart} 
                 setShopFilter={setShopFilter} 
-                openCart={openCart} 
               />
             )}
             

@@ -115,6 +115,53 @@ This promotes your draft build to the live production URL.
 
 ---
 
+## 💳 Stripe Integration (Phase 1 — Real Payments)
+
+Real Stripe checkout is now wired up via a Netlify serverless function. When a customer clicks **"Continue to Secure Payment"**, they are redirected to Stripe's hosted checkout page. No card details ever touch this server.
+
+### How to Add Stripe Keys to Netlify
+
+1. Go to [dashboard.stripe.com](https://dashboard.stripe.com) → **Developers** → **API keys**
+2. Copy your **Publishable key** and **Secret key**
+3. In Netlify: go to **Site settings** → **Environment variables** → **Add variable** for each:
+
+| Variable | Where to get it | Scope |
+|---|---|---|
+| `STRIPE_SECRET_KEY` | Stripe Dashboard → API keys | Functions only (server-side) |
+| `VITE_STRIPE_PUBLISHABLE_KEY` | Stripe Dashboard → API keys | Frontend (safe to expose) |
+| `STRIPE_WEBHOOK_SECRET` | Stripe Dashboard → Webhooks → Signing secret | Functions only |
+| `SITE_URL` | Your Netlify site URL, e.g. `https://cartiaerae.netlify.app` | Functions only |
+
+### Testing with Stripe Test Mode
+
+1. Use keys starting with `pk_test_` and `sk_test_`
+2. Use Stripe's test card: **`4242 4242 4242 4242`**, any future expiry, any 3-digit CVV
+3. Complete a test checkout — you will be redirected to `/checkout/success`
+4. Click "back" or cancel — you will land on `/checkout/cancel` with your cart intact
+
+### Switching to Live Mode
+
+1. Replace `pk_test_` → `pk_live_` and `sk_test_` → `sk_live_` in Netlify environment variables
+2. Redeploy the site (a new deploy picks up the new variables automatically)
+3. **Never commit real keys to Git** — always set them in Netlify's dashboard
+
+### Checkout Flow
+
+```
+Customer clicks "Continue to Secure Payment"
+  ↓
+CartDrawer POSTs to /.netlify/functions/create-checkout-session
+  ↓
+Netlify function validates cart + creates Stripe session
+  ↓
+Browser redirects to Stripe hosted checkout page
+  ↓
+On success → /checkout/success  (receipt shown)
+On cancel  → /checkout/cancel   (cart still intact)
+```
+
+---
+
 ## ⚠️ Backend Status — Current Data Persistence (Important)
 
 > **The current version of the site uses browser `localStorage` for all admin data.**  

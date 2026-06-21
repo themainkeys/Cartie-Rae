@@ -15,6 +15,7 @@ export const ContactPage: React.FC = () => {
   const [msgPhone, setMsgPhone] = useState('');
   const [msgText, setMsgText] = useState('');
   const [msgSuccess, setMsgSuccess] = useState(false);
+  const [agreeNewsletter, setAgreeNewsletter] = useState(false);
 
   // Accordion state
   const [openedFaq, setOpenedFaq] = useState<number | null>(0);
@@ -42,13 +43,14 @@ export const ContactPage: React.FC = () => {
     });
 
     setMsgSuccess(true);
-    signupNewsletter(msgEmail);
+    if (agreeNewsletter) signupNewsletter(msgEmail);
     
     // clear fields
     setMsgName('');
     setMsgEmail('');
     setMsgPhone('');
     setMsgText('');
+    setAgreeNewsletter(false);
     setTimeout(() => setMsgSuccess(false), 5000);
   };
 
@@ -130,6 +132,20 @@ export const ContactPage: React.FC = () => {
                 className="w-full px-4 py-3 bg-brand-cream border border-brand-warm-tan/40 text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose transition-all font-sans"
               />
             </div>
+
+            {/* Newsletter opt-in checkbox */}
+            <label className="flex items-start gap-3 cursor-pointer group select-none">
+              <input
+                id="contact-newsletter-opt-in"
+                type="checkbox"
+                checked={agreeNewsletter}
+                onChange={e => setAgreeNewsletter(e.target.checked)}
+                className="mt-0.5 w-4 h-4 accent-[#C9184A] rounded cursor-pointer"
+              />
+              <span className="font-sans text-[11px] text-zinc-500 leading-relaxed group-hover:text-zinc-700 transition-colors">
+                Subscribe me to updates, eBook releases, and hair care tips. You can unsubscribe anytime.
+              </span>
+            </label>
 
             <motion.button
               id="submit-contact-msg"

@@ -389,6 +389,7 @@ export const AdminPortal: React.FC = () => {
     updateHomepageContent, fulfillOrder, loginAdmin, logoutAdmin,
     respondToContactRequest, deleteContactRequest, updateContactRequestStatus,
     emailNotificationsEnabled, setEmailNotificationsEnabled, prefersReducedMotion,
+    services, updateService, deleteService,
     triggerToast
   } = useApp();
 
@@ -486,6 +487,10 @@ export const AdminPortal: React.FC = () => {
     }, 800);
   }, [updateHomepageContent]);
 
+  // Cleanup debounce on unmount so auto-save can't fire after logout
+  useEffect(() => {
+    return () => { if (cmsDebounceRef.current) clearTimeout(cmsDebounceRef.current); };
+  }, []);
 
   // New catalog item drawers
   const [isAddingProduct, setIsAddingProduct] = useState(false);
@@ -522,7 +527,7 @@ export const AdminPortal: React.FC = () => {
   const BLOG_CATEGORIES = ['Growth Tips', 'Wash Day', 'Styling', 'Product Reviews', 'Tutorials', 'Protective Styles', 'Hair Science'] as const;
 
   // Derived: are there any unsaved/pending changes?
-  const hasOpenForm = isAddingVideo || isAddingProduct || isAddingEBook;
+  const hasOpenForm = isAddingVideo || isAddingProduct || isAddingEBook || isAddingBlog || isAddingGallery || isAddingDiscount;
   const hasUnsavedChanges = hasCmsDirty || hasOpenForm;
   // Inline editing states
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
@@ -571,8 +576,10 @@ export const AdminPortal: React.FC = () => {
     updateHomepageContent({
       heroHeadline: cmsHeroHead,
       heroSubheadline: cmsHeroSub,
+      heroImageUrl: cmsHeroImage,
       aboutHeadline: cmsAboutHead,
       aboutStory: cmsAboutStory,
+      aboutImageUrl: cmsAboutImage,
       promoQuote: cmsPromoQuote,
       promoAuthor: cmsPromoAuthor
     });
@@ -592,8 +599,10 @@ export const AdminPortal: React.FC = () => {
       updateHomepageContent({
         heroHeadline: cmsHeroHead,
         heroSubheadline: cmsHeroSub,
+        heroImageUrl: cmsHeroImage,
         aboutHeadline: cmsAboutHead,
         aboutStory: cmsAboutStory,
+        aboutImageUrl: cmsAboutImage,
         promoQuote: cmsPromoQuote,
         promoAuthor: cmsPromoAuthor
       });
@@ -2298,6 +2307,27 @@ export const AdminPortal: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Hero Image URL */}
+                  <div className="pt-1">
+                    <label className="block text-[10.5px] uppercase font-bold text-brand-chocolate mb-1 flex items-center gap-1.5">
+                      <Image className="w-3.5 h-3.5 text-brand-rose" />
+                      Homepage Hero Photo URL
+                    </label>
+                    <div className="flex gap-3 items-center">
+                      <input
+                        type="text"
+                        value={cmsHeroImage}
+                        placeholder="/hero-portrait.jpg or https://..."
+                        onChange={(e) => { setCmsHeroImage(e.target.value); autoSaveCms({ heroImageUrl: e.target.value }); }}
+                        className="flex-1 px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark transition-all duration-150"
+                      />
+                      {cmsHeroImage && (
+                        <img src={cmsHeroImage} alt="Hero preview" className="w-14 h-14 object-cover object-top rounded-xl border border-brand-warm-tan/30 shrink-0" />
+                      )}
+                    </div>
+                    <p className="text-[10px] text-[#A67E6B] mt-1">Paste any image URL. Changes apply instantly to the homepage.</p>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                     <div>
                       <label className="block text-[10.5px] uppercase font-bold text-brand-chocolate mb-1">About Headline Intro text</label>
@@ -2317,6 +2347,27 @@ export const AdminPortal: React.FC = () => {
                         className="w-full px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark transition-all duration-150"
                       />
                     </div>
+                  </div>
+
+                  {/* About Image URL */}
+                  <div className="pt-1">
+                    <label className="block text-[10.5px] uppercase font-bold text-brand-chocolate mb-1 flex items-center gap-1.5">
+                      <Image className="w-3.5 h-3.5 text-brand-rose" />
+                      About Page Portrait URL
+                    </label>
+                    <div className="flex gap-3 items-center">
+                      <input
+                        type="text"
+                        value={cmsAboutImage}
+                        placeholder="/about-portrait.jpg or https://..."
+                        onChange={(e) => { setCmsAboutImage(e.target.value); autoSaveCms({ aboutImageUrl: e.target.value }); }}
+                        className="flex-1 px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark transition-all duration-150"
+                      />
+                      {cmsAboutImage && (
+                        <img src={cmsAboutImage} alt="About preview" className="w-14 h-14 object-cover object-top rounded-xl border border-brand-warm-tan/30 shrink-0" />
+                      )}
+                    </div>
+                    <p className="text-[10px] text-[#A67E6B] mt-1">Paste an image URL or use <code className="bg-brand-cream px-1 rounded">/about-portrait.jpg</code> for the uploaded file.</p>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
@@ -2404,8 +2455,102 @@ export const AdminPortal: React.FC = () => {
           )}
 
           {/* ============================================= */}
-          {/* CMS COMPONENT: BLOG POSTS MANAGEMENT TABLE   */}
+          {/* CMS COMPONENT: SERVICES COVER IMAGES         */}
           {/* ============================================= */}
+          {activeTab === 'design' && designSub === 'cms' && (
+            <div className="bg-white border border-[#E5D5C8]/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_4px_25px_-4px_rgba(74,43,32,0.02)] animate-fade-in">
+              <div className="flex justify-between items-center border-b border-[#E5D5C8]/30 pb-3">
+                <h3 className="font-serif text-base sm:text-lg font-bold text-brand-dark flex items-center gap-2">
+                  <span className="w-1.5 h-6 bg-brand-rose rounded-full"></span>
+                  Services Cover Images
+                </h3>
+                <span className="text-[10px] text-[#A67E6B] bg-brand-cream border border-[#E5D5C8]/60 px-3 py-1 rounded-full font-bold">
+                  {services.length} Services
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {services.map((svc) => (
+                  <div key={svc.id} className="bg-[#FAF6F0] border border-brand-warm-tan/20 rounded-2xl p-4 space-y-4">
+                    {/* Current cover preview */}
+                    <div className="relative aspect-[16/9] overflow-hidden rounded-xl border border-brand-warm-tan/20 bg-brand-beige">
+                      <img
+                        src={svc.image}
+                        alt={svc.name}
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-brand-dark/60 via-transparent to-transparent flex items-end p-3">
+                        <p className="text-white text-[10px] font-bold font-serif leading-tight line-clamp-2">{svc.name}</p>
+                      </div>
+                    </div>
+
+                    {/* Image URL field */}
+                    <div>
+                      <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1.5 flex items-center gap-1.5">
+                        <Image className="w-3 h-3 text-brand-rose" /> Cover Image URL
+                      </label>
+                      <input
+                        type="text"
+                        defaultValue={svc.image}
+                        id={`service-img-url-${svc.id}`}
+                        placeholder="https://... or /filename.jpg"
+                        className="w-full px-3 py-2 bg-white border border-brand-warm-tan/30 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-rose/20 text-brand-dark"
+                      />
+                    </div>
+
+                    {/* File upload */}
+                    <div>
+                      <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1.5 flex items-center gap-1.5">
+                        <Camera className="w-3 h-3 text-brand-rose" /> Or Upload Photo
+                      </label>
+                      <ImageDropzone
+                        imageValue={svc.image}
+                        onImageChange={(img) => {
+                          updateService(svc.id, { image: img });
+                          const el = document.getElementById(`service-img-url-${svc.id}`) as HTMLInputElement;
+                          if (el) el.value = img;
+                          triggerToast(`✓ "${svc.name}" cover updated!`, 'success');
+                        }}
+                        label="Drop photo or click to upload"
+                        prefersReducedMotion={prefersReducedMotion}
+                      />
+                    </div>
+
+                    {/* Save URL button + Delete button row */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          if (!checkPermission(['super_admin', 'content_manager'])) return;
+                          const el = document.getElementById(`service-img-url-${svc.id}`) as HTMLInputElement;
+                          const url = el?.value?.trim();
+                          if (!url) { triggerToast('Please enter an image URL.', 'error'); return; }
+                          updateService(svc.id, { image: url });
+                          triggerToast(`✓ "${svc.name}" cover updated and live!`, 'success');
+                        }}
+                        className="flex-1 py-2 text-[10.5px] font-extrabold bg-brand-rose hover:bg-brand-berry text-white rounded-xl uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 focus:outline-none"
+                      >
+                        <Save className="w-3.5 h-3.5" /> Save Cover
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (!checkPermission(['super_admin'])) return;
+                          if (!window.confirm(`Delete "${svc.name}"? This cannot be undone.`)) return;
+                          deleteService(svc.id);
+                          triggerToast(`"${svc.name}" deleted.`, 'success');
+                        }}
+                        className="px-3 py-2 text-[10.5px] font-extrabold bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl uppercase tracking-wider transition-all flex items-center justify-center gap-1 focus:outline-none"
+                        title="Delete service"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* ============================================= */}
           {/* CMS COMPONENT: BLOG POSTS MANAGEMENT TABLE   */}
           {/* ============================================= */}

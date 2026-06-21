@@ -66,6 +66,18 @@ export interface PhotoGalleryItem {
   category: 'Progress' | 'Hairstyles' | 'Routines';
 }
 
+export interface Service {
+  id: string;
+  name: string;
+  price: number;
+  image: string;
+  description: string;
+  included: string[];
+  benefits: string[];
+  notice: string[];
+  disclaimer: string;
+}
+
 export interface BlogPost {
   id: string;
   title: string;
