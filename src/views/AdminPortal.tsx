@@ -2307,25 +2307,52 @@ export const AdminPortal: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Hero Image URL */}
-                  <div className="pt-1">
-                    <label className="block text-[10.5px] uppercase font-bold text-brand-chocolate mb-1 flex items-center gap-1.5">
+                  {/* Hero Image — URL OR direct upload */}
+                  <div className="pt-1 space-y-3">
+                    <label className="block text-[10.5px] uppercase font-bold text-brand-chocolate flex items-center gap-1.5">
                       <Image className="w-3.5 h-3.5 text-brand-rose" />
-                      Homepage Hero Photo URL
+                      Homepage Hero Photo
                     </label>
-                    <div className="flex gap-3 items-center">
+
+                    {/* Live preview */}
+                    {cmsHeroImage && (
+                      <div className="relative aspect-[16/7] overflow-hidden rounded-2xl border border-brand-warm-tan/20 bg-brand-beige">
+                        <img
+                          src={cmsHeroImage}
+                          alt="Hero preview"
+                          className="w-full h-full object-cover object-top"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }}
+                        />
+                        <div className="absolute bottom-2 right-2 bg-brand-dark/70 text-white text-[9px] px-2 py-0.5 rounded-full font-mono">
+                          Live Preview
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Upload */}
+                    <ImageDropzone
+                      imageValue={cmsHeroImage}
+                      onImageChange={(img) => {
+                        setCmsHeroImage(img);
+                        updateHomepageContent({ heroImageUrl: img });
+                        triggerToast('✓ Homepage hero photo updated!', 'success');
+                      }}
+                      label="Click or drag to upload hero photo"
+                      prefersReducedMotion={prefersReducedMotion}
+                    />
+
+                    {/* Or paste URL */}
+                    <div>
+                      <label className="block text-[10px] text-[#A67E6B] mb-1">Or paste an image URL:</label>
                       <input
                         type="text"
                         value={cmsHeroImage}
                         placeholder="/hero-portrait.jpg or https://..."
                         onChange={(e) => { setCmsHeroImage(e.target.value); autoSaveCms({ heroImageUrl: e.target.value }); }}
-                        className="flex-1 px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark transition-all duration-150"
+                        className="w-full px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark transition-all duration-150 text-xs"
                       />
-                      {cmsHeroImage && (
-                        <img src={cmsHeroImage} alt="Hero preview" className="w-14 h-14 object-cover object-top rounded-xl border border-brand-warm-tan/30 shrink-0" />
-                      )}
                     </div>
-                    <p className="text-[10px] text-[#A67E6B] mt-1">Paste any image URL. Changes apply instantly to the homepage.</p>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
@@ -2349,25 +2376,52 @@ export const AdminPortal: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* About Image URL */}
-                  <div className="pt-1">
-                    <label className="block text-[10.5px] uppercase font-bold text-brand-chocolate mb-1 flex items-center gap-1.5">
+                  {/* About Portrait — URL OR direct upload */}
+                  <div className="pt-1 space-y-3">
+                    <label className="block text-[10.5px] uppercase font-bold text-brand-chocolate flex items-center gap-1.5">
                       <Image className="w-3.5 h-3.5 text-brand-rose" />
-                      About Page Portrait URL
+                      About Page Portrait
                     </label>
-                    <div className="flex gap-3 items-center">
+
+                    {/* Live preview */}
+                    {cmsAboutImage && (
+                      <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-brand-warm-tan/20 bg-brand-beige max-w-xs">
+                        <img
+                          src={cmsAboutImage}
+                          alt="About preview"
+                          className="w-full h-full object-cover object-top"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }}
+                        />
+                        <div className="absolute bottom-2 right-2 bg-brand-dark/70 text-white text-[9px] px-2 py-0.5 rounded-full font-mono">
+                          Live Preview
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Upload */}
+                    <ImageDropzone
+                      imageValue={cmsAboutImage}
+                      onImageChange={(img) => {
+                        setCmsAboutImage(img);
+                        updateHomepageContent({ aboutImageUrl: img });
+                        triggerToast('✓ About page portrait updated!', 'success');
+                      }}
+                      label="Click or drag to upload portrait"
+                      prefersReducedMotion={prefersReducedMotion}
+                    />
+
+                    {/* Or paste URL */}
+                    <div>
+                      <label className="block text-[10px] text-[#A67E6B] mb-1">Or paste an image URL:</label>
                       <input
                         type="text"
                         value={cmsAboutImage}
                         placeholder="/about-portrait.jpg or https://..."
                         onChange={(e) => { setCmsAboutImage(e.target.value); autoSaveCms({ aboutImageUrl: e.target.value }); }}
-                        className="flex-1 px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark transition-all duration-150"
+                        className="w-full px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark transition-all duration-150 text-xs"
                       />
-                      {cmsAboutImage && (
-                        <img src={cmsAboutImage} alt="About preview" className="w-14 h-14 object-cover object-top rounded-xl border border-brand-warm-tan/30 shrink-0" />
-                      )}
                     </div>
-                    <p className="text-[10px] text-[#A67E6B] mt-1">Paste an image URL or use <code className="bg-brand-cream px-1 rounded">/about-portrait.jpg</code> for the uploaded file.</p>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
