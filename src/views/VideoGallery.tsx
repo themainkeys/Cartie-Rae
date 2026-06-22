@@ -1,925 +1,877 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useApp } from '../context/AppContext';
 import { TikTokVideo } from '../types';
-import { 
-  Play, Heart, Bookmark, Share2, ShoppingBag, 
-  X, Send, Volume2, VolumeX, Eye, Clock, ChevronLeft, ChevronRight
+import {
+  Heart, Bookmark, Share2, ShoppingBag,
+  X, Send, Volume2, VolumeX,
+  ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Play
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-// Static fallback related items map for "Shop this routine" feature
-const getRelatedItems = (videoId: string) => {
-  if (videoId === 'vid-1') {
-    return [
-      { id: 'prod-1', type: 'product', name: 'Botanical Growth Oil', price: 38.00, image: 'https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&q=80&w=400' },
-      { id: 'ebook-1', type: 'ebook', name: 'The 4C Growth Blueprint', price: 24.99, image: 'https://images.unsplash.com/photo-1618673747378-7e0af319150f?auto=format&fit=crop&q=80&w=800' }
-    ];
-  }
-  if (videoId === 'vid-2') {
-    return [
-      { id: 'prod-3', type: 'product', name: 'Detangling Collection', price: 45.00, image: 'https://images.unsplash.com/photo-1590156546746-c2330dd3327c?auto=format&fit=crop&q=80&w=400' },
-      { id: 'prod-2', type: 'product', name: 'Silk Sleep Cap', price: 25.00, image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=400' }
-    ];
-  }
-  if (videoId === 'vid-3') {
-    return [
-      { id: 'prod-1', type: 'product', name: 'Botanical Growth Oil', price: 38.00, image: 'https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&q=80&w=400' }
-    ];
-  }
-  if (videoId === 'vid-4') {
-    return [
-      { id: 'prod-3', type: 'product', name: 'Detangling Collection', price: 45.00, image: 'https://images.unsplash.com/photo-1590156546746-c2330dd3327c?auto=format&fit=crop&q=80&w=400' }
-    ];
-  }
-  if (videoId === 'vid-5') {
-    return [
-      { id: 'prod-2', type: 'product', name: 'Silk Sleep Cap', price: 25.00, image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=400' }
-    ];
-  }
-  return [
-    { id: 'prod-1', type: 'product', name: 'Botanical Growth Oil', price: 38.00, image: 'https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&q=80&w=400' }
-  ];
-};
+// ─── Utility: Resolve video type from URL ───────────────────────────────────
 
-// Static fallback captions for short-form feed
-const getVideoDescription = (videoId: string) => {
-  switch (videoId) {
-    case 'vid-1':
-      return 'Learn the L.C.O moisture application method to retain hydration for up to 5 days without buildup.';
-    case 'vid-2':
-      return 'Step-by-step styling tutorial on coily Bantu Knots. Perfect protective styling details.';
-    case 'vid-3':
-      return 'Increase blood circulation to coily roots using light organic botanical dropper oils.';
-    case 'vid-4':
-      return 'Tension-free goddess braids base layout. Protects sensitive edges from mechanical stress.';
-    case 'vid-5':
-      return 'Flat flat cornrow base mapping designed specifically under silk and fiber wig caps.';
-    default:
-      return 'Exclusive Cartiae Rae natural hair styling guidelines and masterclass routines.';
-  }
-};
-
-// Resolve video types and parameters for YT, TikTok, or direct video
 const resolveVideoSource = (url: string) => {
   const cleanUrl = url.trim();
-  
-  // 1. Raw TikTok video ID check (18-20 digits)
-  if (/^\d{18,20}$/.test(cleanUrl)) {
-    return {
-      type: 'tiktok' as const,
-      id: cleanUrl,
-      url: `https://www.tiktok.com/embed/v2/${cleanUrl}`
-    };
-  }
 
-  // 2. YouTube
+  if (/^\d{18,20}$/.test(cleanUrl)) {
+    return { type: 'tiktok' as const, id: cleanUrl, url: `https://www.tiktok.com/embed/v2/${cleanUrl}` };
+  }
   if (cleanUrl.includes('youtube.com') || cleanUrl.includes('youtu.be')) {
     let videoId = '';
-    if (cleanUrl.includes('/embed/')) {
-      videoId = cleanUrl.split('/embed/')[1]?.split('?')[0] || '';
-    } else if (cleanUrl.includes('/shorts/')) {
-      videoId = cleanUrl.split('/shorts/')[1]?.split('?')[0] || '';
-    } else if (cleanUrl.includes('watch?v=')) {
-      videoId = cleanUrl.split('watch?v=')[1]?.split('&')[0] || '';
-    } else if (cleanUrl.includes('youtu.be/')) {
-      videoId = cleanUrl.split('youtu.be/')[1]?.split('?')[0] || '';
-    }
-    return {
-      type: 'youtube' as const,
-      id: videoId,
-      url: videoId ? `https://www.youtube.com/embed/${videoId}` : cleanUrl
-    };
+    if (cleanUrl.includes('/embed/')) videoId = cleanUrl.split('/embed/')[1]?.split('?')[0] || '';
+    else if (cleanUrl.includes('/shorts/')) videoId = cleanUrl.split('/shorts/')[1]?.split('?')[0] || '';
+    else if (cleanUrl.includes('watch?v=')) videoId = cleanUrl.split('watch?v=')[1]?.split('&')[0] || '';
+    else if (cleanUrl.includes('youtu.be/')) videoId = cleanUrl.split('youtu.be/')[1]?.split('?')[0] || '';
+    return { type: 'youtube' as const, id: videoId, url: videoId ? `https://www.youtube.com/embed/${videoId}` : cleanUrl };
   }
-
-  // 3. TikTok
   if (cleanUrl.includes('tiktok.com')) {
-    let videoId = '';
-    const idMatch = cleanUrl.match(/\/video\/(\d+)/) || cleanUrl.match(/\/embed\/v2\/(\d+)/) || cleanUrl.match(/\/embed\/(\d+)/) || cleanUrl.match(/(\d{18,20})/);
-    if (idMatch) {
-      videoId = idMatch[1] || idMatch[0];
-    }
-    return {
-      type: 'tiktok' as const,
-      id: videoId,
-      url: videoId ? `https://www.tiktok.com/embed/v2/${videoId}` : cleanUrl
-    };
+    const m = cleanUrl.match(/\/video\/(\d+)/) || cleanUrl.match(/\/embed\/v2\/(\d+)/) || cleanUrl.match(/\/embed\/(\d+)/) || cleanUrl.match(/(\d{18,20})/);
+    const videoId = m ? m[1] || m[0] : '';
+    return { type: 'tiktok' as const, id: videoId, url: videoId ? `https://www.tiktok.com/embed/v2/${videoId}` : cleanUrl };
   }
-
-  // 4. Direct Video
-  return {
-    type: 'direct' as const,
-    id: '',
-    url: cleanUrl
-  };
+  return { type: 'direct' as const, id: '', url: cleanUrl };
 };
 
-interface VideoGridCardProps {
+// ─── Static fallback related items ──────────────────────────────────────────
+
+interface RelatedItem {
+  id: string;
+  type: 'product' | 'ebook';
+  name: string;
+  price: number;
+  image: string;
+}
+
+const FALLBACK_RELATED: Record<string, RelatedItem[]> = {
+  'vid-1': [
+    { id: 'prod-1', type: 'product', name: 'Botanical Growth Oil', price: 38.00, image: 'https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&q=80&w=400' },
+    { id: 'ebook-1', type: 'ebook', name: 'The 4C Growth Blueprint', price: 24.99, image: 'https://images.unsplash.com/photo-1618673747378-7e0af319150f?auto=format&fit=crop&q=80&w=800' },
+  ],
+  'vid-2': [
+    { id: 'prod-3', type: 'product', name: 'Detangling Collection', price: 45.00, image: 'https://images.unsplash.com/photo-1590156546746-c2330dd3327c?auto=format&fit=crop&q=80&w=400' },
+    { id: 'prod-2', type: 'product', name: 'Silk Sleep Cap', price: 25.00, image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=400' },
+  ],
+  'vid-3': [{ id: 'prod-1', type: 'product', name: 'Botanical Growth Oil', price: 38.00, image: 'https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&q=80&w=400' }],
+  'vid-4': [{ id: 'prod-3', type: 'product', name: 'Detangling Collection', price: 45.00, image: 'https://images.unsplash.com/photo-1590156546746-c2330dd3327c?auto=format&fit=crop&q=80&w=400' }],
+  'vid-5': [{ id: 'prod-2', type: 'product', name: 'Silk Sleep Cap', price: 25.00, image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=400' }],
+};
+
+const getFallbackRelated = (videoId: string): RelatedItem[] =>
+  FALLBACK_RELATED[videoId] ?? [
+    { id: 'prod-1', type: 'product', name: 'Botanical Growth Oil', price: 38.00, image: 'https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&q=80&w=400' },
+  ];
+
+const DESCRIPTIONS: Record<string, string> = {
+  'vid-1': 'Learn the L.C.O moisture application method to retain hydration for up to 5 days without buildup.',
+  'vid-2': 'Step-by-step styling tutorial on coily Bantu Knots. Perfect protective styling details.',
+  'vid-3': 'Increase blood circulation to coily roots using light organic botanical dropper oils.',
+  'vid-4': 'Tension-free goddess braids base layout. Protects sensitive edges from mechanical stress.',
+  'vid-5': 'Flat cornrow base mapping designed specifically under silk and fiber wig caps.',
+};
+const getDescription = (videoId: string) =>
+  DESCRIPTIONS[videoId] ?? 'Exclusive Cartiae Rae natural hair styling guidelines and masterclass routines.';
+
+// ─── TikTok SVG icon ─────────────────────────────────────────────────────────
+
+const TikTokSvg: React.FC<{ className?: string }> = ({ className }) => (
+  <svg viewBox="0 0 24 24" className={className ?? 'w-3.5 h-3.5 fill-current'} aria-hidden="true">
+    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.34 6.34 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.27 8.27 0 0 0 4.84 1.56V6.78a4.85 4.85 0 0 1-1.07-.09z" />
+  </svg>
+);
+
+// ─── VideoFeedCard ────────────────────────────────────────────────────────────
+
+interface VideoFeedCardProps {
   video: TikTokVideo;
+  cardHeight: string;
+  isActive: boolean;
+  isMuted: boolean;
   isLiked: boolean;
   isSaved: boolean;
   likesCount: number;
-  commentsCount: number;
-  relatedItemsCount: number;
+  relatedItems: RelatedItem[];
   onLike: () => void;
   onSave: () => void;
   onShare: () => void;
-  onClick: () => void;
+  onShopClick: () => void;
+  onToggleMute: () => void;
   prefersReducedMotion: boolean;
-  isPlayingPreview: boolean;
-  onHoverStart: () => void;
-  onHoverEnd: () => void;
 }
 
-const VideoGridCard: React.FC<VideoGridCardProps> = ({
-  video,
-  isLiked,
-  isSaved,
-  likesCount,
-  commentsCount,
-  relatedItemsCount,
-  onLike,
-  onSave,
-  onShare,
-  onClick,
-  prefersReducedMotion,
-  isPlayingPreview,
-  onHoverStart,
-  onHoverEnd
-}) => {
-  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
+const VideoFeedCard = React.forwardRef<HTMLDivElement, VideoFeedCardProps>(
+  (
+    {
+      video, cardHeight, isActive, isMuted, isLiked, isSaved,
+      likesCount, relatedItems, onLike, onSave, onShare,
+      onShopClick, onToggleMute, prefersReducedMotion,
+    },
+    ref
+  ) => {
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const [progress, setProgress] = useState(0);
+    const [overlayVisible, setOverlayVisible] = useState(true);
+    const overlayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const resolved = useMemo(() => resolveVideoSource(video.videoUrl), [video.videoUrl]);
-  const isTikTok = resolved.type === 'tiktok';
+    const resolved = useMemo(() => resolveVideoSource(video.videoUrl), [video.videoUrl]);
 
-  const duration = useMemo(() => {
-    const sum = video.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const sec = (sum % 28) + 30;
-    return `0:${sec}`;
-  }, [video.id]);
+    const thumbnailSrc =
+      video.thumbnailUrl ||
+      (resolved.type === 'youtube' && resolved.id
+        ? `https://img.youtube.com/vi/${resolved.id}/maxresdefault.jpg`
+        : '');
 
-  // Desktop hover: 300ms delay before preview starts
-  const handleMouseEnter = () => {
-    if (!window.matchMedia('(hover: hover)').matches) return;
-    hoverTimeoutRef.current = setTimeout(() => {
-      onHoverStart();
-    }, 300);
-  };
+    // ── Overlay fade logic ───────────────────────────────────────────────────
+    const showOverlayBriefly = useCallback(() => {
+      setOverlayVisible(true);
+      if (overlayTimerRef.current) clearTimeout(overlayTimerRef.current);
+      overlayTimerRef.current = setTimeout(() => setOverlayVisible(false), 3800);
+    }, []);
 
-  const handleMouseLeave = () => {
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-      hoverTimeoutRef.current = null;
-    }
-    onHoverEnd();
-    if (videoRef.current) {
-      videoRef.current.pause();
-      videoRef.current.currentTime = 0;
-    }
-  };
-
-  /**
-   * Mobile click handler:
-   * - Touch devices: no hover capability → first tap = preview, second tap = modal
-   * - Desktop (hover capable): click always opens modal; hover handles preview
-   */
-  const handleClick = () => {
-    const isTouch = !window.matchMedia('(hover: hover)').matches;
-    if (isTouch) {
-      if (!isPlayingPreview) {
-        onHoverStart(); // first tap: start preview
+    useEffect(() => {
+      if (isActive) {
+        showOverlayBriefly();
       } else {
-        onClick(); // second tap: open modal
+        setOverlayVisible(false);
+        if (overlayTimerRef.current) clearTimeout(overlayTimerRef.current);
       }
-    } else {
-      onClick(); // desktop: always open modal on click
-    }
-  };
+    }, [isActive, showOverlayBriefly]);
 
-  useEffect(() => {
-    return () => {
-      if (hoverTimeoutRef.current) {
-        clearTimeout(hoverTimeoutRef.current);
+    useEffect(() => () => { if (overlayTimerRef.current) clearTimeout(overlayTimerRef.current); }, []);
+
+    // ── Auto-play / pause direct video ───────────────────────────────────────
+    useEffect(() => {
+      if (resolved.type !== 'direct' || !videoRef.current) return;
+      if (isActive) {
+        videoRef.current.muted = isMuted;
+        videoRef.current.play().catch(() => { /* autoplay blocked — user hasn't interacted yet */ });
+      } else {
+        videoRef.current.pause();
+        videoRef.current.currentTime = 0;
+        setProgress(0);
       }
-    };
-  }, []);
+    }, [isActive, resolved.type]);
 
-  return (
-    <div
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      onClick={handleClick}
-      className="w-full aspect-[9/16] max-w-full sm:max-w-[260px] rounded-[32px] border border-brand-warm-tan/25 relative flex flex-col justify-end overflow-hidden bg-brand-cream shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-500 cursor-pointer select-none"
-    >
-      <style>{`
-        @keyframes progressLoop {
-          0% { transform: scaleX(0); }
-          100% { transform: scaleX(1); }
-        }
-      `}</style>
+    useEffect(() => {
+      if (resolved.type === 'direct' && videoRef.current) {
+        videoRef.current.muted = isMuted;
+      }
+    }, [isMuted, resolved.type]);
 
-      {/* Video preview / Cover stage */}
-      <div className="absolute inset-0 w-full h-full bg-black flex items-center justify-center">
-        <AnimatePresence mode="wait">
-          {isPlayingPreview ? (
-            <motion.div
-              key="player"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="absolute inset-0 w-full h-full z-10"
-            >
-              {resolved.type === 'youtube' && (
-                <iframe
-                  title={video.title}
-                  src={`${resolved.url}?autoplay=1&mute=1&controls=0&loop=1&playlist=${resolved.id}&start=0&modestbranding=1&iv_load_policy=3&showinfo=0&rel=0`}
-                  className="absolute inset-0 w-full h-full scale-[1.35] pointer-events-none object-cover"
-                  allow="autoplay; encrypted-media"
-                />
-              )}
-              {/* TikTok cannot autoplay in cross-origin iframes — show thumbnail + TikTok badge */}
-              {resolved.type === 'tiktok' && (
-                <div className="absolute inset-0 w-full h-full">
-                  <img
-                    src={video.thumbnailUrl}
-                    alt={video.title}
-                    referrerPolicy="no-referrer"
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                  {/* TikTok badge overlay */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="flex items-center gap-1.5 bg-black/70 backdrop-blur-sm text-white text-[9px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border border-white/20 shadow">
-                      <svg viewBox="0 0 24 24" className="w-3 h-3 fill-white" aria-hidden="true"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.34 6.34 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.27 8.27 0 0 0 4.84 1.56V6.78a4.85 4.85 0 0 1-1.07-.09z"/></svg>
-                      Open on TikTok ↗
-                    </span>
-                  </div>
-                </div>
-              )}
-              {resolved.type === 'direct' && (
-                <video
-                  ref={videoRef}
-                  src={resolved.url}
-                  autoPlay
-                  muted
-                  playsInline
-                  loop
-                  controls={false}
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-              )}
-              {/* Click shield — stops iframe from stealing pointer events */}
-              <div className="absolute inset-0 bg-transparent z-20" />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="thumbnail"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.35 }}
-              className="w-full h-full relative"
-            >
-              <img
-                src={video.thumbnailUrl}
-                alt={video.title}
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-cover"
-              />
-              {/* Play overlay — different for TikTok vs playable */}
-              <div className="absolute inset-0 flex items-center justify-center bg-brand-dark/10 hover:bg-brand-dark/20 transition-all duration-300">
-                {isTikTok ? (
-                  <span className="flex items-center gap-1.5 bg-black/60 backdrop-blur-sm text-white text-[9px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border border-white/20">
-                    <svg viewBox="0 0 24 24" className="w-3 h-3 fill-white" aria-hidden="true"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.34 6.34 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.27 8.27 0 0 0 4.84 1.56V6.78a4.85 4.85 0 0 1-1.07-.09z"/></svg>
-                    View on TikTok
-                  </span>
-                ) : (
-                  <span className="p-3 bg-[#FAF6F0]/90 backdrop-blur-sm text-brand-rose rounded-full shadow-md">
-                    <Play className="w-[18px] h-[18px] fill-brand-rose ml-0.5" />
-                  </span>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+    // ── Progress bar for direct video ────────────────────────────────────────
+    useEffect(() => {
+      const vid = videoRef.current;
+      if (!vid || resolved.type !== 'direct') return;
+      const onTimeUpdate = () => { if (vid.duration) setProgress(vid.currentTime / vid.duration); };
+      vid.addEventListener('timeupdate', onTimeUpdate);
+      return () => vid.removeEventListener('timeupdate', onTimeUpdate);
+    }, [resolved.type]);
 
-      {/* Progress loop indicator */}
-      {isPlayingPreview && (
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20 z-20 overflow-hidden">
-          <div 
-            className="h-full bg-brand-rose origin-left"
-            style={{
-              animation: 'progressLoop 10s linear infinite'
-            }}
-          />
-        </div>
-      )}
+    const fmtCount = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n));
 
-      {/* Info Overlay and Vignette Gradient */}
-      <div className="absolute inset-x-0 bottom-0 h-[75%] bg-gradient-to-t from-brand-dark/95 via-brand-dark/45 to-transparent pointer-events-none z-10" />
-      
-      {/* Left-Aligned Metadata Details */}
-      <div className="absolute left-4 bottom-5 right-14 z-20 text-white text-left flex flex-col gap-1 pointer-events-none">
-        
-        {/* Creator Badge and Category Row */}
-        <div className="flex items-center gap-2 pointer-events-auto flex-wrap">
-          <div className="flex items-center gap-1 bg-white/10 backdrop-blur-xs px-2 py-0.5 rounded-full border border-white/10">
-            <img 
-              src="/about-portrait.jpg" 
-              alt="Cartiae profile" 
-              className="w-3.5 h-3.5 rounded-full object-cover"
+    return (
+      <div
+        ref={ref}
+        className="relative w-full flex-shrink-0 overflow-hidden bg-black snap-start"
+        style={{ height: cardHeight }}
+        onClick={showOverlayBriefly}
+        onTouchStart={showOverlayBriefly}
+      >
+        {/* ── Global animation keyframe ── */}
+        <style>{`
+          @keyframes vidProgressLoop { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+          .feed-no-bar::-webkit-scrollbar { display: none; }
+          .feed-no-bar { -ms-overflow-style: none; scrollbar-width: none; }
+        `}</style>
+
+        {/* ── Video layer ── */}
+        <div className="absolute inset-0 bg-zinc-950">
+          {/* Direct MP4 / WebM */}
+          {resolved.type === 'direct' && (
+            <video
+              ref={videoRef}
+              src={resolved.url}
+              playsInline
+              loop
+              muted={isMuted}
+              preload="metadata"
+              className="absolute inset-0 w-full h-full object-cover"
             />
-            <span className="text-[8.5px] font-bold text-white tracking-wide font-sans">
-              Cartiae Rae
-            </span>
+          )}
+
+          {/* YouTube — embed when active, thumbnail when idle */}
+          {resolved.type === 'youtube' && (
+            isActive ? (
+              <iframe
+                key={`yt-${video.id}-${isMuted}`}
+                title={video.title}
+                src={`${resolved.url}?autoplay=1&mute=${isMuted ? 1 : 0}&controls=0&loop=1&playlist=${resolved.id}&modestbranding=1&iv_load_policy=3&rel=0&showinfo=0`}
+                className="absolute inset-0 w-full h-full scale-[1.08] pointer-events-none"
+                allow="autoplay; encrypted-media"
+              />
+            ) : (
+              thumbnailSrc && (
+                <img
+                  src={thumbnailSrc}
+                  alt={video.title}
+                  referrerPolicy="no-referrer"
+                  className="absolute inset-0 w-full h-full object-cover opacity-80"
+                />
+              )
+            )
+          )}
+
+          {/* TikTok — thumbnail always (cross-origin iframe autoplay blocked) */}
+          {resolved.type === 'tiktok' && thumbnailSrc && (
+            <img
+              src={thumbnailSrc}
+              alt={video.title}
+              referrerPolicy="no-referrer"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          )}
+
+          {/* Fallback gradient for empty thumbnail */}
+          {!thumbnailSrc && resolved.type !== 'direct' && (
+            <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 flex items-center justify-center">
+              <Play className="w-10 h-10 text-white/15" />
+            </div>
+          )}
+        </div>
+
+        {/* ── Gradient vignettes ── */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/88 via-black/18 to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/12 via-transparent to-black/25 pointer-events-none" />
+
+        {/* ── TikTok: Open button (centered) ── */}
+        {resolved.type === 'tiktok' && isActive && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+            <a
+              href={`https://www.tiktok.com/@cartiaerae/video/${resolved.id}`}
+              target="_blank"
+              rel="noreferrer noopener"
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-2 bg-white/95 hover:bg-[#B11B41] text-black hover:text-white px-6 py-3 rounded-2xl text-[11px] font-extrabold uppercase tracking-widest shadow-2xl transition-all duration-300 pointer-events-auto"
+            >
+              <TikTokSvg className="w-4 h-4 fill-current" />
+              Open on TikTok ↗
+            </a>
+          </div>
+        )}
+
+        {/* ── Overlay (fades in/out) ── */}
+        <div
+          className={`absolute inset-0 z-10 transition-opacity duration-600 pointer-events-none ${overlayVisible ? 'opacity-100' : 'opacity-0'}`}
+        >
+          {/* Left: metadata + Shop button */}
+          <div className="absolute left-4 bottom-16 right-16 flex flex-col gap-2.5 pointer-events-auto">
+            {/* Creator + Category pill */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-sm px-2.5 py-1 rounded-full border border-white/10">
+                <img
+                  src="/about-portrait.jpg"
+                  alt="Cartiae Rae"
+                  className="w-4 h-4 rounded-full object-cover object-top"
+                  referrerPolicy="no-referrer"
+                />
+                <span className="text-white text-[9px] font-bold tracking-wide font-sans">Cartiae Rae</span>
+              </div>
+              <span className="bg-[#B11B41]/90 backdrop-blur-sm text-white text-[8px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded border border-white/10 font-mono">
+                {video.category}
+              </span>
+            </div>
+
+            {/* Title */}
+            <h2 className="text-white font-serif text-[17px] font-bold leading-tight tracking-tight">
+              {video.title}
+            </h2>
+
+            {/* Description */}
+            {(video.description || getDescription(video.id)) && (
+              <p className="text-white/62 text-[11px] leading-relaxed line-clamp-2 font-sans">
+                {video.description || getDescription(video.id)}
+              </p>
+            )}
+
+            {/* Shop the Look */}
+            {relatedItems.length > 0 && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onShopClick(); }}
+                className="flex items-center gap-1.5 bg-white/95 hover:bg-[#B11B41] text-black hover:text-white px-3.5 py-2 rounded-xl text-[10px] font-extrabold uppercase tracking-widest w-fit transition-all duration-300 shadow-lg hover:scale-[1.02] active:scale-[0.97]"
+              >
+                <ShoppingBag className="w-3 h-3 shrink-0" />
+                Shop the Look ({relatedItems.length})
+              </button>
+            )}
           </div>
 
-          <span className="bg-brand-rose/90 backdrop-blur-xs text-[#FAF6F0] text-[8px] uppercase tracking-widest font-extrabold px-2 py-0.5 rounded font-mono">
-            {video.category}
-          </span>
-        </div>
-        
-        <h3 className="font-serif text-xs sm:text-[13px] font-bold text-[#FAF6F0] line-clamp-1 leading-snug tracking-wide mt-1.5">
-          {video.title}
-        </h3>
+          {/* Bottom bar: mute + progress */}
+          <div className="absolute bottom-4 left-4 right-16 flex items-center gap-3 pointer-events-auto">
+            <button
+              onClick={(e) => { e.stopPropagation(); onToggleMute(); }}
+              title={isMuted ? 'Unmute' : 'Mute'}
+              className="p-2 rounded-full bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-all flex-shrink-0 border border-white/10"
+            >
+              {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+            </button>
 
-        <div className="text-[9px] text-[#EDE3DE]/70 font-semibold font-mono flex items-center gap-2 mt-1 select-none">
-          <span className="flex items-center gap-0.5"><Eye className="w-3.5 h-3.5" /> {video.views}</span>
-          {!isTikTok && (
-            <>
-              <span>•</span>
-              <span className="flex items-center gap-0.5"><Clock className="w-3.5 h-3.5" /> {duration}</span>
-            </>
-          )}
-        </div>
-
-        {/* Shop Routine Button — only shown when linked products/eBooks exist */}
-        {relatedItemsCount > 0 && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              // On touch: if not yet previewing, open preview first; otherwise go to modal
-              const isTouch = !window.matchMedia('(hover: hover)').matches;
-              if (isTouch && !isPlayingPreview) {
-                onHoverStart();
-              } else {
-                onClick();
-              }
-            }}
-            className="mt-2.5 bg-[#FAF6F0] hover:bg-brand-rose text-brand-dark hover:text-white px-3 py-1.5 rounded-xl text-[9px] uppercase font-extrabold tracking-widest transition-all duration-300 flex items-center gap-1 cursor-pointer w-fit pointer-events-auto shadow-sm hover:scale-[1.02] active:scale-[0.98]"
-          >
-            <ShoppingBag className="w-3 h-3 shrink-0" />
-            <span>Shop Routine ({relatedItemsCount})</span>
-          </button>
-        )}
-      </div>
-
-      {/* Right-Aligned Floating Social Actions Panel — hidden on mobile (actions available in modal) */}
-      <div className="hidden sm:flex absolute right-3.5 bottom-6 z-20 flex-col items-center gap-3.5 text-white pointer-events-auto">
-        {/* Like Action */}
-        <div className="flex flex-col items-center">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onLike();
-            }}
-            className={`w-8 h-8 rounded-full bg-black/30 hover:bg-brand-rose/90 backdrop-blur-md transition-all flex items-center justify-center border border-white/10 shadow-md cursor-pointer ${
-              isLiked ? 'text-brand-rose bg-[#FAF6F0]' : 'text-white'
-            }`}
-          >
-            <Heart className={`w-3.5 h-3.5 ${isLiked ? 'fill-brand-rose text-brand-rose' : ''}`} />
-          </button>
-          <span className="text-[8px] font-mono mt-0.5 font-bold tracking-wider">{likesCount}</span>
+            {/* Progress bar */}
+            <div className="flex-1 h-0.5 bg-white/25 rounded-full overflow-hidden">
+              {resolved.type === 'direct' ? (
+                <div
+                  className="h-full bg-white rounded-full"
+                  style={{ width: `${progress * 100}%`, transition: 'width 0.3s linear' }}
+                />
+              ) : (
+                <div
+                  className="h-full bg-white/80 rounded-full origin-left"
+                  style={{
+                    animation:
+                      isActive && !prefersReducedMotion
+                        ? 'vidProgressLoop 30s linear infinite'
+                        : 'none',
+                    transform: isActive ? undefined : 'scaleX(0)',
+                  }}
+                />
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Bookmark Action */}
-        <div className="flex flex-col items-center">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onSave();
-            }}
-            className={`w-8 h-8 rounded-full bg-black/30 hover:bg-brand-rose/90 backdrop-blur-md transition-all flex items-center justify-center border border-white/10 shadow-md cursor-pointer ${
-              isSaved ? 'text-brand-rose bg-[#FAF6F0]' : 'text-white'
-            }`}
-          >
-            <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-brand-rose text-brand-rose' : ''}`} />
-          </button>
-          <span className="text-[8px] font-mono mt-0.5 font-bold tracking-wider">{isSaved ? 'Saved' : 'Save'}</span>
-        </div>
+        {/* ── Right actions panel (always visible) ── */}
+        <div className="absolute right-3.5 bottom-16 z-20 flex flex-col items-center gap-5">
+          {/* Like */}
+          <div className="flex flex-col items-center gap-1">
+            <button
+              onClick={(e) => { e.stopPropagation(); onLike(); }}
+              className={`w-11 h-11 rounded-full flex items-center justify-center backdrop-blur-sm shadow-lg transition-all border ${
+                isLiked
+                  ? 'bg-[#B11B41] text-white border-[#B11B41]/50'
+                  : 'bg-white/20 text-white border-white/10 hover:bg-white/30'
+              }`}
+            >
+              <Heart className={`w-5 h-5 transition-transform ${isLiked ? 'fill-white scale-110' : ''}`} />
+            </button>
+            <span className="text-white text-[10px] font-bold font-mono">{fmtCount(likesCount)}</span>
+          </div>
 
-        {/* Share Action */}
-        <div className="flex flex-col items-center">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onShare();
-            }}
-            className="w-8 h-8 rounded-full bg-black/30 hover:bg-brand-rose/90 backdrop-blur-md transition-all flex items-center justify-center border border-white/10 shadow-md cursor-pointer text-white"
-            title="Copy Share Link"
-          >
-            <Share2 className="w-3.5 h-3.5" />
-          </button>
-          <span className="text-[8px] font-mono mt-0.5 font-bold tracking-wider">Share</span>
+          {/* Save */}
+          <div className="flex flex-col items-center gap-1">
+            <button
+              onClick={(e) => { e.stopPropagation(); onSave(); }}
+              className={`w-11 h-11 rounded-full flex items-center justify-center backdrop-blur-sm shadow-lg transition-all border ${
+                isSaved
+                  ? 'bg-[#B11B41] text-white border-[#B11B41]/50'
+                  : 'bg-white/20 text-white border-white/10 hover:bg-white/30'
+              }`}
+            >
+              <Bookmark className={`w-5 h-5 transition-transform ${isSaved ? 'fill-white scale-110' : ''}`} />
+            </button>
+            <span className="text-white text-[10px] font-bold font-mono">{isSaved ? 'Saved' : 'Save'}</span>
+          </div>
+
+          {/* Share */}
+          <div className="flex flex-col items-center gap-1">
+            <button
+              onClick={(e) => { e.stopPropagation(); onShare(); }}
+              className="w-11 h-11 rounded-full bg-white/20 text-white border border-white/10 hover:bg-white/30 backdrop-blur-sm flex items-center justify-center shadow-lg transition-all"
+            >
+              <Share2 className="w-5 h-5" />
+            </button>
+            <span className="text-white text-[10px] font-bold font-mono">Share</span>
+          </div>
         </div>
       </div>
-    </div>
-  );
-};
+    );
+  }
+);
+VideoFeedCard.displayName = 'VideoFeedCard';
+
+// ─── Category type ────────────────────────────────────────────────────────────
+
+type CategoryType =
+  | 'All'
+  | 'Wash Day'
+  | 'Styling'
+  | 'Growth Tips'
+  | 'Protective Styles'
+  | 'Product Reviews'
+  | 'Tutorials';
+
+const CATEGORIES: CategoryType[] = [
+  'All', 'Wash Day', 'Styling', 'Growth Tips', 'Protective Styles', 'Product Reviews', 'Tutorials',
+];
+
+// ─── VideoGallery ─────────────────────────────────────────────────────────────
 
 export const VideoGallery: React.FC = () => {
   const { videos, products, ebooks, addToCart, triggerToast, prefersReducedMotion } = useApp();
-  const [activeCategory, setActiveCategory] = useState<'All' | 'Wash Day' | 'Styling' | 'Growth Tips' | 'Protective Styles' | 'Product Reviews' | 'Tutorials'>('All');
-  
-  // Immersive Modal State
-  const [activePlaybackVideoId, setActivePlaybackVideoId] = useState<string | null>(null);
+
+  // Category filter
+  const [activeCategory, setActiveCategory] = useState<CategoryType>('All');
+
+  // Feed
+  const [activeIndex, setActiveIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(true);
-  const [modalTab, setModalTab] = useState<'shop' | 'comments'>('shop');
-  
-  // Lifted hover video state
-  const [hoveredVideoId, setHoveredVideoId] = useState<string | null>(null);
-  
-  // Simulated stats tracking
+
+  // Modal
+  const [modalVideoId, setModalVideoId] = useState<string | null>(null);
+  const [modalTab, setModalTab] = useState<'shop' | 'qa'>('shop');
+
+  // Social
   const [likedMap, setLikedMap] = useState<Record<string, boolean>>({});
   const [savedMap, setSavedMap] = useState<Record<string, boolean>>({});
-  const [likesCount, setLikesCount] = useState<Record<string, number>>({});
-  
-  // Simulated comments database
+  const [likesCountMap, setLikesCountMap] = useState<Record<string, number>>({});
   const [commentsMap, setCommentsMap] = useState<Record<string, Array<{ id: string; author: string; text: string }>>>({});
-  const [newCommentText, setNewCommentText] = useState('');
+  const [newComment, setNewComment] = useState('');
 
-  // Masterclass Academy Syllabus Request state
-  const [isCurriculumDownloaded, setIsCurriculumDownloaded] = useState(false);
-  const [masterclassEmail, setMasterclassEmail] = useState('');
-  const [successMsg, setSuccessMsg] = useState(false);
-  const [teaserSuccess, setTeaserSuccess] = useState(false);
+  // Refs
+  const feedRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const wheelDebounceRef = useRef(false);
 
-  const backdropRef = useRef<HTMLDivElement>(null);
-  const modalContainerRef = useRef<HTMLDivElement>(null);
-  const touchStartY = useRef(0);
+  // Always-current wheel + keyboard handlers (ref pattern avoids re-attaching listener)
+  const handleWheelRef = useRef<(e: WheelEvent) => void>(() => {});
+  const handleKeyRef = useRef<(e: KeyboardEvent) => void>(() => {});
 
-  const categories: ('All' | 'Wash Day' | 'Styling' | 'Growth Tips' | 'Protective Styles' | 'Product Reviews' | 'Tutorials')[] = [
-    'All', 'Wash Day', 'Styling', 'Growth Tips', 'Protective Styles', 'Product Reviews', 'Tutorials'
-  ];
-
+  // ── Filtered + sorted feed ────────────────────────────────────────────────
   const filteredVideos = useMemo(() => {
     const now = new Date();
-    const visibleVideos = videos.filter(v => {
-      const status = v.status || 'published';
-      if (status === 'draft') return false;
-      if (status === 'scheduled') {
-        if (!v.scheduledAt) return false;
-        return new Date(v.scheduledAt) <= now;
-      }
-      return true;
-    });
-
-    const categorized = visibleVideos.filter(v => {
-      if ((v.category as string) === 'Cornrows') return false;
-      return activeCategory === 'All' || v.category === activeCategory;
-    });
-
-    return [...categorized].sort((a, b) => {
-      const isAFeatured = !!a.isFeatured;
-      const isBFeatured = !!b.isFeatured;
-
-      if (isAFeatured && !isBFeatured) return -1;
-      if (!isAFeatured && isBFeatured) return 1;
-      if (isAFeatured && isBFeatured) {
-        const orderA = a.featuredOrder ?? 999;
-        const orderB = b.featuredOrder ?? 999;
-        return orderA - orderB;
-      }
-
-      const numA = parseInt(a.id.replace('vid-', ''), 10) || 0;
-      const numB = parseInt(b.id.replace('vid-', ''), 10) || 0;
-      return numB - numA;
-    });
+    return videos
+      .filter((v) => {
+        const st = v.status ?? 'published';
+        if (st === 'draft') return false;
+        if (st === 'scheduled') return v.scheduledAt ? new Date(v.scheduledAt) <= now : false;
+        if ((v.category as string) === 'Cornrows') return false;
+        return activeCategory === 'All' || v.category === activeCategory;
+      })
+      .sort((a, b) => {
+        if (a.isFeatured && !b.isFeatured) return -1;
+        if (!a.isFeatured && b.isFeatured) return 1;
+        if (a.isFeatured && b.isFeatured) {
+          return (a.featuredOrder ?? 999) - (b.featuredOrder ?? 999);
+        }
+        const nA = parseInt(a.id.replace('vid-', ''), 10) || 0;
+        const nB = parseInt(b.id.replace('vid-', ''), 10) || 0;
+        return nB - nA;
+      });
   }, [videos, activeCategory]);
 
-  // Seed initial values for likes and comments
+  // Card height = viewport minus header (≈56px) and category strip (≈48px)
+  const CARD_H = 'calc(100svh - 104px)';
+
+  // ── Seed social data ──────────────────────────────────────────────────────
   useEffect(() => {
-    const seedLikes: Record<string, number> = {};
-    const seedComments: Record<string, Array<{ id: string; author: string; text: string }>> = {};
-    
-    videos.forEach(v => {
-      const seedVal = Math.abs(v.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0));
-      seedLikes[v.id] = (seedVal % 450) + 120;
-      
-      seedComments[v.id] = [
+    const seedL: Record<string, number> = {};
+    const seedC: Record<string, Array<{ id: string; author: string; text: string }>> = {};
+    videos.forEach((v) => {
+      const seed = Math.abs(v.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0));
+      seedL[v.id] = (seed % 450) + 120;
+      seedC[v.id] = [
         { id: `${v.id}-c1`, author: 'Aria Carter', text: 'This changed my wash day completely! 😭' },
         { id: `${v.id}-c2`, author: 'Nia J.', text: 'Should I do this on damp or fully dry hair?' },
-        { id: `${v.id}-c3`, author: 'Tamera W.', text: 'Love the detailed parting explanation! Very clear.' }
+        { id: `${v.id}-c3`, author: 'Tamera W.', text: 'Love the detailed parting explanation!' },
       ];
     });
-
-    setLikesCount(seedLikes);
-    setCommentsMap(seedComments);
+    setLikesCountMap((prev) => ({ ...seedL, ...prev }));
+    setCommentsMap((prev) => ({ ...seedC, ...prev }));
   }, [videos]);
 
-  // Focus trapping & ESC key support inside modal
+  // ── Reset to first card when category changes ─────────────────────────────
   useEffect(() => {
-    if (!activePlaybackVideoId) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setActivePlaybackVideoId(null);
-        return;
-      }
-      if (e.key === 'Tab' && modalContainerRef.current) {
-        const focusableElements = modalContainerRef.current.querySelectorAll(
-          'button, [href], input, select, textarea, [tabindex="0"], iframe, video'
-        );
-        if (focusableElements.length === 0) return;
-        const first = focusableElements[0] as HTMLElement;
-        const last = focusableElements[focusableElements.length - 1] as HTMLElement;
-
-        if (e.shiftKey) {
-          if (document.activeElement === first) {
-            last.focus();
-            e.preventDefault();
-          }
-        } else {
-          if (document.activeElement === last) {
-            first.focus();
-            e.preventDefault();
-          }
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    
-    // Set initial focus to the close button
+    setActiveIndex(0);
     setTimeout(() => {
-      const closeBtn = modalContainerRef.current?.querySelector('button');
-      if (closeBtn) {
-        closeBtn.focus();
-      }
-    }, 100);
+      cardRefs.current[0]?.scrollIntoView({ behavior: 'instant', block: 'start' });
+    }, 50);
+  }, [activeCategory]);
 
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activePlaybackVideoId]);
+  // ── IntersectionObserver: detect active card ──────────────────────────────
+  useEffect(() => {
+    const refs = cardRefs.current.filter(Boolean) as HTMLDivElement[];
+    if (refs.length === 0) return;
 
-  const activeVideo = useMemo(() => {
-    return videos.find(v => v.id === activePlaybackVideoId);
-  }, [videos, activePlaybackVideoId]);
-
-  const activeVideoResolved = useMemo(() => {
-    return activeVideo ? resolveVideoSource(activeVideo.videoUrl) : null;
-  }, [activeVideo]);
-
-  const activeSimulatedDuration = useMemo(() => {
-    if (!activeVideo) return '0:45';
-    const sum = activeVideo.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const sec = (sum % 28) + 30;
-    return `0:${sec}`;
-  }, [activeVideo]);
-
-  const currentIndex = useMemo(() => {
-    if (!activePlaybackVideoId) return -1;
-    return filteredVideos.findIndex(v => v.id === activePlaybackVideoId);
-  }, [filteredVideos, activePlaybackVideoId]);
-
-  const handlePrevVideo = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (currentIndex > 0) {
-      setActivePlaybackVideoId(filteredVideos[currentIndex - 1].id);
-      setModalTab('shop');
-    }
-  };
-
-  const handleNextVideo = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (currentIndex < filteredVideos.length - 1) {
-      setActivePlaybackVideoId(filteredVideos[currentIndex + 1].id);
-      setModalTab('shop');
-    }
-  };
-
-  const prevDisabled = currentIndex <= 0;
-  const nextDisabled = currentIndex >= filteredVideos.length - 1 || currentIndex === -1;
-
-  const resolveRelatedItems = (video: TikTokVideo) => {
-    if (video.relatedIds && video.relatedIds.length > 0) {
-      const items: any[] = [];
-      video.relatedIds.forEach(id => {
-        const product = products.find(p => p.id === id);
-        if (product) {
-          items.push({
-            id: product.id,
-            type: 'product',
-            name: product.name,
-            price: product.price,
-            image: product.image
-          });
-        } else {
-          const ebook = ebooks.find(e => e.id === id);
-          if (ebook) {
-            items.push({
-              id: ebook.id,
-              type: 'ebook',
-              name: ebook.name,
-              price: ebook.price,
-              image: ebook.image
-            });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.55) {
+            const idx = cardRefs.current.findIndex((r) => r === entry.target);
+            if (idx !== -1) setActiveIndex(idx);
           }
-        }
+        });
+      },
+      { threshold: 0.55 }
+    );
+
+    refs.forEach((r) => observer.observe(r));
+    return () => observer.disconnect();
+  }, [filteredVideos]);
+
+  // ── Scroll to index helper ────────────────────────────────────────────────
+  const goToIndex = useCallback(
+    (idx: number) => {
+      const clamped = Math.max(0, Math.min(idx, filteredVideos.length - 1));
+      setActiveIndex(clamped);
+      cardRefs.current[clamped]?.scrollIntoView({
+        behavior: prefersReducedMotion ? 'instant' : 'smooth',
+        block: 'start',
       });
-      return items;
-    }
-    return getRelatedItems(video.id);
+    },
+    [filteredVideos.length, prefersReducedMotion]
+  );
+
+  // ── Wheel handler (ref, updated each render, listener attached once) ──────
+  handleWheelRef.current = (e: WheelEvent) => {
+    if (modalVideoId) return;
+    e.preventDefault();
+    if (wheelDebounceRef.current) return;
+    wheelDebounceRef.current = true;
+    setTimeout(() => { wheelDebounceRef.current = false; }, 700);
+    if (e.deltaY > 0) goToIndex(activeIndex + 1);
+    else goToIndex(activeIndex - 1);
   };
 
+  useEffect(() => {
+    const feed = feedRef.current;
+    if (!feed) return;
+    const handler = (e: WheelEvent) => handleWheelRef.current(e);
+    feed.addEventListener('wheel', handler, { passive: false });
+    return () => feed.removeEventListener('wheel', handler);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Keyboard handler ──────────────────────────────────────────────────────
+  handleKeyRef.current = (e: KeyboardEvent) => {
+    if (e.key === 'ArrowDown' || e.key === 'j') {
+      if (!modalVideoId) { e.preventDefault(); goToIndex(activeIndex + 1); }
+    } else if (e.key === 'ArrowUp' || e.key === 'k') {
+      if (!modalVideoId) { e.preventDefault(); goToIndex(activeIndex - 1); }
+    } else if (e.key === 'Escape') {
+      setModalVideoId(null);
+    } else if (e.key === 'm') {
+      if (!modalVideoId) setIsMuted((m) => !m);
+    }
+  };
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => handleKeyRef.current(e);
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Modal focus trap ──────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!modalVideoId) return;
+    setTimeout(() => {
+      const btn = modalRef.current?.querySelector<HTMLButtonElement>('button');
+      btn?.focus();
+    }, 120);
+  }, [modalVideoId]);
+
+  // ── Related items resolver ────────────────────────────────────────────────
+  const resolveRelatedItems = useCallback(
+    (video: TikTokVideo): RelatedItem[] => {
+      if (video.relatedIds && video.relatedIds.length > 0) {
+        const items: RelatedItem[] = [];
+        video.relatedIds.forEach((rid) => {
+          const p = products.find((x) => x.id === rid);
+          if (p) { items.push({ id: p.id, type: 'product', name: p.name, price: p.price, image: p.image }); return; }
+          const e = ebooks.find((x) => x.id === rid);
+          if (e) { items.push({ id: e.id, type: 'ebook', name: e.name, price: e.price, image: e.image }); }
+        });
+        if (items.length > 0) return items;
+      }
+      return getFallbackRelated(video.id);
+    },
+    [products, ebooks]
+  );
+
+  // ── Social handlers ───────────────────────────────────────────────────────
   const handleLike = (id: string) => {
     const liked = likedMap[id];
-    setLikedMap(prev => ({ ...prev, [id]: !liked }));
-    setLikesCount(prev => ({
-      ...prev,
-      [id]: liked ? prev[id] - 1 : prev[id] + 1
-    }));
+    setLikedMap((prev) => ({ ...prev, [id]: !liked }));
+    setLikesCountMap((prev) => ({ ...prev, [id]: liked ? prev[id] - 1 : prev[id] + 1 }));
   };
 
   const handleSave = (id: string) => {
     const saved = savedMap[id];
-    setSavedMap(prev => ({ ...prev, [id]: !saved }));
-    triggerToast(saved ? 'Removed from saved tutorials' : 'Saved to your library ✔', 'info');
+    setSavedMap((prev) => ({ ...prev, [id]: !saved }));
+    triggerToast(saved ? 'Removed from saved' : 'Saved to your library ✔', 'info');
   };
 
   const handleShare = async (title: string, id: string) => {
     const url = `${window.location.origin}${window.location.pathname}?video=${encodeURIComponent(id)}`;
     try {
-      await navigator.clipboard.writeText(url);
-      triggerToast('Share link copied to clipboard! 🔗', 'success');
-    } catch (e) {
-      console.error(e);
-    }
+      if (navigator.share) {
+        await navigator.share({ title, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        triggerToast('Share link copied! 🔗', 'success');
+      }
+    } catch { /* user cancelled or not supported */ }
   };
 
   const submitComment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCommentText.trim() || !activePlaybackVideoId) return;
-
-    const newComment = {
-      id: `new-c-${Date.now()}`,
-      author: 'You (Student)',
-      text: newCommentText.trim()
-    };
-
-    setCommentsMap(prev => ({
+    if (!newComment.trim() || !modalVideoId) return;
+    setCommentsMap((prev) => ({
       ...prev,
-      [activePlaybackVideoId]: [...(prev[activePlaybackVideoId] || []), newComment]
+      [modalVideoId]: [
+        ...(prev[modalVideoId] ?? []),
+        { id: `c-${Date.now()}`, author: 'You', text: newComment.trim() },
+      ],
     }));
-    setNewCommentText('');
+    setNewComment('');
   };
 
-  const handleAddProduct = (item: any) => {
-    addToCart({
-      id: item.id,
-      type: item.type,
-      name: item.name,
-      price: item.price,
-      image: item.image
-    });
-    triggerToast(`"${item.name}" added to Bag! 👜`, 'success');
-  };
+  // ── Modal derived data ────────────────────────────────────────────────────
+  const modalVideo = useMemo(() => videos.find((v) => v.id === modalVideoId), [videos, modalVideoId]);
+  const modalResolved = useMemo(() => (modalVideo ? resolveVideoSource(modalVideo.videoUrl) : null), [modalVideo]);
+  const modalRelatedItems = useMemo(() => (modalVideo ? resolveRelatedItems(modalVideo) : []), [modalVideo, resolveRelatedItems]);
+  const modalIndex = useMemo(
+    () => filteredVideos.findIndex((v) => v.id === modalVideoId),
+    [filteredVideos, modalVideoId]
+  );
 
-  const handleDownloadCurriculum = () => {
-    setIsCurriculumDownloaded(true);
-    setTeaserSuccess(true);
-    setTimeout(() => {
-      setIsCurriculumDownloaded(false);
-      setTeaserSuccess(false);
-    }, 3000);
-  };
+  const openModal = (videoId: string) => { setModalVideoId(videoId); setModalTab('shop'); };
 
-  const handleApplyCoaching = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!masterclassEmail) return;
-    setSuccessMsg(true);
-    setMasterclassEmail('');
-    setTimeout(() => setSuccessMsg(false), 5000);
-  };
-
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === backdropRef.current) {
-      setActivePlaybackVideoId(null);
-    }
-  };
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartY.current = e.touches[0].clientY;
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
-    if (deltaY > 150) {
-      setActivePlaybackVideoId(null);
-    }
-  };
-
-  const activeRelatedItems = activeVideo ? resolveRelatedItems(activeVideo) : [];
-
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 relative">
-      
-      {/* Editorial Header */}
-      <div className="text-center mb-8 space-y-2 select-none px-4 sm:px-0">
-        <span className="font-sans text-[10px] uppercase tracking-[0.35em] text-brand-rose font-bold block">
+    // Break out of shared page padding on all screen sizes
+    <div className="-mx-4 sm:-mx-6 lg:-mx-8 relative bg-black min-h-screen">
+
+      {/* ── Page Header ── */}
+      <div className="text-center pt-7 pb-5 px-4 select-none">
+        <span className="font-sans text-[10px] uppercase tracking-[0.35em] text-[#B11B41] font-bold block">
           Short-Form Masterclass
         </span>
-        <h1 className="font-serif text-3xl sm:text-4xl text-brand-dark font-normal">
+        <h1 className="font-serif text-3xl sm:text-4xl text-white font-normal mt-1">
           Visuals
         </h1>
-        <p className="font-sans text-xs sm:text-sm text-[#6C5347]/80 max-w-xl mx-auto leading-relaxed">
-          Explore step-by-step natural coily care, density retention, and protective styling routines.
+        <p className="font-sans text-[11px] text-white/38 max-w-xs mx-auto leading-relaxed mt-1.5">
+          Coily care, styling &amp; growth routines — scroll to explore.
         </p>
       </div>
 
-      {/* Categories Tabs Slider */}
-      <div className="flex flex-wrap gap-x-6 gap-y-2 justify-center mb-10 border-b border-brand-warm-tan/20 pb-4 select-none px-4 sm:px-0 max-w-xl mx-auto">
-        {categories.map((cat) => (
-          <button
-            key={cat}
-            id={`video-cat-${cat.toLowerCase().replace(' ', '-')}`}
-            onClick={() => {
-              setActiveCategory(cat);
-            }}
-            className={`text-[11px] uppercase tracking-[0.18em] font-medium py-1 relative focus:outline-none transition-colors duration-300 cursor-pointer ${
-              activeCategory === cat
-                ? 'text-brand-rose font-bold'
-                : 'text-brand-dark/65 hover:text-[#543F35]'
-            }`}
-          >
-            <span>{cat}</span>
-            {activeCategory === cat && (
-              <motion.span 
-                layoutId="activeVideoTab"
-                className="absolute bottom-[-1px] left-0 right-0 h-[1.5px] bg-brand-rose"
-                transition={{ type: "spring", stiffness: 380, damping: 30 }}
-              />
-            )}
-          </button>
-        ))}
+      {/* ── Category Filter (sticky) ── */}
+      <div className="sticky top-14 z-30 bg-black/95 backdrop-blur-md border-b border-white/[0.07]">
+        <div className="max-w-[420px] mx-auto flex overflow-x-auto feed-no-bar px-4 gap-5 py-2.5">
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              id={`vid-cat-${cat.toLowerCase().replace(/\s+/g, '-')}`}
+              onClick={() => setActiveCategory(cat)}
+              className={`text-[10px] uppercase tracking-wider font-bold whitespace-nowrap pb-0.5 relative transition-colors flex-shrink-0 focus:outline-none ${
+                activeCategory === cat ? 'text-white' : 'text-white/35 hover:text-white/65'
+              }`}
+            >
+              {cat}
+              {activeCategory === cat && (
+                <motion.div
+                  layoutId="activeFeedCat"
+                  className="absolute bottom-[-10px] left-0 right-0 h-[2px] bg-[#B11B41] rounded-full"
+                  transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                />
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Video Grid Timeline */}
-      <div className="w-full flex justify-center py-4">
-        {filteredVideos.length > 0 ? (
-          <div 
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6 w-full max-w-7xl justify-items-center px-4 sm:px-4 pb-16"
-          >
-            {filteredVideos.map((video) => {
-              const isLiked = !!likedMap[video.id];
-              const isSaved = !!savedMap[video.id];
-              const likes = likesCount[video.id] || 0;
-              const relatedItems = resolveRelatedItems(video);
-              const comments = (commentsMap[video.id] || []).length;
+      {/* ── Feed + Desktop navigation ── */}
+      <div className="relative flex items-center justify-center">
 
-              return (
-                <VideoGridCard
-                  key={video.id}
-                  video={video}
-                  isLiked={isLiked}
-                  isSaved={isSaved}
-                  likesCount={likes}
-                  commentsCount={comments}
-                  relatedItemsCount={relatedItems.length}
-                  onLike={() => handleLike(video.id)}
-                  onSave={() => handleSave(video.id)}
-                  onShare={() => handleShare(video.title, video.id)}
-                  onClick={() => {
-                    setActivePlaybackVideoId(video.id);
-                    setModalTab('shop');
-                  }}
-                  prefersReducedMotion={prefersReducedMotion}
-                  isPlayingPreview={hoveredVideoId === video.id}
-                  onHoverStart={() => setHoveredVideoId(video.id)}
-                  onHoverEnd={() => {
-                    if (hoveredVideoId === video.id) {
-                      setHoveredVideoId(null);
-                    }
-                  }}
-                />
-              );
-            })}
-          </div>
-        ) : (
-          <div className="py-20 text-center bg-brand-cream border border-brand-warm-tan/25 rounded-[32px] w-full max-w-[370px] mx-auto">
-            <Play className="w-8 h-8 text-[#B11B41] mx-auto mb-3 opacity-60 animate-pulse" />
-            <p className="font-serif text-base text-brand-dark font-normal">No short-form video logs found.</p>
-            <p className="font-sans text-xs text-brand-dark/50 mt-1">Try selecting another coily routine category.</p>
+        {/* Desktop ↑ button */}
+        <button
+          onClick={() => goToIndex(activeIndex - 1)}
+          disabled={activeIndex === 0}
+          aria-label="Previous video"
+          className="hidden lg:flex absolute z-20 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white items-center justify-center border border-white/10 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+          style={{ left: 'calc(50% + 218px)', top: '28%' }}
+        >
+          <ChevronUp className="w-5 h-5" />
+        </button>
+
+        {/* Scroll feed */}
+        <div
+          ref={feedRef}
+          className="w-full sm:max-w-[390px] overflow-y-scroll snap-y snap-mandatory feed-no-bar"
+          style={{ height: CARD_H }}
+        >
+          {filteredVideos.length > 0 ? (
+            filteredVideos.map((video, idx) => (
+              <VideoFeedCard
+                key={video.id}
+                ref={(el) => { cardRefs.current[idx] = el; }}
+                video={video}
+                cardHeight={CARD_H}
+                isActive={idx === activeIndex}
+                isMuted={isMuted}
+                isLiked={!!likedMap[video.id]}
+                isSaved={!!savedMap[video.id]}
+                likesCount={likesCountMap[video.id] ?? 0}
+                relatedItems={resolveRelatedItems(video)}
+                onLike={() => handleLike(video.id)}
+                onSave={() => handleSave(video.id)}
+                onShare={() => handleShare(video.title, video.id)}
+                onShopClick={() => openModal(video.id)}
+                onToggleMute={() => setIsMuted((m) => !m)}
+                prefersReducedMotion={prefersReducedMotion}
+              />
+            ))
+          ) : (
+            <div className="flex items-center justify-center" style={{ height: CARD_H }}>
+              <div className="text-center">
+                <Play className="w-8 h-8 text-white/20 mx-auto mb-3 animate-pulse" />
+                <p className="font-serif text-sm text-white/45">No videos in this category.</p>
+                <p className="text-[10px] text-white/25 mt-1 font-sans">Try a different filter.</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Desktop ↓ button */}
+        <button
+          onClick={() => goToIndex(activeIndex + 1)}
+          disabled={activeIndex >= filteredVideos.length - 1}
+          aria-label="Next video"
+          className="hidden lg:flex absolute z-20 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white items-center justify-center border border-white/10 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+          style={{ left: 'calc(50% + 218px)', top: '68%' }}
+        >
+          <ChevronDown className="w-5 h-5" />
+        </button>
+
+        {/* Desktop dot tracker (left of feed) */}
+        {filteredVideos.length > 1 && (
+          <div
+            className="hidden lg:flex flex-col items-center gap-1.5 absolute z-20"
+            style={{ right: 'calc(50% + 218px)' }}
+          >
+            {filteredVideos.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => goToIndex(idx)}
+                aria-label={`Go to video ${idx + 1}`}
+                className={`rounded-full transition-all duration-300 ${
+                  idx === activeIndex ? 'w-1.5 h-6 bg-white' : 'w-1.5 h-1.5 bg-white/30 hover:bg-white/55'
+                }`}
+              />
+            ))}
           </div>
         )}
       </div>
 
-      {/* Immersive Lightbox Modal */}
+      {/* ── Keyboard hint (desktop, first load) ── */}
+      <div className="hidden lg:block text-center py-3 text-[9px] text-white/20 uppercase tracking-widest select-none">
+        ↑ ↓ arrows · J K keys · scroll to navigate · M to mute
+      </div>
+
+      {/* ── Modal / Immersive Player ── */}
       <AnimatePresence>
-        {activePlaybackVideoId && activeVideo && activeVideoResolved && (
+        {modalVideoId && modalVideo && modalResolved && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            ref={backdropRef}
-            onClick={handleBackdropClick}
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
-            className="fixed inset-0 z-55 bg-[#120E0C]/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-6"
+            className="fixed inset-0 z-50 bg-black/92 backdrop-blur-md flex items-center justify-center p-3 sm:p-5"
+            onClick={() => setModalVideoId(null)}
           >
-            {/* Close Button */}
-            <div className="absolute top-4 right-4 z-55">
+            {/* Close */}
+            <button
+              onClick={() => setModalVideoId(null)}
+              aria-label="Close"
+              className="absolute top-4 right-4 z-50 p-2.5 rounded-full bg-white/10 hover:bg-[#B11B41] text-white border border-white/10 transition-all"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Prev arrow */}
+            {modalIndex > 0 && (
               <button
-                onClick={() => {
-                  setActivePlaybackVideoId(null);
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setModalVideoId(filteredVideos[modalIndex - 1].id);
+                  setModalTab('shop');
                 }}
-                className="p-3 rounded-full bg-white/10 hover:bg-brand-rose text-white transition-all cursor-pointer shadow-md border border-white/10 flex items-center justify-center focus:outline-none"
-                title="Close Lightbox (ESC)"
+                aria-label="Previous video"
+                className="absolute left-3 top-1/2 -translate-y-1/2 z-50 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/10 transition-all flex items-center justify-center"
               >
-                <X className="w-5 h-5" />
+                <ChevronLeft className="w-5 h-5" />
               </button>
-            </div>
-
-            {/* Left Carousel Navigation Button */}
-            {!prevDisabled && (
-              <div className="absolute left-2 sm:left-4 z-55 pointer-events-none">
-                <button
-                  onClick={handlePrevVideo}
-                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/10 hover:bg-[#FAF6F0] text-white hover:text-brand-dark transition-all flex items-center justify-center border border-white/10 shadow-lg pointer-events-auto cursor-pointer focus:outline-none"
-                  title="Previous Tutorial"
-                >
-                  <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
-                </button>
-              </div>
             )}
 
-            {/* Right Carousel Navigation Button */}
-            {!nextDisabled && (
-              <div className="absolute right-2 sm:right-4 z-55 pointer-events-none">
-                <button
-                  onClick={handleNextVideo}
-                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/10 hover:bg-[#FAF6F0] text-white hover:text-brand-dark transition-all flex items-center justify-center border border-white/10 shadow-lg pointer-events-auto cursor-pointer focus:outline-none"
-                  title="Next Tutorial"
-                >
-                  <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
-                </button>
-              </div>
+            {/* Next arrow */}
+            {modalIndex < filteredVideos.length - 1 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setModalVideoId(filteredVideos[modalIndex + 1].id);
+                  setModalTab('shop');
+                }}
+                aria-label="Next video"
+                className="absolute right-3 top-1/2 -translate-y-1/2 z-50 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/10 transition-all flex items-center justify-center"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
             )}
 
-            {/* Immersive Detail Card Dialog Container */}
+            {/* Modal card */}
             <motion.div
-              ref={modalContainerRef}
-              initial={{ scale: 0.95, y: 15 }}
+              ref={modalRef}
+              initial={{ scale: 0.95, y: 18 }}
               animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 15 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-              className="w-full max-w-4xl h-[88vh] md:h-[620px] bg-brand-cream rounded-[28px] overflow-hidden border border-brand-warm-tan/30 shadow-2xl flex flex-col md:flex-row relative text-left mx-6 sm:mx-12"
+              exit={{ scale: 0.95, y: 18 }}
+              transition={{ type: 'spring', damping: 26, stiffness: 210 }}
+              className="w-full max-w-4xl h-[88vh] md:h-[620px] bg-[#FAF6F0] rounded-[28px] overflow-hidden flex flex-col md:flex-row shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Left Side: 9:16 Video Player Stage */}
-              <div className="w-full md:w-[350px] h-[45%] md:h-full bg-black relative flex items-center justify-center shrink-0">
-                {activeVideoResolved.type === 'youtube' && (
+              {/* Left: Video player */}
+              <div className="w-full md:w-[290px] h-[42%] md:h-full bg-black relative flex-shrink-0 flex items-center justify-center overflow-hidden">
+                {/* YouTube */}
+                {modalResolved.type === 'youtube' && (
                   <iframe
-                    key={`yt-${activeVideo.id}`}
-                    title={activeVideo.title}
-                    src={`${activeVideoResolved.url}?autoplay=1&mute=${isMuted ? 1 : 0}&controls=1&loop=1&playlist=${activeVideoResolved.id}&modestbranding=1&rel=0`}
-                    className="absolute inset-0 w-full h-full object-cover"
+                    key={`modal-yt-${modalVideo.id}-${isMuted}`}
+                    title={modalVideo.title}
+                    src={`${modalResolved.url}?autoplay=1&mute=${isMuted ? 1 : 0}&controls=1&loop=1&playlist=${modalResolved.id}&modestbranding=1&rel=0`}
+                    className="absolute inset-0 w-full h-full"
                     allow="autoplay; encrypted-media; picture-in-picture"
                     allowFullScreen
                   />
                 )}
-                {/* TikTok: show thumbnail card with direct link — TikTok blocks cross-origin iframe embeds */}
-                {activeVideoResolved.type === 'tiktok' && (() => {
-                  const tiktokUrl = `https://www.tiktok.com/@cartiaerae/video/${activeVideoResolved.id}`;
-                  return (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black gap-5 px-6">
+
+                {/* TikTok */}
+                {modalResolved.type === 'tiktok' && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-5 bg-zinc-950">
+                    {modalVideo.thumbnailUrl && (
                       <img
-                        src={activeVideo.thumbnailUrl}
-                        alt={activeVideo.title}
+                        src={modalVideo.thumbnailUrl}
+                        alt={modalVideo.title}
                         referrerPolicy="no-referrer"
-                        className="w-full max-h-[55%] object-cover rounded-xl opacity-70"
+                        className="w-full max-h-[52%] object-cover rounded-xl opacity-55"
                       />
-                      <div className="text-center space-y-3">
-                        <p className="font-sans text-[10px] uppercase tracking-widest text-white/60 font-bold">TikTok Content</p>
-                        <p className="font-serif text-sm text-white leading-snug">{activeVideo.title}</p>
-                        <a
-                          href={tiktokUrl}
-                          target="_blank"
-                          rel="noreferrer noopener"
-                          className="inline-flex items-center gap-2 bg-[#FAF6F0] hover:bg-brand-rose text-brand-dark hover:text-white px-5 py-2.5 rounded-xl text-[10px] uppercase font-extrabold tracking-widest transition-all duration-300 shadow-md"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current" aria-hidden="true"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.34 6.34 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.27 8.27 0 0 0 4.84 1.56V6.78a4.85 4.85 0 0 1-1.07-.09z"/></svg>
-                          Open on TikTok
-                        </a>
-                      </div>
+                    )}
+                    <div className="text-center space-y-3">
+                      <p className="text-white/55 text-[9px] uppercase tracking-widest font-bold">TikTok Content</p>
+                      <p className="text-white font-serif text-sm leading-snug px-2">{modalVideo.title}</p>
+                      <a
+                        href={`https://www.tiktok.com/@cartiaerae/video/${modalResolved.id}`}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-2 bg-white hover:bg-[#B11B41] text-black hover:text-white px-5 py-2.5 rounded-xl text-[10px] uppercase font-extrabold tracking-widest transition-all"
+                      >
+                        <TikTokSvg />
+                        Open on TikTok
+                      </a>
                     </div>
-                  );
-                })()}
-                {activeVideoResolved.type === 'direct' && (
+                  </div>
+                )}
+
+                {/* Direct MP4 */}
+                {modalResolved.type === 'direct' && (
                   <video
-                    key={`dir-${activeVideo.id}`}
-                    src={activeVideoResolved.url}
+                    key={`modal-dir-${modalVideo.id}`}
+                    src={modalResolved.url}
                     autoPlay
                     controls
                     playsInline
@@ -929,163 +881,156 @@ export const VideoGallery: React.FC = () => {
                   />
                 )}
 
-                {/* Floating Mute Toggle */}
-                <button
-                  onClick={() => setIsMuted(!isMuted)}
-                  className="absolute bottom-4 right-4 z-20 p-2.5 rounded-full bg-white/85 hover:bg-white text-brand-dark shadow-md backdrop-blur-xs transition-colors cursor-pointer border border-brand-warm-tan/10"
-                  title={isMuted ? "Unmute Audio" : "Mute Audio"}
-                >
-                  {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                </button>
+                {/* Mute toggle (non-TikTok) */}
+                {modalResolved.type !== 'tiktok' && (
+                  <button
+                    onClick={() => setIsMuted((m) => !m)}
+                    className="absolute bottom-3 right-3 z-10 p-2 rounded-full bg-black/60 text-white hover:bg-black/80 transition-all"
+                    title={isMuted ? 'Unmute' : 'Mute'}
+                  >
+                    {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                  </button>
+                )}
               </div>
 
-              {/* Right Side: Details Pane */}
-              <div className="flex-1 h-[55%] md:h-full flex flex-col justify-between bg-[#FAF7F2] overflow-hidden text-brand-dark">
-                
-                {/* 1. Header Creator Bio Profile */}
-                <div className="p-4 sm:p-5 border-b border-brand-warm-tan/20 flex items-center justify-between shrink-0 bg-brand-cream/40">
+              {/* Right: content pane */}
+              <div className="flex-1 flex flex-col h-[58%] md:h-full bg-[#FAF6F0] overflow-hidden text-black">
+
+                {/* Creator header */}
+                <div className="px-5 py-4 border-b border-black/[0.07] flex items-center justify-between flex-shrink-0 bg-white/50">
                   <div className="flex items-center gap-2.5">
-                    <img 
-                      src="/about-portrait.jpg" 
-                      alt="Cartiae founder profile" 
-                      className="w-8 h-8 rounded-full border border-brand-rose/25 object-cover shrink-0"
+                    <img
+                      src="/about-portrait.jpg"
+                      alt="Cartiae Rae"
+                      className="w-8 h-8 rounded-full border border-[#B11B41]/20 object-cover object-top"
                     />
-                    <div className="text-left">
-                      <span className="font-mono text-xs font-bold text-brand-dark tracking-wide block leading-none">
-                        @cartiae_rae
-                      </span>
-                      <span className="text-[9px] font-sans font-semibold text-[#8C6D62] mt-0.5 block leading-none">
-                        Coily Hair Specialist
-                      </span>
+                    <div>
+                      <span className="font-mono text-xs font-bold text-black block leading-none">@cartiae_rae</span>
+                      <span className="text-[9px] text-zinc-500 block mt-0.5 leading-none">Coily Hair Specialist</span>
                     </div>
                   </div>
-
-                  <span className="bg-brand-rose/90 backdrop-blur-xs text-[#FAF6F0] text-[8px] uppercase tracking-widest font-extrabold px-2 py-0.5 rounded font-mono">
-                    {activeVideo.category}
+                  <span className="bg-[#B11B41] text-white text-[8px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded font-mono">
+                    {modalVideo.category}
                   </span>
                 </div>
 
-                {/* 2. Content Tabs Switcher */}
-                <div className="flex border-b border-brand-warm-tan/20 bg-brand-cream/20 text-xs uppercase font-extrabold tracking-wider select-none shrink-0 font-sans">
-                  <button
-                    onClick={() => setModalTab('shop')}
-                    className={`flex-1 py-3 text-center border-b-2 transition-all cursor-pointer ${
-                      modalTab === 'shop' 
-                        ? 'border-brand-rose text-brand-rose bg-[#FAF7F2]' 
-                        : 'border-transparent text-brand-dark/50 hover:text-brand-dark'
-                    }`}
-                  >
-                    Shop Routine ({activeRelatedItems.length})
-                  </button>
-                  <button
-                    onClick={() => setModalTab('comments')}
-                    className={`flex-1 py-3 text-center border-b-2 transition-all cursor-pointer ${
-                      modalTab === 'comments' 
-                        ? 'border-brand-rose text-brand-rose bg-[#FAF7F2]' 
-                        : 'border-transparent text-brand-dark/50 hover:text-brand-dark'
-                    }`}
-                  >
-                    Q&A Discussion ({(commentsMap[activeVideo.id] || []).length})
-                  </button>
+                {/* Tabs */}
+                <div className="flex border-b border-black/[0.07] flex-shrink-0 text-[10px] uppercase font-extrabold tracking-wider select-none">
+                  {(['shop', 'qa'] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setModalTab(tab)}
+                      className={`flex-1 py-3 text-center border-b-2 transition-all ${
+                        modalTab === tab
+                          ? 'border-[#B11B41] text-[#B11B41] bg-white/30'
+                          : 'border-transparent text-black/40 hover:text-black/70'
+                      }`}
+                    >
+                      {tab === 'shop'
+                        ? `Shop Routine (${modalRelatedItems.length})`
+                        : `Q&A (${(commentsMap[modalVideo.id] ?? []).length})`}
+                    </button>
+                  ))}
                 </div>
 
-                {/* 3. Scrollable Tab Contents */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+                {/* Scrollable content */}
+                <div className="flex-1 overflow-y-auto p-5 feed-no-bar">
                   {modalTab === 'shop' ? (
                     <div className="space-y-4">
-                      {/* Video descriptions */}
+                      {/* Video info */}
                       <div>
-                        <h2 className="font-serif text-lg font-bold text-brand-dark leading-snug">
-                          {activeVideo.title}
+                        <h2 className="font-serif text-lg font-bold text-black leading-snug">
+                          {modalVideo.title}
                         </h2>
-                        
-                        <div className="flex items-center gap-3 text-[10px] text-[#8C6D62] font-semibold font-mono mt-1.5 select-none">
-                          <span className="flex items-center gap-0.5"><Eye className="w-3.5 h-3.5" /> {activeVideo.views} Views</span>
-                          <span>•</span>
-                          <span className="flex items-center gap-0.5"><Clock className="w-3.5 h-3.5" /> {activeSimulatedDuration} Duration</span>
-                        </div>
-
-                        <p className="font-sans text-xs text-brand-dark/80 mt-2.5 leading-relaxed bg-[#FAF6F0] p-3 rounded-2xl border border-brand-warm-tan/15">
-                          {activeVideo.description || getVideoDescription(activeVideo.id)}
+                        <p className="text-[11px] text-zinc-500 mt-2 leading-relaxed bg-white rounded-xl p-3 border border-black/[0.05]">
+                          {modalVideo.description || getDescription(modalVideo.id)}
                         </p>
                       </div>
 
-                      {/* Related shop items grid */}
-                      <div className="space-y-3 pt-1">
-                        <span className="font-sans text-[9px] uppercase tracking-wider text-brand-rose font-bold block select-none">
-                          Featured in this Routine
-                        </span>
-
-                        {activeRelatedItems.map((item) => (
-                          <div 
-                            key={item.id}
-                            className="flex items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-brand-warm-tan/10 shadow-xs"
-                          >
-                            <img 
-                              src={item.image} 
-                              alt={item.name} 
-                              className="w-11 h-11 object-cover rounded-xl border border-brand-warm-tan/15 shrink-0"
-                              referrerPolicy="no-referrer"
-                            />
-                            
-                            <div className="flex-1 min-w-0">
-                              <span className="text-[7.5px] uppercase tracking-wider font-extrabold text-[#A67E6B] font-mono block leading-none font-bold">
-                                {item.type}
-                              </span>
-                              <h4 className="font-serif text-[11px] font-bold text-brand-dark truncate mt-1 font-bold">
-                                {item.name}
-                              </h4>
-                              <span className="font-mono text-xs text-[#8C6D62] font-semibold mt-0.5 block leading-none font-bold">
-                                ${item.price.toFixed(2)}
-                              </span>
-                            </div>
-
-                            <button
-                              onClick={() => handleAddProduct(item)}
-                              className="px-3 py-1.5 bg-brand-dark hover:bg-brand-rose text-[#FAF6F0] text-[9px] uppercase font-bold tracking-widest transition-all rounded-xl focus:outline-none cursor-pointer shrink-0 hover:scale-[1.02] active:scale-[0.98] shadow-sm"
+                      {/* Related items */}
+                      {modalRelatedItems.length > 0 && (
+                        <div className="space-y-3">
+                          <span className="text-[9px] uppercase tracking-wider text-[#B11B41] font-bold block">
+                            Featured in this Routine
+                          </span>
+                          {modalRelatedItems.map((item) => (
+                            <div
+                              key={item.id}
+                              className="flex items-center gap-3 bg-white p-3 rounded-2xl border border-black/[0.05] shadow-sm"
                             >
-                              Add
-                            </button>
-                          </div>
-                        ))}
-                      </div>
+                              <img
+                                src={item.image}
+                                alt={item.name}
+                                referrerPolicy="no-referrer"
+                                className="w-11 h-11 object-cover rounded-xl border border-black/[0.05] flex-shrink-0"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <span className="text-[7.5px] uppercase tracking-widest font-extrabold text-zinc-400 block">
+                                  {item.type}
+                                </span>
+                                <h4 className="font-serif text-[11px] font-bold text-black truncate mt-0.5">
+                                  {item.name}
+                                </h4>
+                                <span className="font-mono text-[10px] text-zinc-500 font-semibold">
+                                  ${item.price.toFixed(2)}
+                                </span>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  addToCart({
+                                    id: item.id,
+                                    type: item.type,
+                                    name: item.name,
+                                    price: item.price,
+                                    image: item.image,
+                                  });
+                                  triggerToast(`"${item.name}" added to bag! 👜`, 'success');
+                                }}
+                                className="px-3 py-1.5 bg-black hover:bg-[#B11B41] text-white text-[9px] uppercase font-bold tracking-widest transition-all rounded-xl flex-shrink-0 focus:outline-none"
+                              >
+                                Add
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ) : (
-                    <div className="h-full flex flex-col justify-between">
-                      {/* Comments feed list */}
-                      <div className="flex-1 overflow-y-auto space-y-3.5 pr-1 py-1 min-h-[160px]">
-                        {(commentsMap[activeVideo.id] || []).length > 0 ? (
-                          (commentsMap[activeVideo.id] || []).map((comm) => (
-                            <div key={comm.id} className="text-xs leading-relaxed border-b border-brand-warm-tan/10 pb-2.5">
-                              <div className="flex justify-between items-baseline select-none">
-                                <span className="font-bold text-brand-chocolate font-mono">{comm.author}</span>
-                                <span className="text-[8px] text-[#A67E6B] font-mono">Just now</span>
+                    <div className="flex flex-col h-full min-h-[200px]">
+                      {/* Comments */}
+                      <div className="space-y-3.5 flex-1 mb-4">
+                        {(commentsMap[modalVideo.id] ?? []).length > 0 ? (
+                          (commentsMap[modalVideo.id] ?? []).map((c) => (
+                            <div key={c.id} className="text-xs border-b border-black/[0.06] pb-3 last:border-0">
+                              <div className="flex justify-between items-baseline mb-0.5">
+                                <span className="font-bold text-black font-mono">{c.author}</span>
+                                <span className="text-[8px] text-zinc-400">Just now</span>
                               </div>
-                              <p className="text-brand-dark/85 mt-0.5">{comm.text}</p>
+                              <p className="text-zinc-600 leading-relaxed">{c.text}</p>
                             </div>
                           ))
                         ) : (
-                          <div className="py-12 text-center text-brand-dark/40 font-serif text-xs">
-                            No questions asked yet. Be the first to start the discussion!
+                          <div className="py-10 text-center text-zinc-400 font-serif text-xs">
+                            No questions yet. Be first!
                           </div>
                         )}
                       </div>
 
-                      {/* Comment input form */}
-                      <form 
+                      {/* Comment form */}
+                      <form
                         onSubmit={submitComment}
-                        className="border-t border-brand-warm-tan/20 pt-3 flex gap-2 items-center shrink-0 mt-3"
+                        className="flex gap-2 items-center border-t border-black/[0.07] pt-3 flex-shrink-0"
                       >
                         <input
                           type="text"
-                          value={newCommentText}
-                          onChange={(e) => setNewCommentText(e.target.value)}
+                          value={newComment}
+                          onChange={(e) => setNewComment(e.target.value)}
                           placeholder="Ask a question about this routine..."
-                          className="flex-1 px-3 py-2 bg-white border border-brand-warm-tan/30 text-xs rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-rose focus:border-brand-rose"
+                          className="flex-1 px-3 py-2 bg-white border border-black/10 text-xs rounded-xl focus:outline-none focus:ring-1 focus:ring-[#B11B41]"
                         />
                         <button
                           type="submit"
-                          className="p-2 bg-brand-dark hover:bg-brand-rose text-[#FAF6F0] rounded-full transition-colors flex items-center justify-center cursor-pointer shadow-sm focus:outline-none"
+                          className="p-2 bg-black hover:bg-[#B11B41] text-white rounded-full transition-all flex items-center justify-center focus:outline-none"
                         >
                           <Send className="w-3.5 h-3.5" />
                         </button>
@@ -1094,127 +1039,39 @@ export const VideoGallery: React.FC = () => {
                   )}
                 </div>
 
-                {/* 4. Footer Actions Row */}
-                <div className="p-4 border-t border-brand-warm-tan/20 bg-brand-cream/35 flex items-center justify-around shrink-0 select-none">
-                  {/* Like Toggle */}
+                {/* Footer social row */}
+                <div className="px-5 py-3 border-t border-black/[0.07] bg-white/50 flex items-center justify-around flex-shrink-0 select-none">
                   <button
-                    onClick={() => handleLike(activeVideo.id)}
-                    className="flex items-center gap-1.5 text-xs font-semibold hover:text-brand-rose transition-colors cursor-pointer"
+                    onClick={() => handleLike(modalVideo.id)}
+                    className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
+                      likedMap[modalVideo.id] ? 'text-[#B11B41]' : 'text-black/55 hover:text-black'
+                    }`}
                   >
-                    <Heart className={`w-4 h-4 ${likedMap[activeVideo.id] ? 'fill-brand-rose text-brand-rose' : ''}`} />
-                    <span>{likesCount[activeVideo.id] || 0} Likes</span>
+                    <Heart className={`w-4 h-4 ${likedMap[modalVideo.id] ? 'fill-[#B11B41]' : ''}`} />
+                    {(likesCountMap[modalVideo.id] ?? 0).toLocaleString()}
                   </button>
-
-                  <div className="w-[1px] h-4 bg-brand-warm-tan/30" />
-
-                  {/* Bookmark/Save Toggle */}
                   <button
-                    onClick={() => handleSave(activeVideo.id)}
-                    className="flex items-center gap-1.5 text-xs font-semibold hover:text-brand-rose transition-colors cursor-pointer"
+                    onClick={() => handleSave(modalVideo.id)}
+                    className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
+                      savedMap[modalVideo.id] ? 'text-[#B11B41]' : 'text-black/55 hover:text-black'
+                    }`}
                   >
-                    <Bookmark className={`w-4 h-4 ${savedMap[activeVideo.id] ? 'fill-brand-rose text-brand-rose' : ''}`} />
-                    <span>{savedMap[activeVideo.id] ? 'Saved' : 'Save'}</span>
+                    <Bookmark className={`w-4 h-4 ${savedMap[modalVideo.id] ? 'fill-[#B11B41]' : ''}`} />
+                    {savedMap[modalVideo.id] ? 'Saved' : 'Save'}
                   </button>
-
-                  <div className="w-[1px] h-4 bg-brand-warm-tan/30" />
-
-                  {/* Share clipboard */}
                   <button
-                    onClick={() => handleShare(activeVideo.title, activeVideo.id)}
-                    className="flex items-center gap-1.5 text-xs font-semibold hover:text-brand-rose transition-colors cursor-pointer"
+                    onClick={() => handleShare(modalVideo.title, modalVideo.id)}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-black/55 hover:text-black transition-colors"
                   >
                     <Share2 className="w-4 h-4" />
-                    <span>Share</span>
+                    Share
                   </button>
                 </div>
-
               </div>
-
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* ======================================= */}
-      {/* 🎓 ELITE COACHING MASTERCLASS MODULE     */}
-      {/* ======================================= */}
-      <div className="bg-[#FAF6F0] border border-brand-warm-tan/30 p-8 sm:p-12 lg:p-16 text-left grid grid-cols-1 lg:grid-cols-12 gap-12 items-center rounded-3xl mt-12 w-full max-w-4xl mx-auto">
-        
-        {/* Left side text details */}
-        <div className="lg:col-span-7 space-y-4">
-          <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-[#B11B41] font-bold block">
-            The Masterclass Academy
-          </span>
-
-          <h2 className="font-serif text-2xl sm:text-3xl text-brand-dark leading-tight">
-            Elite Coaching: Go Beyond the Basics
-          </h2>
-
-          <p className="font-sans text-xs sm:text-sm text-brand-dark/70 leading-relaxed max-w-xl">
-            Ready to completely understand your coily coils? The Cartiae Masterclass features 40+ structured training modules, downloadable porosity tables, dynamic hydration trackers, and personal feedback routines.
-          </p>
-
-          {/* Technical highlights bullets brief */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4 border-t border-brand-warm-tan/20">
-            <div>
-              <p className="text-xs uppercase tracking-wider font-bold text-brand-dark font-bold">40+ Modules</p>
-              <p className="text-[10px] text-brand-dark/60 mt-0.5 font-sans">Full regimens mapped</p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-wider font-bold text-brand-dark font-bold">5K+ Students</p>
-              <p className="text-[10px] text-brand-dark/60 mt-0.5 font-sans">Coily collective peers</p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-wider font-bold text-brand-dark font-bold">VIP Sessions</p>
-              <p className="text-[10px] text-[#A67E6B] mt-0.5 font-sans font-bold">Routine calibrations</p>
-            </div>
-          </div>
-
-        </div>
-
-        {/* Right side lead forms box */}
-        <div className="lg:col-span-5 bg-white border border-brand-warm-tan/25 p-8 space-y-4 rounded-2xl shadow-xs">
-          <h3 className="font-serif text-lg text-brand-dark font-semibold">Syllabus Request</h3>
-          <p className="font-sans text-[11px] text-[#6D5448] leading-relaxed">
-            Enter your email to request the complete academic syllabus containing video listings, group consultation formats, and pre-registration schedules.
-          </p>
-
-          <form onSubmit={handleApplyCoaching} className="space-y-3">
-            <input
-              id="coaching-email-field"
-              type="email"
-              required
-              placeholder="Your email address"
-              value={masterclassEmail}
-              onChange={(e) => setMasterclassEmail(e.target.value)}
-              className="w-full px-3 py-2.5 bg-transparent border-b border-brand-warm-tan/50 text-brand-dark placeholder-brand-dark/40 text-xs focus:outline-none focus:border-brand-dark"
-            />
-            
-            <button
-              id="coaching-info-submit"
-              type="submit"
-              className="w-full py-2.5 text-[10px] uppercase tracking-widest font-semibold bg-brand-dark hover:bg-brand-rose text-white transition-colors duration-300 rounded-xl"
-            >
-              {successMsg ? 'Syllabus Requested ✓' : 'Request Syllabus Details'}
-            </button>
-          </form>
-
-          {/* Immediate roadmap click */}
-          <div className="border-t border-brand-warm-tan/15 pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[10px] text-brand-dark/50">
-            <span>Want a quick syllabus teaser?</span>
-            <button
-              id="download-curriculum-teaser"
-              onClick={handleDownloadCurriculum}
-              className="text-[#B11B41] hover:text-brand-dark underline font-semibold focus:outline-none cursor-pointer"
-            >
-              {teaserSuccess ? 'Downloaded Teaser (PDF) ✓' : 'Get Teaser (PDF)'}
-            </button>
-          </div>
-
-        </div>
-
-      </div>
-
     </div>
   );
 };

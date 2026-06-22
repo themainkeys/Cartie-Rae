@@ -524,7 +524,50 @@ export const AdminPortal: React.FC = () => {
   const [blogReadTime, setBlogReadTime] = useState('5 min read');
   const [blogImage, setBlogImage] = useState('');
   const [blogCategory, setBlogCategory] = useState('Growth Tips');
+  const [blogStatus, setBlogStatus] = useState<'published' | 'draft'>('published');
   const BLOG_CATEGORIES = ['Growth Tips', 'Wash Day', 'Styling', 'Product Reviews', 'Tutorials', 'Protective Styles', 'Hair Science'] as const;
+
+  // ── Controlled state for Services admin (Fix 3 & 4) ──────────────────────
+  // Keyed by service id so each card has isolated, reactive field values.
+  type ServiceEditFields = {
+    name: string; price: string; description: string;
+    included: string; benefits: string; notice: string;
+    disclaimer: string; imageUrl: string;
+  };
+  const buildServiceEdit = (svc: typeof services[0]): ServiceEditFields => ({
+    name: svc.name,
+    price: String(svc.price),
+    description: svc.description,
+    included: svc.included.join('\n'),
+    benefits: svc.benefits.join('\n'),
+    notice: svc.notice.join('\n'),
+    disclaimer: svc.disclaimer,
+    imageUrl: svc.image,
+  });
+  const [serviceEdits, setServiceEdits] = useState<Record<string, ServiceEditFields>>(() => {
+    const map: Record<string, ServiceEditFields> = {};
+    services.forEach(svc => { map[svc.id] = buildServiceEdit(svc); });
+    return map;
+  });
+  // Sync edits map when context services array changes (after external save / delete)
+  useEffect(() => {
+    setServiceEdits(prev => {
+      const next = { ...prev };
+      services.forEach(svc => {
+        if (!next[svc.id]) next[svc.id] = buildServiceEdit(svc);
+      });
+      // Remove entries for services that no longer exist
+      Object.keys(next).forEach(id => {
+        if (!services.find(s => s.id === id)) delete next[id];
+      });
+      return next;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [services]);
+
+  const patchServiceEdit = (id: string, patch: Partial<ServiceEditFields>) =>
+    setServiceEdits(prev => ({ ...prev, [id]: { ...prev[id], ...patch } }));
+  // ─────────────────────────────────────────────────────────────────────────
 
   // Derived: are there any unsaved/pending changes?
   const hasOpenForm = isAddingVideo || isAddingProduct || isAddingEBook || isAddingBlog || isAddingGallery || isAddingDiscount;
@@ -2307,25 +2350,52 @@ export const AdminPortal: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Hero Image URL */}
-                  <div className="pt-1">
-                    <label className="block text-[10.5px] uppercase font-bold text-brand-chocolate mb-1 flex items-center gap-1.5">
+                  {/* Hero Image — URL OR direct upload */}
+                  <div className="pt-1 space-y-3">
+                    <label className="block text-[10.5px] uppercase font-bold text-brand-chocolate flex items-center gap-1.5">
                       <Image className="w-3.5 h-3.5 text-brand-rose" />
-                      Homepage Hero Photo URL
+                      Homepage Hero Photo
                     </label>
-                    <div className="flex gap-3 items-center">
+
+                    {/* Live preview */}
+                    {cmsHeroImage && (
+                      <div className="relative aspect-[16/7] overflow-hidden rounded-2xl border border-brand-warm-tan/20 bg-brand-beige">
+                        <img
+                          src={cmsHeroImage}
+                          alt="Hero preview"
+                          className="w-full h-full object-cover object-top"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }}
+                        />
+                        <div className="absolute bottom-2 right-2 bg-brand-dark/70 text-white text-[9px] px-2 py-0.5 rounded-full font-mono">
+                          Live Preview
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Upload */}
+                    <ImageDropzone
+                      imageValue={cmsHeroImage}
+                      onImageChange={(img) => {
+                        setCmsHeroImage(img);
+                        updateHomepageContent({ heroImageUrl: img });
+                        triggerToast('✓ Homepage hero photo updated!', 'success');
+                      }}
+                      label="Click or drag to upload hero photo"
+                      prefersReducedMotion={prefersReducedMotion}
+                    />
+
+                    {/* Or paste URL */}
+                    <div>
+                      <label className="block text-[10px] text-[#A67E6B] mb-1">Or paste an image URL:</label>
                       <input
                         type="text"
                         value={cmsHeroImage}
                         placeholder="/hero-portrait.jpg or https://..."
                         onChange={(e) => { setCmsHeroImage(e.target.value); autoSaveCms({ heroImageUrl: e.target.value }); }}
-                        className="flex-1 px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark transition-all duration-150"
+                        className="w-full px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark transition-all duration-150 text-xs"
                       />
-                      {cmsHeroImage && (
-                        <img src={cmsHeroImage} alt="Hero preview" className="w-14 h-14 object-cover object-top rounded-xl border border-brand-warm-tan/30 shrink-0" />
-                      )}
                     </div>
-                    <p className="text-[10px] text-[#A67E6B] mt-1">Paste any image URL. Changes apply instantly to the homepage.</p>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
@@ -2349,25 +2419,52 @@ export const AdminPortal: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* About Image URL */}
-                  <div className="pt-1">
-                    <label className="block text-[10.5px] uppercase font-bold text-brand-chocolate mb-1 flex items-center gap-1.5">
+                  {/* About Portrait — URL OR direct upload */}
+                  <div className="pt-1 space-y-3">
+                    <label className="block text-[10.5px] uppercase font-bold text-brand-chocolate flex items-center gap-1.5">
                       <Image className="w-3.5 h-3.5 text-brand-rose" />
-                      About Page Portrait URL
+                      About Page Portrait
                     </label>
-                    <div className="flex gap-3 items-center">
+
+                    {/* Live preview */}
+                    {cmsAboutImage && (
+                      <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-brand-warm-tan/20 bg-brand-beige max-w-xs">
+                        <img
+                          src={cmsAboutImage}
+                          alt="About preview"
+                          className="w-full h-full object-cover object-top"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }}
+                        />
+                        <div className="absolute bottom-2 right-2 bg-brand-dark/70 text-white text-[9px] px-2 py-0.5 rounded-full font-mono">
+                          Live Preview
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Upload */}
+                    <ImageDropzone
+                      imageValue={cmsAboutImage}
+                      onImageChange={(img) => {
+                        setCmsAboutImage(img);
+                        updateHomepageContent({ aboutImageUrl: img });
+                        triggerToast('✓ About page portrait updated!', 'success');
+                      }}
+                      label="Click or drag to upload portrait"
+                      prefersReducedMotion={prefersReducedMotion}
+                    />
+
+                    {/* Or paste URL */}
+                    <div>
+                      <label className="block text-[10px] text-[#A67E6B] mb-1">Or paste an image URL:</label>
                       <input
                         type="text"
                         value={cmsAboutImage}
                         placeholder="/about-portrait.jpg or https://..."
                         onChange={(e) => { setCmsAboutImage(e.target.value); autoSaveCms({ aboutImageUrl: e.target.value }); }}
-                        className="flex-1 px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark transition-all duration-150"
+                        className="w-full px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark transition-all duration-150 text-xs"
                       />
-                      {cmsAboutImage && (
-                        <img src={cmsAboutImage} alt="About preview" className="w-14 h-14 object-cover object-top rounded-xl border border-brand-warm-tan/30 shrink-0" />
-                      )}
                     </div>
-                    <p className="text-[10px] text-[#A67E6B] mt-1">Paste an image URL or use <code className="bg-brand-cream px-1 rounded">/about-portrait.jpg</code> for the uploaded file.</p>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
@@ -2455,98 +2552,260 @@ export const AdminPortal: React.FC = () => {
           )}
 
           {/* ============================================= */}
-          {/* CMS COMPONENT: SERVICES COVER IMAGES         */}
+          {/* CMS COMPONENT: SERVICES MANAGEMENT           */}
+          {/* (Cover + Text — all controlled state)        */}
           {/* ============================================= */}
           {activeTab === 'design' && designSub === 'cms' && (
-            <div className="bg-white border border-[#E5D5C8]/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_4px_25px_-4px_rgba(74,43,32,0.02)] animate-fade-in">
-              <div className="flex justify-between items-center border-b border-[#E5D5C8]/30 pb-3">
-                <h3 className="font-serif text-base sm:text-lg font-bold text-brand-dark flex items-center gap-2">
-                  <span className="w-1.5 h-6 bg-brand-rose rounded-full"></span>
-                  Services Cover Images
-                </h3>
-                <span className="text-[10px] text-[#A67E6B] bg-brand-cream border border-[#E5D5C8]/60 px-3 py-1 rounded-full font-bold">
-                  {services.length} Services
-                </span>
+            <div className="space-y-8">
+
+              {/* ── Cover Images ── */}
+              <div className="bg-white border border-[#E5D5C8]/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_4px_25px_-4px_rgba(74,43,32,0.02)] animate-fade-in">
+                <div className="flex justify-between items-center border-b border-[#E5D5C8]/30 pb-3">
+                  <h3 className="font-serif text-base sm:text-lg font-bold text-brand-dark flex items-center gap-2">
+                    <span className="w-1.5 h-6 bg-brand-rose rounded-full"></span>
+                    Services Cover Images
+                  </h3>
+                  <span className="text-[10px] text-[#A67E6B] bg-brand-cream border border-[#E5D5C8]/60 px-3 py-1 rounded-full font-bold">
+                    {services.length} Services
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {services.map((svc) => {
+                    const edits = serviceEdits[svc.id];
+                    if (!edits) return null;
+                    const previewUrl = edits.imageUrl || svc.image;
+                    return (
+                      <div key={svc.id} className="bg-[#FAF6F0] border border-brand-warm-tan/20 rounded-2xl p-4 space-y-4">
+                        {/* Live cover preview */}
+                        <div className="relative aspect-[16/9] overflow-hidden rounded-xl border border-brand-warm-tan/20 bg-brand-beige">
+                          {previewUrl ? (
+                            <img
+                              src={previewUrl}
+                              alt={svc.name}
+                              className="w-full h-full object-cover"
+                              referrerPolicy="no-referrer"
+                              onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.2'; }}
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-brand-beige to-brand-warm-tan/40">
+                              <span className="font-serif text-[10px] text-[#8C6D62] uppercase tracking-wider">{svc.name}</span>
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-brand-dark/60 via-transparent to-transparent flex items-end p-3">
+                            <p className="text-white text-[10px] font-bold font-serif leading-tight line-clamp-2">{edits.name || svc.name}</p>
+                          </div>
+                        </div>
+
+                        {/* Controlled URL input (Fix 4) */}
+                        <div>
+                          <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1.5 flex items-center gap-1.5">
+                            <Image className="w-3 h-3 text-brand-rose" /> Cover Image URL
+                          </label>
+                          <input
+                            type="text"
+                            value={edits.imageUrl}
+                            placeholder="https://... or /filename.jpg"
+                            onChange={(e) => patchServiceEdit(svc.id, { imageUrl: e.target.value })}
+                            className="w-full px-3 py-2 bg-white border border-brand-warm-tan/30 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-rose/20 text-brand-dark"
+                          />
+                        </div>
+
+                        {/* File upload */}
+                        <div>
+                          <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1.5 flex items-center gap-1.5">
+                            <Camera className="w-3 h-3 text-brand-rose" /> Or Upload Photo
+                          </label>
+                          <ImageDropzone
+                            imageValue={edits.imageUrl}
+                            onImageChange={(img) => {
+                              patchServiceEdit(svc.id, { imageUrl: img });
+                              updateService(svc.id, { image: img });
+                              triggerToast(`✓ "${svc.name}" cover updated!`, 'success');
+                            }}
+                            label="Drop photo or click to upload"
+                            prefersReducedMotion={prefersReducedMotion}
+                          />
+                        </div>
+
+                        {/* Save URL + Delete row */}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              if (!checkPermission(['super_admin', 'content_manager'])) return;
+                              const url = edits.imageUrl.trim();
+                              if (!url) { triggerToast('Please enter an image URL.', 'error'); return; }
+                              updateService(svc.id, { image: url });
+                              triggerToast(`✓ "${svc.name}" cover updated and live!`, 'success');
+                            }}
+                            className="flex-1 py-2 text-[10.5px] font-extrabold bg-brand-rose hover:bg-brand-berry text-white rounded-xl uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 focus:outline-none"
+                          >
+                            <Save className="w-3.5 h-3.5" /> Save Cover
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (!checkPermission(['super_admin'])) return;
+                              if (!window.confirm(`Delete "${svc.name}"? This cannot be undone.`)) return;
+                              deleteService(svc.id);
+                              triggerToast(`"${svc.name}" deleted.`, 'success');
+                            }}
+                            className="px-3 py-2 text-[10.5px] font-extrabold bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl uppercase tracking-wider transition-all flex items-center justify-center gap-1 focus:outline-none"
+                            title="Delete service"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {services.map((svc) => (
-                  <div key={svc.id} className="bg-[#FAF6F0] border border-brand-warm-tan/20 rounded-2xl p-4 space-y-4">
-                    {/* Current cover preview */}
-                    <div className="relative aspect-[16/9] overflow-hidden rounded-xl border border-brand-warm-tan/20 bg-brand-beige">
-                      <img
-                        src={svc.image}
-                        alt={svc.name}
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-brand-dark/60 via-transparent to-transparent flex items-end p-3">
-                        <p className="text-white text-[10px] font-bold font-serif leading-tight line-clamp-2">{svc.name}</p>
+              {/* ── Text Editor ── */}
+              <div className="bg-white border border-[#E5D5C8]/80 rounded-3xl p-6 sm:p-8 space-y-8 shadow-[0_4px_25px_-4px_rgba(74,43,32,0.02)] animate-fade-in">
+                <div className="flex items-center gap-3 border-b border-[#E5D5C8]/30 pb-3">
+                  <span className="w-1.5 h-6 bg-brand-rose rounded-full shrink-0"></span>
+                  <div>
+                    <h3 className="font-serif text-base sm:text-lg font-bold text-brand-dark">Services Text Editor</h3>
+                    <p className="font-sans text-[10px] text-zinc-400 mt-0.5">Edit name, price, description, bullet points, and disclaimer. Changes go live on Save.</p>
+                  </div>
+                </div>
+
+                {services.map((svc, svcIdx) => {
+                  const edits = serviceEdits[svc.id];
+                  if (!edits) return null;
+                  return (
+                    <div key={svc.id} className="border border-brand-warm-tan/20 rounded-2xl overflow-hidden">
+                      {/* Header bar */}
+                      <div className="bg-brand-dark px-5 py-3 flex items-center justify-between">
+                        <span className="font-serif text-sm text-white font-normal">{edits.name || svc.name}</span>
+                        <span className="text-[9px] font-bold text-brand-rose uppercase tracking-widest">Service {svcIdx + 1}</span>
+                      </div>
+
+                      <div className="p-5 space-y-5 bg-[#FAF6F0]">
+
+                        {/* Name + Price */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          <div className="sm:col-span-2">
+                            <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1.5">Service Name</label>
+                            <input
+                              type="text"
+                              value={edits.name}
+                              onChange={(e) => patchServiceEdit(svc.id, { name: e.target.value })}
+                              placeholder="e.g. Hair Assessment Guidance Call"
+                              className="w-full px-3 py-2.5 bg-white border border-brand-warm-tan/30 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-rose/20 text-brand-dark font-medium"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1.5">Price ($)</label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={edits.price}
+                              onChange={(e) => patchServiceEdit(svc.id, { price: e.target.value })}
+                              placeholder="100.00"
+                              className="w-full px-3 py-2.5 bg-white border border-brand-warm-tan/30 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-rose/20 text-brand-dark font-medium"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Description */}
+                        <div>
+                          <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1.5">Description</label>
+                          <textarea
+                            rows={3}
+                            value={edits.description}
+                            onChange={(e) => patchServiceEdit(svc.id, { description: e.target.value })}
+                            placeholder="Describe what this service includes and who it's for..."
+                            className="w-full px-3 py-2.5 bg-white border border-brand-warm-tan/30 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-rose/20 text-brand-dark leading-relaxed resize-none"
+                          />
+                        </div>
+
+                        {/* What's Included */}
+                        <div>
+                          <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1.5 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span>
+                            What's Included <span className="font-normal normal-case">(one per line)</span>
+                          </label>
+                          <textarea
+                            rows={4}
+                            value={edits.included}
+                            onChange={(e) => patchServiceEdit(svc.id, { included: e.target.value })}
+                            className="w-full px-3 py-2.5 bg-white border border-brand-warm-tan/30 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-rose/20 text-brand-dark leading-relaxed font-mono"
+                          />
+                          <p className="text-[9px] text-zinc-400 mt-1">Each line becomes a bullet point on the services page.</p>
+                        </div>
+
+                        {/* Benefits */}
+                        <div>
+                          <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1.5 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-brand-rose inline-block"></span>
+                            Benefits / Bonuses <span className="font-normal normal-case">(one per line)</span>
+                          </label>
+                          <textarea
+                            rows={3}
+                            value={edits.benefits}
+                            onChange={(e) => patchServiceEdit(svc.id, { benefits: e.target.value })}
+                            className="w-full px-3 py-2.5 bg-white border border-brand-warm-tan/30 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-rose/20 text-brand-dark leading-relaxed font-mono"
+                          />
+                        </div>
+
+                        {/* Notice */}
+                        <div>
+                          <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1.5 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>
+                            Notice / Important Info <span className="font-normal normal-case">(one per line)</span>
+                          </label>
+                          <textarea
+                            rows={3}
+                            value={edits.notice}
+                            onChange={(e) => patchServiceEdit(svc.id, { notice: e.target.value })}
+                            className="w-full px-3 py-2.5 bg-white border border-brand-warm-tan/30 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-rose/20 text-brand-dark leading-relaxed font-mono"
+                          />
+                        </div>
+
+                        {/* Disclaimer */}
+                        <div>
+                          <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1.5">Disclaimer</label>
+                          <input
+                            type="text"
+                            value={edits.disclaimer}
+                            onChange={(e) => patchServiceEdit(svc.id, { disclaimer: e.target.value })}
+                            placeholder="This is a virtual consultation. Not a physical product..."
+                            className="w-full px-3 py-2.5 bg-white border border-brand-warm-tan/30 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-rose/20 text-brand-dark"
+                          />
+                        </div>
+
+                        {/* Save */}
+                        <button
+                          onClick={() => {
+                            if (!checkPermission(['super_admin', 'content_manager'])) return;
+                            const parseLines = (raw: string) => raw.split('\n').map(l => l.trim()).filter(Boolean);
+                            const name = edits.name.trim();
+                            if (!name) { triggerToast('Service name cannot be empty.', 'error'); return; }
+                            const included = parseLines(edits.included);
+                            const benefits = parseLines(edits.benefits);
+                            const notice   = parseLines(edits.notice);
+                            updateService(svc.id, {
+                              name,
+                              price:       parseFloat(edits.price) || svc.price,
+                              description: edits.description.trim() || svc.description,
+                              included:    included.length ? included : svc.included,
+                              benefits:    benefits.length ? benefits : svc.benefits,
+                              notice:      notice.length   ? notice   : svc.notice,
+                              disclaimer:  edits.disclaimer.trim() || svc.disclaimer,
+                            });
+                            triggerToast(`✓ "${name}" updated and live!`, 'success');
+                          }}
+                          className="w-full py-2.5 text-[10.5px] font-extrabold bg-brand-rose hover:bg-brand-berry text-white rounded-xl uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 focus:outline-none"
+                        >
+                          <Save className="w-3.5 h-3.5" /> Save All Text Changes
+                        </button>
                       </div>
                     </div>
-
-                    {/* Image URL field */}
-                    <div>
-                      <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1.5 flex items-center gap-1.5">
-                        <Image className="w-3 h-3 text-brand-rose" /> Cover Image URL
-                      </label>
-                      <input
-                        type="text"
-                        defaultValue={svc.image}
-                        id={`service-img-url-${svc.id}`}
-                        placeholder="https://... or /filename.jpg"
-                        className="w-full px-3 py-2 bg-white border border-brand-warm-tan/30 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-rose/20 text-brand-dark"
-                      />
-                    </div>
-
-                    {/* File upload */}
-                    <div>
-                      <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1.5 flex items-center gap-1.5">
-                        <Camera className="w-3 h-3 text-brand-rose" /> Or Upload Photo
-                      </label>
-                      <ImageDropzone
-                        imageValue={svc.image}
-                        onImageChange={(img) => {
-                          updateService(svc.id, { image: img });
-                          const el = document.getElementById(`service-img-url-${svc.id}`) as HTMLInputElement;
-                          if (el) el.value = img;
-                          triggerToast(`✓ "${svc.name}" cover updated!`, 'success');
-                        }}
-                        label="Drop photo or click to upload"
-                        prefersReducedMotion={prefersReducedMotion}
-                      />
-                    </div>
-
-                    {/* Save URL button + Delete button row */}
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => {
-                          if (!checkPermission(['super_admin', 'content_manager'])) return;
-                          const el = document.getElementById(`service-img-url-${svc.id}`) as HTMLInputElement;
-                          const url = el?.value?.trim();
-                          if (!url) { triggerToast('Please enter an image URL.', 'error'); return; }
-                          updateService(svc.id, { image: url });
-                          triggerToast(`✓ "${svc.name}" cover updated and live!`, 'success');
-                        }}
-                        className="flex-1 py-2 text-[10.5px] font-extrabold bg-brand-rose hover:bg-brand-berry text-white rounded-xl uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 focus:outline-none"
-                      >
-                        <Save className="w-3.5 h-3.5" /> Save Cover
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (!checkPermission(['super_admin'])) return;
-                          if (!window.confirm(`Delete "${svc.name}"? This cannot be undone.`)) return;
-                          deleteService(svc.id);
-                          triggerToast(`"${svc.name}" deleted.`, 'success');
-                        }}
-                        className="px-3 py-2 text-[10.5px] font-extrabold bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl uppercase tracking-wider transition-all flex items-center justify-center gap-1 focus:outline-none"
-                        title="Delete service"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -2624,15 +2883,32 @@ export const AdminPortal: React.FC = () => {
                           <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Full Article Body *</label>
                           <textarea rows={6} value={blogContent} onChange={e => setBlogContent(e.target.value)} placeholder="Write the full blog post content here..." className="w-full px-3 py-2 bg-white border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 text-brand-dark leading-relaxed" />
                         </div>
+                        <div className="sm:col-span-2 flex items-center gap-3">
+                          <label className="block text-[10px] uppercase font-bold text-brand-chocolate">Status</label>
+                          <button
+                            type="button"
+                            onClick={() => setBlogStatus(s => s === 'published' ? 'draft' : 'published')}
+                            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${
+                              blogStatus === 'published'
+                                ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                : 'bg-zinc-100 text-zinc-500 border border-zinc-200'
+                            }`}
+                          >
+                            <span className={`w-1.5 h-1.5 rounded-full ${blogStatus === 'published' ? 'bg-emerald-500' : 'bg-zinc-400'}`}></span>
+                            {blogStatus === 'published' ? 'Published' : 'Draft'}
+                          </button>
+                          <span className="text-[9px] text-zinc-400">Drafts are hidden from visitors</span>
+                        </div>
                       </div>
                       <div className="flex justify-end gap-2 pt-2">
                         <button onClick={() => setIsAddingBlog(false)} className="px-4 py-2 text-[10.5px] font-bold text-brand-chocolate bg-brand-cream border border-[#E5D5C8] rounded-xl hover:bg-brand-beige transition-all">Cancel</button>
                         <button
                           onClick={() => {
                             if (!blogTitle.trim() || !blogContent.trim()) { triggerToast('Title and content are required.', 'error'); return; }
-                            addBlogPost({ title: blogTitle.trim(), excerpt: blogExcerpt.trim(), content: blogContent.trim(), readTime: blogReadTime, image: blogImage || 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&q=80&w=800', category: blogCategory });
-                            triggerToast(`✓ "${blogTitle}" published to blog!`, 'success');
+                            addBlogPost({ title: blogTitle.trim(), excerpt: blogExcerpt.trim(), content: blogContent.trim(), readTime: blogReadTime, image: blogImage || 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&q=80&w=800', category: blogCategory, status: blogStatus });
+                            triggerToast(`✓ "${blogTitle}" ${blogStatus === 'draft' ? 'saved as draft' : 'published to blog'}!`, 'success');
                             setIsAddingBlog(false);
+                            setBlogStatus('published');
                           }}
                           className="px-5 py-2 text-[10.5px] font-extrabold bg-brand-rose hover:bg-brand-berry text-white rounded-xl uppercase tracking-wider transition-all flex items-center gap-1.5 focus:outline-none"
                         >
@@ -2669,7 +2945,10 @@ export const AdminPortal: React.FC = () => {
                             </td>
                             <td className="p-3 font-semibold max-w-[200px]">
                               <p className="line-clamp-2 leading-snug">{post.title}</p>
-                              <p className="text-[10px] text-[#A67E6B] font-normal mt-0.5">{post.readTime}</p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <p className="text-[10px] text-[#A67E6B] font-normal">{post.readTime}</p>
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded ${post.status === 'draft' ? 'bg-zinc-100 text-zinc-500' : 'bg-emerald-50 text-emerald-700'}`}>{post.status || 'published'}</span>
+                              </div>
                             </td>
                             <td className="p-3 font-mono">{post.category}</td>
                             <td className="p-3 text-[#A67E6B]">{post.date}</td>
@@ -2685,6 +2964,7 @@ export const AdminPortal: React.FC = () => {
                                     setBlogReadTime(post.readTime);
                                     setBlogImage(post.image);
                                     setBlogCategory(post.category);
+                                    setBlogStatus(post.status || 'published');
                                     setIsAddingBlog(false);
                                     setEditingBlogId(post.id);
                                   }}
@@ -2757,14 +3037,30 @@ export const AdminPortal: React.FC = () => {
                                       <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Full Article Body *</label>
                                       <textarea rows={8} value={blogContent} onChange={e => setBlogContent(e.target.value)} className="w-full px-3 py-2 bg-white border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 text-brand-dark leading-relaxed" />
                                     </div>
+                                    <div className="sm:col-span-2 flex items-center gap-3">
+                                      <label className="block text-[10px] uppercase font-bold text-brand-chocolate">Status</label>
+                                      <button
+                                        type="button"
+                                        onClick={() => setBlogStatus(s => s === 'published' ? 'draft' : 'published')}
+                                        className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${
+                                          blogStatus === 'published'
+                                            ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                            : 'bg-zinc-100 text-zinc-500 border border-zinc-200'
+                                        }`}
+                                      >
+                                        <span className={`w-1.5 h-1.5 rounded-full ${blogStatus === 'published' ? 'bg-emerald-500' : 'bg-zinc-400'}`}></span>
+                                        {blogStatus === 'published' ? 'Published' : 'Draft'}
+                                      </button>
+                                      <span className="text-[9px] text-zinc-400">Drafts are hidden from visitors</span>
+                                    </div>
                                   </div>
                                   <div className="flex justify-end gap-2 pt-2">
                                     <button onClick={() => setEditingBlogId(null)} className="px-4 py-2 text-[10.5px] font-bold text-brand-chocolate bg-brand-cream border border-[#E5D5C8] rounded-xl hover:bg-brand-beige transition-all">Cancel</button>
                                     <button
                                       onClick={() => {
                                         if (!blogTitle.trim() || !blogContent.trim()) { triggerToast('Title and content are required.', 'error'); return; }
-                                        updateBlogPost(post.id, { title: blogTitle.trim(), excerpt: blogExcerpt.trim(), content: blogContent.trim(), readTime: blogReadTime, image: blogImage || post.image, category: blogCategory });
-                                        triggerToast(`✓ "${blogTitle}" updated and live!`, 'success');
+                                        updateBlogPost(post.id, { title: blogTitle.trim(), excerpt: blogExcerpt.trim(), content: blogContent.trim(), readTime: blogReadTime, image: blogImage || post.image, category: blogCategory, status: blogStatus });
+                                        triggerToast(`✓ "${blogTitle}" ${blogStatus === 'draft' ? 'saved as draft' : 'updated and live'}!`, 'success');
                                         setEditingBlogId(null);
                                       }}
                                       className="px-5 py-2 text-[10.5px] font-extrabold bg-brand-rose hover:bg-brand-berry text-white rounded-xl uppercase tracking-wider transition-all flex items-center gap-1.5 focus:outline-none"

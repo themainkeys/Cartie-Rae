@@ -88,6 +88,7 @@ export interface BlogPost {
   date: string;
   category: string;
   likes: number;
+  status?: 'published' | 'draft'; // draft posts are hidden from the public About page
 }
 
 export interface DiscountCode {
@@ -167,7 +168,6 @@ export interface AdminUser {
   email: string;
   role: AdminRole;
 }
-
 export interface SecureDownloadToken {
   orderId: string;
   email: string;
@@ -175,4 +175,3 @@ export interface SecureDownloadToken {
   expiresAt: string; // ISO string
   token: string; // signature
 }
-

@@ -28,7 +28,7 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({ openCart }) => {
     visible: { 
       opacity: 1, 
       y: 0,
-      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as any }
+      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const }
     }
   };
 
@@ -60,11 +60,28 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({ openCart }) => {
           >
             {/* Header Portrait/Cover */}
             <div className="relative aspect-[16/9] bg-brand-beige overflow-hidden">
-              <img 
-                src={service.image} 
-                alt={service.name} 
-                className="w-full h-full object-cover"
-              />
+              {service.image ? (
+                <img 
+                  src={service.image} 
+                  alt={service.name} 
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const el = e.target as HTMLImageElement;
+                    el.style.display = 'none';
+                    const parent = el.parentElement;
+                    if (parent && !parent.querySelector('.img-fallback')) {
+                      const fb = document.createElement('div');
+                      fb.className = 'img-fallback w-full h-full flex items-center justify-center bg-gradient-to-br from-brand-beige to-brand-warm-tan/40';
+                      fb.innerHTML = `<span style="font-size:10px;color:#8C6D62;font-family:serif;letter-spacing:0.05em;text-transform:uppercase">${service.name}</span>`;
+                      parent.appendChild(fb);
+                    }
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-brand-beige to-brand-warm-tan/40">
+                  <span className="font-serif text-[10px] text-[#8C6D62] uppercase tracking-wider">{service.name}</span>
+                </div>
+              )}
               <div className="absolute inset-0 bg-gradient-to-t from-brand-dark/65 via-brand-dark/15 to-transparent flex items-end p-6 sm:p-8">
                 <div className="space-y-1">
                   <span className="text-[10px] uppercase tracking-widest text-brand-pink font-bold font-mono">

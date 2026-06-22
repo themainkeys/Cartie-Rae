@@ -224,7 +224,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [discountCodes, setDiscountCodes] = useState<DiscountCode[]>(() => {
     const local = localStorage.getItem('cartiae_discounts');
-    return local ? JSON.parse(local) : initialDiscountCodes;
+    const base: DiscountCode[] = local ? JSON.parse(local) : initialDiscountCodes;
+    return filterTombstoned(base, TOMBSTONE_KEYS.discounts);
   });
 
   const [homepageContent, setHomepageContent] = useState<HomepageContent>(() => {
