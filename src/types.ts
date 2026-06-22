@@ -40,7 +40,9 @@ export interface TikTokVideo {
   title: string;
   views: string;
   category: 'Wash Day' | 'Styling' | 'Protective Styles' | 'Growth Tips' | 'Product Reviews' | 'Tutorials';
-  videoUrl: string; // Embed source or simulated link
+  videoUrl: string;       // Primary playable URL: uploaded MP4/WebM, blob:, or YouTube embed
+  tiktokUrl?: string;     // Optional: external TikTok link (opens in new tab / shown as social button)
+  youtubeUrl?: string;    // Optional: YouTube fallback when no uploaded video exists
   thumbnailUrl: string;
   description?: string;
   relatedIds?: string[];
@@ -58,6 +60,7 @@ export interface TikTokVideo {
   ebookAddClicks?: number;
   conversionCount?: number;
 }
+
 
 export interface PhotoGalleryItem {
   id: string;
