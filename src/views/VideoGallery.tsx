@@ -220,18 +220,32 @@ const VideoFeedCard = React.forwardRef<HTMLDivElement, VideoFeedCardProps>(
             )
           )}
 
-          {/* TikTok — thumbnail always (cross-origin iframe autoplay blocked) */}
-          {resolved.type === 'tiktok' && thumbnailSrc && (
-            <img
-              src={thumbnailSrc}
-              alt={video.title}
-              referrerPolicy="no-referrer"
-              className="absolute inset-0 w-full h-full object-cover"
-            />
+          {/* TikTok — inline embed when active so user can tap-play on site */}
+          {resolved.type === 'tiktok' && (
+            isActive ? (
+              <iframe
+                key={`tiktok-${video.id}`}
+                title={video.title}
+                src={`https://www.tiktok.com/embed/v2/${resolved.id}?autoplay=0&music_info=0&description=0`}
+                className="absolute inset-0 w-full h-full"
+                allow="autoplay; fullscreen"
+                scrolling="no"
+                frameBorder="0"
+              />
+            ) : (
+              thumbnailSrc && (
+                <img
+                  src={thumbnailSrc}
+                  alt={video.title}
+                  referrerPolicy="no-referrer"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              )
+            )
           )}
 
-          {/* Fallback gradient for empty thumbnail */}
-          {!thumbnailSrc && resolved.type !== 'direct' && (
+          {/* No blank fallback */}
+          {!thumbnailSrc && resolved.type !== 'direct' && resolved.type !== 'tiktok' && (
             <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 flex items-center justify-center">
               <Play className="w-10 h-10 text-white/15" />
             </div>
@@ -242,21 +256,7 @@ const VideoFeedCard = React.forwardRef<HTMLDivElement, VideoFeedCardProps>(
         <div className="absolute inset-0 bg-gradient-to-t from-black/88 via-black/18 to-transparent pointer-events-none" />
         <div className="absolute inset-0 bg-gradient-to-r from-black/12 via-transparent to-black/25 pointer-events-none" />
 
-        {/* ── TikTok: Open button (centered) ── */}
-        {resolved.type === 'tiktok' && isActive && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-            <a
-              href={`https://www.tiktok.com/@cartiaerae/video/${resolved.id}`}
-              target="_blank"
-              rel="noreferrer noopener"
-              onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-2 bg-white/95 hover:bg-[#B11B41] text-black hover:text-white px-6 py-3 rounded-2xl text-[11px] font-extrabold uppercase tracking-widest shadow-2xl transition-all duration-300 pointer-events-auto"
-            >
-              <TikTokSvg className="w-4 h-4 fill-current" />
-              Open on TikTok ↗
-            </a>
-          </div>
-        )}
+        {/* TikTok: remove redirect button — video plays inline via iframe above */}
 
         {/* ── Overlay (fades in/out) ── */}
         <div
@@ -839,33 +839,19 @@ export const VideoGallery: React.FC = () => {
                   />
                 )}
 
-                {/* TikTok */}
+                {/* TikTok — inline embed in modal so video plays on-site */}
                 {modalResolved.type === 'tiktok' && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-5 bg-zinc-950">
-                    {modalVideo.thumbnailUrl && (
-                      <img
-                        src={modalVideo.thumbnailUrl}
-                        alt={modalVideo.title}
-                        referrerPolicy="no-referrer"
-                        className="w-full max-h-[52%] object-cover rounded-xl opacity-55"
-                      />
-                    )}
-                    <div className="text-center space-y-3">
-                      <p className="text-white/55 text-[9px] uppercase tracking-widest font-bold">TikTok Content</p>
-                      <p className="text-white font-serif text-sm leading-snug px-2">{modalVideo.title}</p>
-                      <a
-                        href={`https://www.tiktok.com/@cartiaerae/video/${modalResolved.id}`}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                        onClick={(e) => e.stopPropagation()}
-                        className="inline-flex items-center gap-2 bg-white hover:bg-[#B11B41] text-black hover:text-white px-5 py-2.5 rounded-xl text-[10px] uppercase font-extrabold tracking-widest transition-all"
-                      >
-                        <TikTokSvg />
-                        Open on TikTok
-                      </a>
-                    </div>
-                  </div>
+                  <iframe
+                    key={`modal-tiktok-${modalVideo.id}`}
+                    title={modalVideo.title}
+                    src={`https://www.tiktok.com/embed/v2/${modalResolved.id}?autoplay=0&music_info=0&description=0`}
+                    className="absolute inset-0 w-full h-full"
+                    allow="autoplay; fullscreen"
+                    scrolling="no"
+                    frameBorder="0"
+                  />
                 )}
+
 
                 {/* Direct MP4 */}
                 {modalResolved.type === 'direct' && (
