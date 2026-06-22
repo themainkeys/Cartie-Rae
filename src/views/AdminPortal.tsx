@@ -425,6 +425,8 @@ export const AdminPortal: React.FC = () => {
   const [viewingAnalyticsVideo, setViewingAnalyticsVideo] = useState<TikTokVideo | null>(null);
   const [uploadedVideoFile, setUploadedVideoFile] = useState<File | null>(null);
   const [uploadedThumbFile, setUploadedThumbFile] = useState<File | null>(null);
+  const [vidTiktokUrl, setVidTiktokUrl] = useState('');
+  const [vidYoutubeUrl, setVidYoutubeUrl] = useState('');
 
   // Automatic YouTube/TikTok URL detector and thumbnail resolver
   useEffect(() => {
@@ -841,6 +843,8 @@ export const AdminPortal: React.FC = () => {
     setVidIsFeatured(false);
     setVidStatus('published');
     setVidScheduledAt('');
+    setVidTiktokUrl('');
+    setVidYoutubeUrl('');
     setUploadedVideoFile(null);
     setUploadedThumbFile(null);
     setIsAddingVideo(false);
@@ -895,6 +899,8 @@ export const AdminPortal: React.FC = () => {
       relatedIds: vidRelatedIds,
       isFeatured: vidIsFeatured,
       status: vidStatus,
+      tiktokUrl: vidTiktokUrl.trim() || undefined,
+      youtubeUrl: vidYoutubeUrl.trim() || undefined,
       scheduledAt: vidStatus === 'scheduled' ? vidScheduledAt : undefined,
       featuredOrder: fOrder,
     };
@@ -3171,33 +3177,32 @@ export const AdminPortal: React.FC = () => {
                       {editingVideoId ? `Edit Video Masterclass` : 'Add New Video Masterclass'}
                     </p>
                     <div className="space-y-4">
-                      {/* ── 1. Video Link (most important — shown first) ── */}
-                      <div className="space-y-2">
-                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate">Video Link *</label>
-                        <input
-                          id="vid-url-input"
-                          type="url"
-                          required
-                          value={vidUrl}
-                          onChange={(e) => {
-                            setVidUrl(e.target.value);
-                            setUploadedVideoFile(null);
-                          }}
-                          placeholder="https://www.tiktok.com/@username/video/... or YouTube or MP4 link"
-                          className="w-full px-3 py-2.5 bg-brand-cream border border-brand-warm-tan/30 rounded-lg focus:outline-none font-mono text-[11px] placeholder:text-brand-dark/30"
-                        />
-                        {/* Live type detection badge */}
-                        {vidUrl.trim() && (() => {
-                          const res = resolveVideoSource(vidUrl);
-                          if (res.type === 'tiktok') return <span className="inline-flex items-center gap-1 bg-black text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"><svg viewBox="0 0 24 24" className="w-2.5 h-2.5 fill-white"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.34 6.34 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.27 8.27 0 0 0 4.84 1.56V6.78a4.85 4.85 0 0 1-1.07-.09z"/></svg> TikTok detected</span>;
-                          if (res.type === 'youtube') return <span className="inline-flex items-center gap-1 bg-red-600 text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">🔴 YouTube{vidUrl.includes('/shorts/') ? ' Shorts' : ''} detected</span>;
-                          if (res.type === 'direct') return <span className="inline-flex items-center gap-1 bg-zinc-700 text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">■ MP4 / Direct video detected</span>;
-                          return null;
-                        })()}
-                        <p className="text-[9px] text-brand-dark/40 leading-relaxed">
-                          Paste any TikTok, YouTube, YouTube Shorts, or direct MP4 link. No embed code needed.
-                        </p>
-                      </div>
+                       {/* ── 1. Primary Video (upload or URL) ── */}
+                       <div className="space-y-2">
+                         <label className="block text-[10px] uppercase font-bold text-brand-chocolate">Primary Video *</label>
+                         <input
+                           id="vid-url-input"
+                           type="url"
+                           required
+                           value={vidUrl}
+                           onChange={(e) => {
+                             setVidUrl(e.target.value);
+                             setUploadedVideoFile(null);
+                           }}
+                           placeholder="Paste MP4/WebM URL or YouTube URL (TikTok → use Social Links below)"
+                           className="w-full px-3 py-2.5 bg-brand-cream border border-brand-warm-tan/30 rounded-lg focus:outline-none font-mono text-[11px] placeholder:text-brand-dark/30"
+                         />
+                         {/* Live type detection badge */}
+                         {vidUrl.trim() && (() => {
+                           const res = resolveVideoSource(vidUrl);
+                           if (res.type === 'youtube') return <span className="inline-flex items-center gap-1 bg-red-600 text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">🔴 YouTube{vidUrl.includes('/shorts/') ? ' Shorts' : ''} detected</span>;
+                           if (res.type === 'direct') return <span className="inline-flex items-center gap-1 bg-zinc-700 text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">■ MP4 / Direct video detected ✓ will autoplay</span>;
+                           return null;
+                         })()}
+                         <p className="text-[9px] text-brand-dark/40 leading-relaxed">
+                           For best autoplay: upload MP4 or paste YouTube URL. Add TikTok link in Social Links below.
+                         </p>
+                       </div>
 
                       {/* ── 2. Video Title ── */}
                       <div>
@@ -3241,7 +3246,41 @@ export const AdminPortal: React.FC = () => {
                         />
                       </div>
 
-                      {/* ── 5. Thumbnail URL (optional) ── */}
+                       {/* ── 4b. Social Links (TikTok + YouTube) ── */}
+                       <div className="border border-brand-warm-tan/30 rounded-xl p-3 space-y-3 bg-brand-cream/40">
+                         <p className="text-[9px] uppercase font-extrabold text-brand-chocolate tracking-wider">Social Links <span className="font-normal text-brand-dark/40 normal-case">(optional)</span></p>
+                         <div className="space-y-2">
+                           <label className="block text-[10px] uppercase font-bold text-brand-chocolate">
+                             TikTok Link
+                           </label>
+                           <input
+                             id="vid-tiktok-url"
+                             type="url"
+                             value={vidTiktokUrl}
+                             onChange={(e) => setVidTiktokUrl(e.target.value)}
+                             placeholder="https://www.tiktok.com/@cartiaerae/video/..."
+                             className="w-full px-3 py-2 bg-white border border-brand-warm-tan/30 rounded-lg focus:outline-none font-mono text-[11px] placeholder:text-brand-dark/25"
+                           />
+                           <p className="text-[9px] text-brand-dark/35">
+                             Shown as a &ldquo;Watch on TikTok&rdquo; button in the feed. Does not affect autoplay.
+                           </p>
+                         </div>
+                         <div className="space-y-2">
+                           <label className="block text-[10px] uppercase font-bold text-brand-chocolate">
+                             YouTube Link <span className="text-brand-dark/40 font-normal normal-case">(fallback if no video file)</span>
+                           </label>
+                           <input
+                             id="vid-youtube-url"
+                             type="url"
+                             value={vidYoutubeUrl}
+                             onChange={(e) => setVidYoutubeUrl(e.target.value)}
+                             placeholder="https://www.youtube.com/watch?v=... or /embed/..."
+                             className="w-full px-3 py-2 bg-white border border-brand-warm-tan/30 rounded-lg focus:outline-none font-mono text-[11px] placeholder:text-brand-dark/25"
+                           />
+                         </div>
+                       </div>
+
+                       {/* ── 5. Thumbnail URL ── */}
                       <div>
                         <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Thumbnail URL <span className="text-brand-dark/40 font-normal normal-case">(optional — auto-generated for YouTube)</span></label>
                         <input
@@ -3584,6 +3623,8 @@ export const AdminPortal: React.FC = () => {
                                   setVidIsFeatured(!!vid.isFeatured);
                                   setVidStatus(vid.status || 'published');
                                   setVidScheduledAt(vid.scheduledAt || '');
+                                  setVidTiktokUrl(vid.tiktokUrl || '');
+                                  setVidYoutubeUrl(vid.youtubeUrl || '');
                                   setUploadedVideoFile(null);
                                   setUploadedThumbFile(null);
                                   setEditingVideoId(vid.id);

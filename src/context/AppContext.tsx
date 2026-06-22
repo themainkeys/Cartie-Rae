@@ -153,12 +153,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (local) {
       try {
         const parsed = JSON.parse(local) as TikTokVideo[];
+
+        // ── Migration: move legacy TikTok URLs from videoUrl → tiktokUrl ─────
+        // This runs once per load and self-heals old localStorage data where
+        // TikTok links were incorrectly stored as the primary videoUrl.
+        const isTikTokUrl = (url: string) =>
+          url.includes('tiktok.com') || /^\d{18,20}$/.test(url.trim());
+
         base = parsed.map(item => {
-          if (item.thumbnailUrl && item.thumbnailUrl.includes('photo-1608139556157-196be06511fc')) {
-            return { ...item, thumbnailUrl: '/about-portrait.jpg' };
+          // Fix broken thumbnail URL from an earlier migration
+          const fixedThumb = item.thumbnailUrl?.includes('photo-1608139556157-196be06511fc')
+            ? '/about-portrait.jpg'
+            : item.thumbnailUrl;
+
+          const url = (item.videoUrl || '').trim();
+
+          if (url && isTikTokUrl(url)) {
+            // videoUrl is a TikTok link — migrate to tiktokUrl
+            return {
+              ...item,
+              thumbnailUrl: fixedThumb,
+              // Preserve tiktokUrl if admin already set one; otherwise use the migrated URL
+              tiktokUrl: item.tiktokUrl || url,
+              // Clear videoUrl — this becomes a TikTok-only card
+              // (frontend will show thumbnail + Watch on TikTok button)
+              videoUrl: '',
+            };
           }
-          return item;
+
+          // videoUrl is already MP4/YouTube/empty — no migration needed
+          return { ...item, thumbnailUrl: fixedThumb };
         });
+        // ──────────────────────────────────────────────────────────────────────
       } catch (e) {
         base = initialVideos;
       }
@@ -167,6 +193,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     return filterTombstoned(base, TOMBSTONE_KEYS.videos);
   });
+
 
   const [gallery, setGallery] = useState<PhotoGalleryItem[]>(() => {
     const tombstoned = readTombstones(TOMBSTONE_KEYS.gallery);

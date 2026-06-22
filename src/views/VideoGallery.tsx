@@ -11,11 +11,9 @@ import { motion, AnimatePresence } from 'motion/react';
 // ─── Utility: Resolve video type from URL ───────────────────────────────────
 
 const resolveVideoSource = (url: string) => {
-  const cleanUrl = url.trim();
+  const cleanUrl = (url || '').trim();
+  if (!cleanUrl) return { type: 'none' as const, id: '', url: '' };
 
-  if (/^\d{18,20}$/.test(cleanUrl)) {
-    return { type: 'tiktok' as const, id: cleanUrl, url: `https://www.tiktok.com/embed/v2/${cleanUrl}` };
-  }
   if (cleanUrl.includes('youtube.com') || cleanUrl.includes('youtu.be')) {
     let videoId = '';
     if (cleanUrl.includes('/embed/')) videoId = cleanUrl.split('/embed/')[1]?.split('?')[0] || '';
@@ -24,13 +22,10 @@ const resolveVideoSource = (url: string) => {
     else if (cleanUrl.includes('youtu.be/')) videoId = cleanUrl.split('youtu.be/')[1]?.split('?')[0] || '';
     return { type: 'youtube' as const, id: videoId, url: videoId ? `https://www.youtube.com/embed/${videoId}` : cleanUrl };
   }
-  if (cleanUrl.includes('tiktok.com')) {
-    const m = cleanUrl.match(/\/video\/(\d+)/) || cleanUrl.match(/\/embed\/v2\/(\d+)/) || cleanUrl.match(/\/embed\/(\d+)/) || cleanUrl.match(/(\d{18,20})/);
-    const videoId = m ? m[1] || m[0] : '';
-    return { type: 'tiktok' as const, id: videoId, url: videoId ? `https://www.tiktok.com/embed/v2/${videoId}` : cleanUrl };
-  }
+  // Anything else (MP4, WebM, blob:, data:, CDN URL) is treated as a direct video
   return { type: 'direct' as const, id: '', url: cleanUrl };
 };
+
 
 // ─── Static fallback related items ──────────────────────────────────────────
 
@@ -90,6 +85,7 @@ interface VideoFeedCardProps {
   isSaved: boolean;
   likesCount: number;
   relatedItems: RelatedItem[];
+  tiktokUrl?: string;
   onLike: () => void;
   onSave: () => void;
   onShare: () => void;
@@ -102,7 +98,7 @@ const VideoFeedCard = React.forwardRef<HTMLDivElement, VideoFeedCardProps>(
   (
     {
       video, cardHeight, isActive, isMuted, isLiked, isSaved,
-      likesCount, relatedItems, onLike, onSave, onShare,
+      likesCount, relatedItems, tiktokUrl, onLike, onSave, onShare,
       onShopClick, onToggleMute, prefersReducedMotion,
     },
     ref
@@ -112,7 +108,10 @@ const VideoFeedCard = React.forwardRef<HTMLDivElement, VideoFeedCardProps>(
     const [overlayVisible, setOverlayVisible] = useState(true);
     const overlayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const resolved = useMemo(() => resolveVideoSource(video.videoUrl), [video.videoUrl]);
+    const resolved = useMemo(() => resolveVideoSource(video.videoUrl || ''), [video.videoUrl]);
+
+    // isTikTokOnly: video has no playable source but has a TikTok social link
+    const isTikTokOnly = !resolved.url && !!video.tiktokUrl;
 
     const thumbnailSrc =
       video.thumbnailUrl ||
@@ -139,8 +138,9 @@ const VideoFeedCard = React.forwardRef<HTMLDivElement, VideoFeedCardProps>(
     useEffect(() => () => { if (overlayTimerRef.current) clearTimeout(overlayTimerRef.current); }, []);
 
     // ── Auto-play / pause direct video ───────────────────────────────────────
+    // Only attempt autoplay for direct (MP4/WebM) videos; TikTok-only cards skip this entirely
     useEffect(() => {
-      if (resolved.type !== 'direct' || !videoRef.current) return;
+      if (resolved.type !== 'direct' || isTikTokOnly || !videoRef.current) return;
       if (isActive) {
         videoRef.current.muted = isMuted;
         videoRef.current.play().catch(() => { /* autoplay blocked — user hasn't interacted yet */ });
@@ -220,8 +220,8 @@ const VideoFeedCard = React.forwardRef<HTMLDivElement, VideoFeedCardProps>(
             )
           )}
 
-          {/* TikTok — thumbnail always (cross-origin iframe autoplay blocked) */}
-          {resolved.type === 'tiktok' && thumbnailSrc && (
+          {/* TikTok-only card: show thumbnail as static background, no video/autoplay */}
+          {isTikTokOnly && thumbnailSrc && (
             <img
               src={thumbnailSrc}
               alt={video.title}
@@ -230,8 +230,16 @@ const VideoFeedCard = React.forwardRef<HTMLDivElement, VideoFeedCardProps>(
             />
           )}
 
-          {/* Fallback gradient for empty thumbnail */}
-          {!thumbnailSrc && resolved.type !== 'direct' && (
+          {/* TikTok-only: no thumbnail fallback */}
+          {isTikTokOnly && !thumbnailSrc && (
+            <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 flex flex-col items-center justify-center gap-2">
+              <TikTokSvg className="w-8 h-8 fill-white/20" />
+              <span className="text-white/30 text-[10px] uppercase tracking-widest font-bold">TikTok Video</span>
+            </div>
+          )}
+
+          {/* No-source fallback (not TikTok-only) */}
+          {!resolved.url && !isTikTokOnly && (
             <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 flex items-center justify-center">
               <Play className="w-10 h-10 text-white/15" />
             </div>
@@ -242,21 +250,6 @@ const VideoFeedCard = React.forwardRef<HTMLDivElement, VideoFeedCardProps>(
         <div className="absolute inset-0 bg-gradient-to-t from-black/88 via-black/18 to-transparent pointer-events-none" />
         <div className="absolute inset-0 bg-gradient-to-r from-black/12 via-transparent to-black/25 pointer-events-none" />
 
-        {/* ── TikTok: Open button (centered) ── */}
-        {resolved.type === 'tiktok' && isActive && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-            <a
-              href={`https://www.tiktok.com/@cartiaerae/video/${resolved.id}`}
-              target="_blank"
-              rel="noreferrer noopener"
-              onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-2 bg-white/95 hover:bg-[#B11B41] text-black hover:text-white px-6 py-3 rounded-2xl text-[11px] font-extrabold uppercase tracking-widest shadow-2xl transition-all duration-300 pointer-events-auto"
-            >
-              <TikTokSvg className="w-4 h-4 fill-current" />
-              Open on TikTok ↗
-            </a>
-          </div>
-        )}
 
         {/* ── Overlay (fades in/out) ── */}
         <div
@@ -301,6 +294,20 @@ const VideoFeedCard = React.forwardRef<HTMLDivElement, VideoFeedCardProps>(
                 <ShoppingBag className="w-3 h-3 shrink-0" />
                 Shop the Look ({relatedItems.length})
               </button>
+            )}
+
+            {/* Watch on TikTok (secondary, only if tiktokUrl provided) */}
+            {tiktokUrl && (
+              <a
+                href={tiktokUrl}
+                target="_blank"
+                rel="noreferrer noopener"
+                onClick={(e) => e.stopPropagation()}
+                className="flex items-center gap-1.5 bg-black/60 hover:bg-black text-white px-3 py-1.5 rounded-xl text-[9px] font-bold uppercase tracking-widest w-fit transition-all duration-200 border border-white/15 backdrop-blur-sm"
+              >
+                <TikTokSvg className="w-3 h-3 fill-white" />
+                Watch on TikTok
+              </a>
             )}
           </div>
 
@@ -711,6 +718,7 @@ export const VideoGallery: React.FC = () => {
                 isSaved={!!savedMap[video.id]}
                 likesCount={likesCountMap[video.id] ?? 0}
                 relatedItems={resolveRelatedItems(video)}
+                tiktokUrl={video.tiktokUrl}
                 onLike={() => handleLike(video.id)}
                 onSave={() => handleSave(video.id)}
                 onShare={() => handleShare(video.title, video.id)}
@@ -839,33 +847,6 @@ export const VideoGallery: React.FC = () => {
                   />
                 )}
 
-                {/* TikTok */}
-                {modalResolved.type === 'tiktok' && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-5 bg-zinc-950">
-                    {modalVideo.thumbnailUrl && (
-                      <img
-                        src={modalVideo.thumbnailUrl}
-                        alt={modalVideo.title}
-                        referrerPolicy="no-referrer"
-                        className="w-full max-h-[52%] object-cover rounded-xl opacity-55"
-                      />
-                    )}
-                    <div className="text-center space-y-3">
-                      <p className="text-white/55 text-[9px] uppercase tracking-widest font-bold">TikTok Content</p>
-                      <p className="text-white font-serif text-sm leading-snug px-2">{modalVideo.title}</p>
-                      <a
-                        href={`https://www.tiktok.com/@cartiaerae/video/${modalResolved.id}`}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                        onClick={(e) => e.stopPropagation()}
-                        className="inline-flex items-center gap-2 bg-white hover:bg-[#B11B41] text-black hover:text-white px-5 py-2.5 rounded-xl text-[10px] uppercase font-extrabold tracking-widest transition-all"
-                      >
-                        <TikTokSvg />
-                        Open on TikTok
-                      </a>
-                    </div>
-                  </div>
-                )}
 
                 {/* Direct MP4 */}
                 {modalResolved.type === 'direct' && (
@@ -881,17 +862,47 @@ export const VideoGallery: React.FC = () => {
                   />
                 )}
 
-                {/* Mute toggle (non-TikTok) */}
-                {modalResolved.type !== 'tiktok' && (
-                  <button
-                    onClick={() => setIsMuted((m) => !m)}
-                    className="absolute bottom-3 right-3 z-10 p-2 rounded-full bg-black/60 text-white hover:bg-black/80 transition-all"
-                    title={isMuted ? 'Unmute' : 'Mute'}
-                  >
-                    {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-                  </button>
+                {/* TikTok-only modal: thumbnail + prominent Watch on TikTok CTA */}
+                {!modalResolved.url && modalVideo.tiktokUrl && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950">
+                    {modalVideo.thumbnailUrl && (
+                      <img
+                        src={modalVideo.thumbnailUrl}
+                        alt={modalVideo.title}
+                        referrerPolicy="no-referrer"
+                        className="absolute inset-0 w-full h-full object-cover opacity-40"
+                      />
+                    )}
+                    <div className="relative z-10 flex flex-col items-center gap-4 px-5 text-center">
+                      <TikTokSvg className="w-9 h-9 fill-white/60" />
+                      <p className="text-white font-serif text-sm leading-snug">{modalVideo.title}</p>
+                      <a
+                        href={modalVideo.tiktokUrl}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-2 bg-white hover:bg-[#B11B41] text-black hover:text-white px-5 py-2.5 rounded-xl text-[11px] uppercase font-extrabold tracking-widest transition-all shadow-lg"
+                      >
+                        <TikTokSvg className="w-3.5 h-3.5 fill-current" />
+                        Watch on TikTok
+                      </a>
+                    </div>
+                  </div>
                 )}
+
+                {/* Mute toggle — hidden for TikTok-only cards */}
+                {(modalResolved.url || !modalVideo.tiktokUrl) && (
+                <button
+                  onClick={() => setIsMuted((m) => !m)}
+                  className="absolute bottom-3 right-3 z-10 p-2 rounded-full bg-black/60 text-white hover:bg-black/80 transition-all"
+                  title={isMuted ? 'Unmute' : 'Mute'}
+                >
+                  {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                </button>
+                )}
+
               </div>
+
 
               {/* Right: content pane */}
               <div className="flex-1 flex flex-col h-[58%] md:h-full bg-[#FAF6F0] overflow-hidden text-black">
@@ -1066,6 +1077,19 @@ export const VideoGallery: React.FC = () => {
                     <Share2 className="w-4 h-4" />
                     Share
                   </button>
+                  {modalVideo.tiktokUrl && (
+                    <a
+                      href={modalVideo.tiktokUrl}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center gap-1.5 text-xs font-semibold text-black/55 hover:text-[#B11B41] transition-colors"
+                      title="Open on TikTok"
+                    >
+                      <TikTokSvg className="w-3.5 h-3.5 fill-current" />
+                      TikTok
+                    </a>
+                  )}
                 </div>
               </div>
             </motion.div>
