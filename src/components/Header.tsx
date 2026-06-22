@@ -22,7 +22,7 @@ export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openC
     { label: 'Services', key: 'services' },
     { label: 'Visuals', key: 'tutorials' },
     { label: 'Lookbook', key: 'gallery' },
-    { label: 'About', key: 'about' },
+    { label: 'About & Blog', key: 'about' },
     { label: 'Contact', key: 'contact' },
   ];
 

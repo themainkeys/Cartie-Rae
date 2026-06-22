@@ -524,6 +524,7 @@ export const AdminPortal: React.FC = () => {
   const [blogReadTime, setBlogReadTime] = useState('5 min read');
   const [blogImage, setBlogImage] = useState('');
   const [blogCategory, setBlogCategory] = useState('Growth Tips');
+  const [blogStatus, setBlogStatus] = useState<'published' | 'draft'>('published');
   const BLOG_CATEGORIES = ['Growth Tips', 'Wash Day', 'Styling', 'Product Reviews', 'Tutorials', 'Protective Styles', 'Hair Science'] as const;
 
   // ── Controlled state for Services admin (Fix 3 & 4) ──────────────────────
@@ -2882,15 +2883,32 @@ export const AdminPortal: React.FC = () => {
                           <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Full Article Body *</label>
                           <textarea rows={6} value={blogContent} onChange={e => setBlogContent(e.target.value)} placeholder="Write the full blog post content here..." className="w-full px-3 py-2 bg-white border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 text-brand-dark leading-relaxed" />
                         </div>
+                        <div className="sm:col-span-2 flex items-center gap-3">
+                          <label className="block text-[10px] uppercase font-bold text-brand-chocolate">Status</label>
+                          <button
+                            type="button"
+                            onClick={() => setBlogStatus(s => s === 'published' ? 'draft' : 'published')}
+                            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${
+                              blogStatus === 'published'
+                                ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                : 'bg-zinc-100 text-zinc-500 border border-zinc-200'
+                            }`}
+                          >
+                            <span className={`w-1.5 h-1.5 rounded-full ${blogStatus === 'published' ? 'bg-emerald-500' : 'bg-zinc-400'}`}></span>
+                            {blogStatus === 'published' ? 'Published' : 'Draft'}
+                          </button>
+                          <span className="text-[9px] text-zinc-400">Drafts are hidden from visitors</span>
+                        </div>
                       </div>
                       <div className="flex justify-end gap-2 pt-2">
                         <button onClick={() => setIsAddingBlog(false)} className="px-4 py-2 text-[10.5px] font-bold text-brand-chocolate bg-brand-cream border border-[#E5D5C8] rounded-xl hover:bg-brand-beige transition-all">Cancel</button>
                         <button
                           onClick={() => {
                             if (!blogTitle.trim() || !blogContent.trim()) { triggerToast('Title and content are required.', 'error'); return; }
-                            addBlogPost({ title: blogTitle.trim(), excerpt: blogExcerpt.trim(), content: blogContent.trim(), readTime: blogReadTime, image: blogImage || 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&q=80&w=800', category: blogCategory });
-                            triggerToast(`✓ "${blogTitle}" published to blog!`, 'success');
+                            addBlogPost({ title: blogTitle.trim(), excerpt: blogExcerpt.trim(), content: blogContent.trim(), readTime: blogReadTime, image: blogImage || 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&q=80&w=800', category: blogCategory, status: blogStatus });
+                            triggerToast(`✓ "${blogTitle}" ${blogStatus === 'draft' ? 'saved as draft' : 'published to blog'}!`, 'success');
                             setIsAddingBlog(false);
+                            setBlogStatus('published');
                           }}
                           className="px-5 py-2 text-[10.5px] font-extrabold bg-brand-rose hover:bg-brand-berry text-white rounded-xl uppercase tracking-wider transition-all flex items-center gap-1.5 focus:outline-none"
                         >
@@ -2927,7 +2945,10 @@ export const AdminPortal: React.FC = () => {
                             </td>
                             <td className="p-3 font-semibold max-w-[200px]">
                               <p className="line-clamp-2 leading-snug">{post.title}</p>
-                              <p className="text-[10px] text-[#A67E6B] font-normal mt-0.5">{post.readTime}</p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <p className="text-[10px] text-[#A67E6B] font-normal">{post.readTime}</p>
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded ${post.status === 'draft' ? 'bg-zinc-100 text-zinc-500' : 'bg-emerald-50 text-emerald-700'}`}>{post.status || 'published'}</span>
+                              </div>
                             </td>
                             <td className="p-3 font-mono">{post.category}</td>
                             <td className="p-3 text-[#A67E6B]">{post.date}</td>
@@ -2943,6 +2964,7 @@ export const AdminPortal: React.FC = () => {
                                     setBlogReadTime(post.readTime);
                                     setBlogImage(post.image);
                                     setBlogCategory(post.category);
+                                    setBlogStatus(post.status || 'published');
                                     setIsAddingBlog(false);
                                     setEditingBlogId(post.id);
                                   }}
@@ -3015,14 +3037,30 @@ export const AdminPortal: React.FC = () => {
                                       <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Full Article Body *</label>
                                       <textarea rows={8} value={blogContent} onChange={e => setBlogContent(e.target.value)} className="w-full px-3 py-2 bg-white border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 text-brand-dark leading-relaxed" />
                                     </div>
+                                    <div className="sm:col-span-2 flex items-center gap-3">
+                                      <label className="block text-[10px] uppercase font-bold text-brand-chocolate">Status</label>
+                                      <button
+                                        type="button"
+                                        onClick={() => setBlogStatus(s => s === 'published' ? 'draft' : 'published')}
+                                        className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${
+                                          blogStatus === 'published'
+                                            ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                            : 'bg-zinc-100 text-zinc-500 border border-zinc-200'
+                                        }`}
+                                      >
+                                        <span className={`w-1.5 h-1.5 rounded-full ${blogStatus === 'published' ? 'bg-emerald-500' : 'bg-zinc-400'}`}></span>
+                                        {blogStatus === 'published' ? 'Published' : 'Draft'}
+                                      </button>
+                                      <span className="text-[9px] text-zinc-400">Drafts are hidden from visitors</span>
+                                    </div>
                                   </div>
                                   <div className="flex justify-end gap-2 pt-2">
                                     <button onClick={() => setEditingBlogId(null)} className="px-4 py-2 text-[10.5px] font-bold text-brand-chocolate bg-brand-cream border border-[#E5D5C8] rounded-xl hover:bg-brand-beige transition-all">Cancel</button>
                                     <button
                                       onClick={() => {
                                         if (!blogTitle.trim() || !blogContent.trim()) { triggerToast('Title and content are required.', 'error'); return; }
-                                        updateBlogPost(post.id, { title: blogTitle.trim(), excerpt: blogExcerpt.trim(), content: blogContent.trim(), readTime: blogReadTime, image: blogImage || post.image, category: blogCategory });
-                                        triggerToast(`✓ "${blogTitle}" updated and live!`, 'success');
+                                        updateBlogPost(post.id, { title: blogTitle.trim(), excerpt: blogExcerpt.trim(), content: blogContent.trim(), readTime: blogReadTime, image: blogImage || post.image, category: blogCategory, status: blogStatus });
+                                        triggerToast(`✓ "${blogTitle}" ${blogStatus === 'draft' ? 'saved as draft' : 'updated and live'}!`, 'success');
                                         setEditingBlogId(null);
                                       }}
                                       className="px-5 py-2 text-[10.5px] font-extrabold bg-brand-rose hover:bg-brand-berry text-white rounded-xl uppercase tracking-wider transition-all flex items-center gap-1.5 focus:outline-none"

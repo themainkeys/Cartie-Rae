@@ -7,8 +7,8 @@ export const AboutAndBlog: React.FC = () => {
   const { homepageContent, blogs, likeBlogPost, prefersReducedMotion } = useApp();
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
 
-  // Filter: only show published posts (no status field = published by default)
-  const publishedBlogs = blogs.filter(b => !('status' in b) || (b as any).status !== 'draft');
+  // Filter: only show published posts (no status = published by default)
+  const publishedBlogs = blogs.filter(b => b.status !== 'draft');
   const selectedPost = publishedBlogs.find(b => b.id === selectedPostId) ?? null;
 
   return (
