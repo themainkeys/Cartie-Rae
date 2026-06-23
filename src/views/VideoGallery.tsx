@@ -645,23 +645,23 @@ export const VideoGallery: React.FC = () => {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     // Break out of shared page padding on all screen sizes
-    <div className="-mx-4 sm:-mx-6 lg:-mx-8 relative bg-black min-h-screen">
+    <div className="-mx-4 sm:-mx-6 lg:-mx-8 relative bg-[#FAF6F0] min-h-screen">
 
       {/* ── Page Header ── */}
       <div className="text-center pt-7 pb-5 px-4 select-none">
         <span className="font-sans text-[10px] uppercase tracking-[0.35em] text-[#B11B41] font-bold block">
           Short-Form Masterclass
         </span>
-        <h1 className="font-serif text-3xl sm:text-4xl text-white font-normal mt-1">
+        <h1 className="font-serif text-3xl sm:text-4xl text-[#2C1810] font-normal mt-1">
           Visuals
         </h1>
-        <p className="font-sans text-[11px] text-white/38 max-w-xs mx-auto leading-relaxed mt-1.5">
+        <p className="font-sans text-[11px] text-[#543F35]/60 max-w-xs mx-auto leading-relaxed mt-1.5">
           Coily care, styling &amp; growth routines — scroll to explore.
         </p>
       </div>
 
       {/* ── Category Filter (sticky) ── */}
-      <div className="sticky top-14 z-30 bg-black/95 backdrop-blur-md border-b border-white/[0.07]">
+      <div className="sticky top-14 z-30 bg-[#FAF6F0]/95 backdrop-blur-md border-b border-[#C4A882]/30">
         <div className="max-w-[420px] mx-auto flex overflow-x-auto feed-no-bar px-4 gap-5 py-2.5">
           {CATEGORIES.map((cat) => (
             <button
@@ -669,7 +669,7 @@ export const VideoGallery: React.FC = () => {
               id={`vid-cat-${cat.toLowerCase().replace(/\s+/g, '-')}`}
               onClick={() => setActiveCategory(cat)}
               className={`text-[10px] uppercase tracking-wider font-bold whitespace-nowrap pb-0.5 relative transition-colors flex-shrink-0 focus:outline-none ${
-                activeCategory === cat ? 'text-white' : 'text-white/35 hover:text-white/65'
+                activeCategory === cat ? 'text-[#2C1810]' : 'text-[#543F35]/40 hover:text-[#543F35]/70'
               }`}
             >
               {cat}
@@ -693,7 +693,7 @@ export const VideoGallery: React.FC = () => {
           onClick={() => goToIndex(activeIndex - 1)}
           disabled={activeIndex === 0}
           aria-label="Previous video"
-          className="hidden lg:flex absolute z-20 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white items-center justify-center border border-white/10 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+          className="hidden lg:flex absolute z-20 w-10 h-10 rounded-full bg-[#2C1810]/10 hover:bg-[#2C1810]/20 text-[#2C1810] items-center justify-center border border-[#C4A882]/40 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
           style={{ left: 'calc(50% + 218px)', top: '28%' }}
         >
           <ChevronUp className="w-5 h-5" />
@@ -730,9 +730,9 @@ export const VideoGallery: React.FC = () => {
           ) : (
             <div className="flex items-center justify-center" style={{ height: CARD_H }}>
               <div className="text-center">
-                <Play className="w-8 h-8 text-white/20 mx-auto mb-3 animate-pulse" />
-                <p className="font-serif text-sm text-white/45">No videos in this category.</p>
-                <p className="text-[10px] text-white/25 mt-1 font-sans">Try a different filter.</p>
+                <Play className="w-8 h-8 text-[#543F35]/20 mx-auto mb-3 animate-pulse" />
+                <p className="font-serif text-sm text-[#543F35]/50">No videos in this category.</p>
+                <p className="text-[10px] text-[#543F35]/30 mt-1 font-sans">Try a different filter.</p>
               </div>
             </div>
           )}
@@ -743,7 +743,7 @@ export const VideoGallery: React.FC = () => {
           onClick={() => goToIndex(activeIndex + 1)}
           disabled={activeIndex >= filteredVideos.length - 1}
           aria-label="Next video"
-          className="hidden lg:flex absolute z-20 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white items-center justify-center border border-white/10 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+          className="hidden lg:flex absolute z-20 w-10 h-10 rounded-full bg-[#2C1810]/10 hover:bg-[#2C1810]/20 text-[#2C1810] items-center justify-center border border-[#C4A882]/40 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
           style={{ left: 'calc(50% + 218px)', top: '68%' }}
         >
           <ChevronDown className="w-5 h-5" />
@@ -761,7 +761,7 @@ export const VideoGallery: React.FC = () => {
                 onClick={() => goToIndex(idx)}
                 aria-label={`Go to video ${idx + 1}`}
                 className={`rounded-full transition-all duration-300 ${
-                  idx === activeIndex ? 'w-1.5 h-6 bg-white' : 'w-1.5 h-1.5 bg-white/30 hover:bg-white/55'
+                  idx === activeIndex ? 'w-1.5 h-6 bg-[#B11B41]' : 'w-1.5 h-1.5 bg-[#543F35]/25 hover:bg-[#543F35]/50'
                 }`}
               />
             ))}
@@ -770,7 +770,7 @@ export const VideoGallery: React.FC = () => {
       </div>
 
       {/* ── Keyboard hint (desktop, first load) ── */}
-      <div className="hidden lg:block text-center py-3 text-[9px] text-white/20 uppercase tracking-widest select-none">
+      <div className="hidden lg:block text-center py-3 text-[9px] text-[#543F35]/30 uppercase tracking-widest select-none">
         ↑ ↓ arrows · J K keys · scroll to navigate · M to mute
       </div>
 
