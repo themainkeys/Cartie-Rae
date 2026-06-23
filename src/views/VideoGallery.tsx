@@ -645,7 +645,7 @@ export const VideoGallery: React.FC = () => {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     // Break out of shared page padding on all screen sizes
-    <div className="-mx-4 sm:-mx-6 lg:-mx-8 relative bg-[#FAF6F0] min-h-screen">
+    <div className="-mx-4 sm:-mx-6 lg:-mx-8 relative bg-[#FDFAF4] min-h-screen">
 
       {/* ── Page Header ── */}
       <div className="text-center pt-7 pb-5 px-4 select-none">
@@ -661,7 +661,7 @@ export const VideoGallery: React.FC = () => {
       </div>
 
       {/* ── Category Filter (sticky) ── */}
-      <div className="sticky top-14 z-30 bg-[#FAF6F0]/95 backdrop-blur-md border-b border-[#C4A882]/30">
+      <div className="sticky top-14 z-30 bg-[#FDFAF4]/95 backdrop-blur-md border-b border-[#C4A882]/30">
         <div className="max-w-[420px] mx-auto flex overflow-x-auto feed-no-bar px-4 gap-5 py-2.5">
           {CATEGORIES.map((cat) => (
             <button
@@ -830,7 +830,7 @@ export const VideoGallery: React.FC = () => {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 18 }}
               transition={{ type: 'spring', damping: 26, stiffness: 210 }}
-              className="w-full max-w-4xl h-[88vh] md:h-[620px] bg-[#FAF6F0] rounded-[28px] overflow-hidden flex flex-col md:flex-row shadow-2xl"
+              className="w-full max-w-4xl h-[88vh] md:h-[620px] bg-[#FDFAF4] rounded-[28px] overflow-hidden flex flex-col md:flex-row shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Left: Video player */}
@@ -905,7 +905,7 @@ export const VideoGallery: React.FC = () => {
 
 
               {/* Right: content pane */}
-              <div className="flex-1 flex flex-col h-[58%] md:h-full bg-[#FAF6F0] overflow-hidden text-black">
+              <div className="flex-1 flex flex-col h-[58%] md:h-full bg-[#FDFAF4] overflow-hidden text-black">
 
                 {/* Creator header */}
                 <div className="px-5 py-4 border-b border-black/[0.07] flex items-center justify-between flex-shrink-0 bg-white/50">

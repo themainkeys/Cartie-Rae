@@ -6,8 +6,8 @@
   --font-mono: "JetBrains Mono", monospace;
   
   /* ─── Neutral / Base Palette (warm cream tones) ─── */
-  --color-brand-cream:     #FAF6F0;   /* warm ivory — main page background */
-  --color-brand-beige:     #F2EAE0;   /* warm sand — card/hover background */
+  --color-brand-cream:     #FDFAF4;   /* warm ivory — main page background */
+  --color-brand-beige:     #F5EFE3;   /* warm sand — card/hover background */
   --color-brand-warm-tan:  #C4A882;   /* warm tan — borders and dividers */
   --color-brand-chocolate: #52382B;   /* deep warm brown — headings/labels */
   --color-brand-dark:      #2C1810;   /* richest brown — body text/icons */
