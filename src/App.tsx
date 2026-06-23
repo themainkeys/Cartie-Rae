@@ -258,6 +258,9 @@ export const AppContent: React.FC = () => {
       setActivePart('checkout-cancel');
     } else if (params.get('product') || params.get('ebook')) {
       setActivePart('shop');
+    } else if (params.get('video')) {
+      // Deep-link to Visuals page; VideoGallery reads ?video=id on mount
+      setActivePart('visuals');
     }
   }, []);
 

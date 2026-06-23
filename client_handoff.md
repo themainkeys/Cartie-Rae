@@ -196,3 +196,34 @@ To run the site as a real, multi-device business platform you will need:
 5. **Secure admin authentication** — JWT tokens with server-side session validation instead of hardcoded passwords
 
 Contact your developer when you're ready to connect a real backend.
+
+---
+
+## 🔐 Admin Authentication — Security Warning
+
+> [!CAUTION]
+> **The current admin login is frontend-only and NOT production-secure.**
+
+### Current System (Demo Only)
+
+- Admin credentials (`admin@cartiaerae.com` / `cartiae123`) are hardcoded in the compiled JavaScript bundle.
+- Anyone who inspects the site's JavaScript can extract these credentials.
+- The login check happens in the browser — there is no server-side verification.
+- This is intentional for a demo/prototype phase, but **must be replaced before handling real customer data, orders, or payments**.
+
+### What's Required Before Production
+
+| Requirement | Solution |
+|---|---|
+| Secure password storage | Hashed passwords in a real database (bcrypt/argon2) |
+| Server-side auth | Netlify Functions or a backend API that issues JWT tokens |
+| Session management | Signed JWT stored in httpOnly cookies (not localStorage) |
+| Role enforcement | Server-side permission checks, not client-side `if` statements |
+
+### Timeline Recommendation
+
+- ✅ **Now**: Use the current demo admin safely for content management and testing.
+- ⚠️ **Before real payments go live**: Connect Stripe backend + secure admin auth.
+- 🚀 **Before public launch**: Full backend database + authentication system.
+
+Contact your developer when ready. Estimated backend setup: 2–3 sprint weeks.

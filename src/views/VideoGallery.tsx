@@ -22,6 +22,12 @@ const resolveVideoSource = (url: string) => {
     else if (cleanUrl.includes('youtu.be/')) videoId = cleanUrl.split('youtu.be/')[1]?.split('?')[0] || '';
     return { type: 'youtube' as const, id: videoId, url: videoId ? `https://www.youtube.com/embed/${videoId}` : cleanUrl };
   }
+
+  // Defensive: detect TikTok URLs accidentally saved as videoUrl
+  if (cleanUrl.includes('tiktok.com') || /^\d{18,20}$/.test(cleanUrl)) {
+    return { type: 'tiktok' as const, id: cleanUrl, url: '' };
+  }
+
   // Anything else (MP4, WebM, blob:, data:, CDN URL) is treated as a direct video
   return { type: 'direct' as const, id: '', url: cleanUrl };
 };
@@ -108,10 +114,20 @@ const VideoFeedCard = React.forwardRef<HTMLDivElement, VideoFeedCardProps>(
     const [overlayVisible, setOverlayVisible] = useState(true);
     const overlayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const resolved = useMemo(() => resolveVideoSource(video.videoUrl || ''), [video.videoUrl]);
+    // Resolve primary source: videoUrl → youtubeUrl fallback → none
+    const primaryResolved = useMemo(() => {
+      const fromVideoUrl = resolveVideoSource(video.videoUrl || '');
+      // If videoUrl is empty or resolves to tiktok (accidentally stored there), try youtubeUrl
+      if ((fromVideoUrl.type === 'none' || fromVideoUrl.type === 'tiktok') && video.youtubeUrl) {
+        return resolveVideoSource(video.youtubeUrl);
+      }
+      return fromVideoUrl;
+    }, [video.videoUrl, video.youtubeUrl]);
+    const resolved = primaryResolved;
 
     // isTikTokOnly: video has no playable source but has a TikTok social link
-    const isTikTokOnly = !resolved.url && !!video.tiktokUrl;
+    // Also treat 'tiktok' type from resolveVideoSource as TikTok-only
+    const isTikTokOnly = (resolved.type === 'none' || resolved.type === 'tiktok') && !!video.tiktokUrl;
 
     const thumbnailSrc =
       video.thumbnailUrl ||
@@ -468,6 +484,22 @@ export const VideoGallery: React.FC = () => {
   const CARD_H = 'calc(100svh - 104px)';
 
   // ── Seed social data ──────────────────────────────────────────────────────
+  // Deep-link: ?video=<id> opens the matching video on load
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const targetId = params.get('video');
+    if (!targetId || filteredVideos.length === 0) return;
+    const idx = filteredVideos.findIndex(v => v.id === targetId);
+    if (idx !== -1) {
+      setActiveIndex(idx);
+      // Clean the URL so the param doesn't persist
+      const clean = window.location.pathname;
+      window.history.replaceState({}, '', clean);
+    }
+  // Only run once after filteredVideos is populated
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredVideos.length]);
+
   useEffect(() => {
     const seedL: Record<string, number> = {};
     const seedC: Record<string, Array<{ id: string; author: string; text: string }>> = {};

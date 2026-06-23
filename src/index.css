@@ -30,8 +30,8 @@ html {
 }
 
 body {
-  background-color: #FAFAFA;
-  color: #18181B;
+  background-color: #FDFAF4;
+  color: #2C1810;
 }
 
 /* ─── Custom scrollbar ─── */
@@ -40,10 +40,10 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #FAFAFA;
+  background: #FDFAF4;
 }
 ::-webkit-scrollbar-thumb {
-  background: #D4D4D8;
+  background: #C4A882;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
@@ -58,3 +58,18 @@ body {
 .animate-float {
   animation: float 4s ease-in-out infinite;
 }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.35s ease-out both;
+}
+
+.feed-no-bar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.feed-no-bar::-webkit-scrollbar { display: none; }

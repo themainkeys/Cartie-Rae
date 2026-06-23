@@ -91,6 +91,7 @@ interface AppContextType {
   
   // Discount Code Operations
   addDiscountCode: (code: Omit<DiscountCode, 'id'>) => void;
+  updateDiscountCode: (id: string, patch: Partial<DiscountCode>) => void;
   deleteDiscountCode: (id: string) => void;
   
   // CMS Home/About
@@ -98,6 +99,7 @@ interface AppContextType {
 
   // Services
   services: Service[];
+  addService: (service: Omit<Service, 'id'>) => void;
   updateService: (id: string, patch: Partial<Service>) => void;
   deleteService: (id: string) => void;
   
@@ -562,9 +564,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setDiscountCodes(prev => prev.filter(item => item.id !== id));
   };
 
+  const updateDiscountCode = (id: string, patch: Partial<DiscountCode>) => {
+    setDiscountCodes(prev => prev.map(item => item.id === id ? { ...item, ...patch } : item));
+  };
+
   // --- CMS Content ---
   const updateHomepageContent = (content: Partial<HomepageContent>) => {
     setHomepageContent(prev => ({ ...prev, ...content }));
+  };
+
+  const addService = (service: Omit<Service, 'id'>) => {
+    const newService: Service = {
+      ...service,
+      id: `svc-${Date.now()}`
+    };
+    setServices(prev => [...prev, newService]);
   };
 
   const updateService = (id: string, patch: Partial<Service>) => {
@@ -762,9 +776,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addVideo, updateVideo, deleteVideo,
       addGalleryItem, updateGalleryItem, deleteGalleryItem,
       addBlogPost, updateBlogPost, deleteBlogPost, likeBlogPost,
-      addDiscountCode, deleteDiscountCode,
+      addDiscountCode, updateDiscountCode, deleteDiscountCode,
       updateHomepageContent,
-      updateService,
+      addService, updateService,
       deleteService,
       signupNewsletter,
       addToCart, removeFromCart, updateCartQuantity, applyPromoCode, clearCart,

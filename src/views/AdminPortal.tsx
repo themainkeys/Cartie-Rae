@@ -385,11 +385,11 @@ export const AdminPortal: React.FC = () => {
     addVideo, updateVideo, deleteVideo,
     addGalleryItem, updateGalleryItem, deleteGalleryItem,
     addBlogPost, updateBlogPost, deleteBlogPost,
-    addDiscountCode, deleteDiscountCode,
+    addDiscountCode, updateDiscountCode, deleteDiscountCode,
     updateHomepageContent, fulfillOrder, loginAdmin, logoutAdmin,
     respondToContactRequest, deleteContactRequest, updateContactRequestStatus,
     emailNotificationsEnabled, setEmailNotificationsEnabled, prefersReducedMotion,
-    services, updateService, deleteService,
+    services, addService, updateService, deleteService,
     triggerToast
   } = useApp();
 
@@ -656,24 +656,63 @@ export const AdminPortal: React.FC = () => {
       saved++;
     }
 
-    // 2. If video form is open with a title + URL, auto-submit it
-    if (isAddingVideo && vidTitle.trim() && vidUrl.trim()) {
-      const newVideo = {
+    // 2. If video form is open with a title, auto-submit it
+    if (isAddingVideo && vidTitle.trim()) {
+      // Compute featuredOrder
+      let fOrder: number | undefined = undefined;
+      if (vidIsFeatured) {
+        if (editingVideoId) {
+          const existing = videos.find(v => v.id === editingVideoId);
+          if (existing && existing.isFeatured && existing.featuredOrder !== undefined) {
+            fOrder = existing.featuredOrder;
+          }
+        }
+        if (fOrder === undefined) {
+          const maxOrder = videos.reduce((max, v) => (v.isFeatured && v.featuredOrder ? Math.max(max, v.featuredOrder) : max), 0);
+          fOrder = maxOrder + 1;
+        }
+      }
+      const newVideoPayload: Omit<TikTokVideo, 'id'> = {
         title: vidTitle.trim(),
-        views: vidViews,
+        views: vidStatus === 'draft' ? 'Draft' : vidStatus === 'scheduled' ? 'Scheduled' : vidViews,
         category: vidCategory,
         videoUrl: vidUrl.trim(),
         thumbnailUrl: vidThumb || '/about-portrait.jpg',
         description: vidDescription,
         relatedIds: vidRelatedIds,
         isFeatured: vidIsFeatured,
-        status: vidStatus as 'draft' | 'published' | 'scheduled',
-        scheduledAt: vidScheduledAt || undefined,
+        status: vidStatus,
+        tiktokUrl: vidTiktokUrl.trim() || undefined,
+        youtubeUrl: vidYoutubeUrl.trim() || undefined,
+        scheduledAt: vidStatus === 'scheduled' ? vidScheduledAt : undefined,
+        featuredOrder: fOrder,
+        viewsCount: 0,
+        likesCount: 0,
+        savesCount: 0,
+        sharesCount: 0,
+        commentsCount: 0,
+        shopClicks: 0,
+        productAddClicks: 0,
+        ebookAddClicks: 0,
+        conversionCount: 0,
       };
       if (editingVideoId) {
-        updateVideo(editingVideoId, newVideo);
+        const existing = videos.find(v => v.id === editingVideoId);
+        if (existing) {
+          // Preserve analytics on update
+          newVideoPayload.viewsCount = existing.viewsCount;
+          newVideoPayload.likesCount = existing.likesCount;
+          newVideoPayload.savesCount = existing.savesCount;
+          newVideoPayload.sharesCount = existing.sharesCount;
+          newVideoPayload.commentsCount = existing.commentsCount;
+          newVideoPayload.shopClicks = existing.shopClicks;
+          newVideoPayload.productAddClicks = existing.productAddClicks;
+          newVideoPayload.ebookAddClicks = existing.ebookAddClicks;
+          newVideoPayload.conversionCount = existing.conversionCount;
+        }
+        updateVideo(editingVideoId, newVideoPayload);
       } else {
-        addVideo({ ...newVideo, id: `vid-${Date.now()}` } as any);
+        addVideo(newVideoPayload);
       }
       setIsAddingVideo(false);
       saved++;
@@ -857,11 +896,11 @@ export const AdminPortal: React.FC = () => {
       triggerToast('Please enter a video title.', 'error');
       return;
     }
-    if (!vidUrl) {
-      triggerToast('Please upload a video file or paste a video link.', 'error');
+    if (!vidUrl && !vidYoutubeUrl.trim() && !vidTiktokUrl.trim()) {
+      triggerToast('Please upload a video file, paste a YouTube link, or add a TikTok URL.', 'error');
       return;
     }
-    if (vidUrl.includes('vm.tiktok.com') || vidUrl.includes('vt.tiktok.com')) {
+    if (vidUrl && (vidUrl.includes('vm.tiktok.com') || vidUrl.includes('vt.tiktok.com'))) {
       triggerToast('Mobile TikTok links (vm.tiktok.com) are shortened and blocked from embedding by TikTok. Please paste a desktop video link or enter the 19-digit Video ID directly.', 'error');
       return;
     }
@@ -933,7 +972,7 @@ export const AdminPortal: React.FC = () => {
       payload.ebookAddClicks = 0;
       payload.conversionCount = 0;
 
-      addVideo(payload as any);
+      addVideo(payload as Omit<TikTokVideo, 'id'>);
       triggerToast('Video Masterclass published! 🎬', 'success');
     }
 
@@ -2221,27 +2260,46 @@ export const AdminPortal: React.FC = () => {
                           <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-bold ${
                             c.isActive ? 'bg-emerald-50 text-emerald-800' : 'bg-zinc-100 text-zinc-500'
                           }`}>
-                            {c.isActive ? 'Enabled / Active' : 'Disabled'}
+                            {c.isActive ? 'Active' : 'Inactive'}
                           </span>
                         </td>
                         <td className="p-3 text-center">
-                          <button
-                            id={`delete-discount-${c.id}`}
-                            onClick={() => {
-                              if (confirm(`Remove promo Coupon "${c.code}" completely?`)) {
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              id={`toggle-discount-${c.id}`}
+                              onClick={() => {
                                 if (checkPermission(['super_admin'])) {
-                                  deleteDiscountCode(c.id);
-                                  triggerToast(`🗑 Discount code "${c.code}" deleted.`, 'success');
+                                  updateDiscountCode(c.id, { isActive: !c.isActive });
+                                  triggerToast(`"${c.code}" ${c.isActive ? 'deactivated' : 'activated'}.`, 'info');
                                 }
-                              }
-                            }}
-                            className="p-1 px-2.5 bg-brand-pink-light hover:bg-brand-rose text-brand-rose hover:text-white rounded-md font-bold transition duration-250"
-                          >
-                            Delete
-                          </button>
+                              }}
+                              className={`p-1 px-2.5 rounded-md font-bold transition duration-150 text-[10.5px] ${
+                                c.isActive
+                                  ? 'bg-amber-50 hover:bg-amber-500 text-amber-700 hover:text-white border border-amber-200'
+                                  : 'bg-emerald-50 hover:bg-emerald-500 text-emerald-700 hover:text-white border border-emerald-200'
+                              }`}
+                            >
+                              {c.isActive ? 'Deactivate' : 'Activate'}
+                            </button>
+                            <button
+                              id={`delete-discount-${c.id}`}
+                              onClick={() => {
+                                if (confirm(`Remove promo Coupon "${c.code}" completely?`)) {
+                                  if (checkPermission(['super_admin'])) {
+                                    deleteDiscountCode(c.id);
+                                    triggerToast(`🗑 Discount code "${c.code}" deleted.`, 'success');
+                                  }
+                                }
+                              }}
+                              className="p-1 px-2.5 bg-brand-pink-light hover:bg-brand-rose text-brand-rose hover:text-white rounded-md font-bold transition duration-250 text-[10.5px]"
+                            >
+                              Delete
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
+
                   </tbody>
                 </table>
               </div>
@@ -2669,12 +2727,32 @@ export const AdminPortal: React.FC = () => {
 
               {/* ── Text Editor ── */}
               <div className="bg-white border border-[#E5D5C8]/80 rounded-3xl p-6 sm:p-8 space-y-8 shadow-[0_4px_25px_-4px_rgba(74,43,32,0.02)] animate-fade-in">
-                <div className="flex items-center gap-3 border-b border-[#E5D5C8]/30 pb-3">
-                  <span className="w-1.5 h-6 bg-brand-rose rounded-full shrink-0"></span>
+                <div className="flex items-center justify-between gap-3 border-b border-[#E5D5C8]/30 pb-3">
                   <div>
                     <h3 className="font-serif text-base sm:text-lg font-bold text-brand-dark">Services Text Editor</h3>
                     <p className="font-sans text-[10px] text-zinc-400 mt-0.5">Edit name, price, description, bullet points, and disclaimer. Changes go live on Save.</p>
                   </div>
+                  <button
+                    id="admin-add-service-btn"
+                    onClick={() => {
+                      if (!checkPermission(['super_admin', 'content_manager'])) return;
+                      addService({
+                        name: 'New Service',
+                        description: 'Describe your service here.',
+                        price: 100,
+                        image: '/hero-portrait.jpg',
+                        included: ['60-minute video call', 'Follow-up notes'],
+                        benefits: ['Personalised advice', 'Actionable plan'],
+                        notice: ['Virtual only — no in-person sessions'],
+                        disclaimer: 'This is a virtual consultation. Results may vary.',
+                      });
+                      triggerToast('✓ New service created — edit it below!', 'success');
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-rose hover:bg-brand-berry text-white text-[10.5px] font-bold uppercase tracking-wider rounded-xl transition-all duration-150 focus:outline-none shrink-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add Service
+                  </button>
                 </div>
 
                 {services.map((svc, svcIdx) => {
@@ -3280,20 +3358,29 @@ export const AdminPortal: React.FC = () => {
                          </div>
                        </div>
 
-                       {/* ── 5. Thumbnail URL ── */}
-                      <div>
-                        <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Thumbnail URL <span className="text-brand-dark/40 font-normal normal-case">(optional — auto-generated for YouTube)</span></label>
-                        <input
-                          type="url"
-                          value={uploadedThumbFile ? '' : vidThumb}
-                          onChange={(e) => { setVidThumb(e.target.value); setUploadedThumbFile(null); }}
-                          placeholder="https://images.unsplash.com/... or any image URL"
-                          className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded-lg focus:outline-none font-mono text-[11px]"
-                        />
-                        {vidThumb && !uploadedThumbFile && (
-                          <img src={vidThumb} alt="thumb preview" referrerPolicy="no-referrer" className="mt-2 h-16 w-10 object-cover rounded border border-brand-warm-tan/20" />
-                        )}
-                      </div>
+                       {/* ── 5. Thumbnail ── */}
+                       <div>
+                         <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Thumbnail <span className="text-brand-dark/40 font-normal normal-case">(auto-generated for YouTube · upload or paste URL)</span></label>
+                         {/* Upload via file drop */}
+                         <ImageDropzone
+                           imageValue={vidThumb}
+                           onImageChange={(dataUrl) => { setVidThumb(dataUrl); setUploadedThumbFile(null); }}
+                           label="Upload Thumbnail Image"
+                           prefersReducedMotion={prefersReducedMotion}
+                         />
+                         {/* Or paste a URL */}
+                         <p className="text-[9px] text-brand-dark/35 uppercase tracking-wider my-1.5 text-center">— or paste URL —</p>
+                         <input
+                           type="url"
+                           value={vidThumb.startsWith('data:') ? '' : vidThumb}
+                           onChange={(e) => { setVidThumb(e.target.value); setUploadedThumbFile(null); }}
+                           placeholder="https://images.unsplash.com/..."
+                           className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded-lg focus:outline-none font-mono text-[11px]"
+                         />
+                         {vidThumb && !uploadedThumbFile && (
+                           <img src={vidThumb} alt="thumb preview" referrerPolicy="no-referrer" className="mt-2 h-16 w-10 object-cover rounded border border-brand-warm-tan/20" />
+                         )}
+                       </div>
 
                       {/* ── 6. Publishing Status ── */}
                       <div className="space-y-2">
