@@ -596,7 +596,7 @@ export const initialGallery: PhotoGalleryItem[] = [
   },
   {
     id: 'gal-9',
-    image: '/our-story.jpeg',
+    image: '/hero-portrait.jpg',
     caption: 'Morning hydration routine checking coils and styling self-care habits.',
     category: 'Routines'
   },

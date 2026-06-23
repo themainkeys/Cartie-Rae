@@ -5,12 +5,12 @@
   --font-sans: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", monospace;
   
-  /* ─── Neutral / Base Palette (replaces all brown tones) ─── */
-  --color-brand-cream:     #FAFAFA;   /* zinc-50  — near white */
-  --color-brand-beige:     #F4F4F5;   /* zinc-100 — soft light gray */
-  --color-brand-warm-tan:  #D4D4D8;   /* zinc-300 — subtle border gray */
-  --color-brand-chocolate: #52525B;   /* zinc-600 — mid charcoal */
-  --color-brand-dark:      #18181B;   /* zinc-950 — true charcoal/near-black */
+  /* ─── Neutral / Base Palette (warm cream tones) ─── */
+  --color-brand-cream:     #FDFAF4;   /* warm ivory — main page background */
+  --color-brand-beige:     #F5EFE3;   /* warm sand — card/hover background */
+  --color-brand-warm-tan:  #C4A882;   /* warm tan — borders and dividers */
+  --color-brand-chocolate: #52382B;   /* deep warm brown — headings/labels */
+  --color-brand-dark:      #2C1810;   /* richest brown — body text/icons */
 
   /* ─── Pink Accent Palette (unchanged) ─── */
   --color-brand-pink-light: #FFF0F3;  /* soft blush */
@@ -30,8 +30,8 @@ html {
 }
 
 body {
-  background-color: #FAFAFA;
-  color: #18181B;
+  background-color: #FDFAF4;
+  color: #2C1810;
 }
 
 /* ─── Custom scrollbar ─── */
@@ -40,10 +40,10 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #FAFAFA;
+  background: #FDFAF4;
 }
 ::-webkit-scrollbar-thumb {
-  background: #D4D4D8;
+  background: #C4A882;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
@@ -58,3 +58,18 @@ body {
 .animate-float {
   animation: float 4s ease-in-out infinite;
 }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.35s ease-out both;
+}
+
+.feed-no-bar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.feed-no-bar::-webkit-scrollbar { display: none; }

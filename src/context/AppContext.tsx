@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { EBook, Product, TikTokVideo, PhotoGalleryItem, BlogPost, DiscountCode, CartItem, Order, NewsletterSignup, HomepageContent, WishlistItem, ContactRequest, AdminUser, Service } from '../types';
 import { initialEBooks, initialProducts, initialVideos, initialGallery, initialBlogPosts, initialDiscountCodes, initialHomepageContent, initialServices } from '../data/initialData';
+import { supabase, isSupabaseConfigured } from '../services/supabaseClient';
 
 // ─── Tombstone helpers ──────────────────────────────────────────────────────
 // A "tombstone" is a persisted Set of deleted IDs per entity type.
@@ -91,6 +92,7 @@ interface AppContextType {
   
   // Discount Code Operations
   addDiscountCode: (code: Omit<DiscountCode, 'id'>) => void;
+  updateDiscountCode: (id: string, patch: Partial<DiscountCode>) => void;
   deleteDiscountCode: (id: string) => void;
   
   // CMS Home/About
@@ -98,6 +100,7 @@ interface AppContextType {
 
   // Services
   services: Service[];
+  addService: (service: Omit<Service, 'id'>) => void;
   updateService: (id: string, patch: Partial<Service>) => void;
   deleteService: (id: string) => void;
   
@@ -122,7 +125,7 @@ interface AppContextType {
   fulfillOrder: (id: string) => void;
   
   // Admin auth
-  loginAdmin: (email: string, password: string) => boolean;
+  loginAdmin: (email: string, password: string) => Promise<boolean>;
   logoutAdmin: () => void;
 
   // Settings & Preferences
@@ -315,6 +318,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [contactRequests, setContactRequests] = useState<ContactRequest[]>(() => {
+    if (isSupabaseConfigured) return [];
     const local = localStorage.getItem('cartiae_contacts');
     if (local) return JSON.parse(local);
     return [
@@ -347,10 +351,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(() => {
+    if (isSupabaseConfigured) return false;
     return localStorage.getItem('cartiae_admin_auth') === 'true';
   });
 
   const [currentAdminUser, setCurrentAdminUser] = useState<AdminUser | null>(() => {
+    if (isSupabaseConfigured) return null;
     const local = localStorage.getItem('cartiae_admin_user');
     return local ? JSON.parse(local) : null;
   });
@@ -375,6 +381,97 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => media.removeEventListener('change', listener);
   }, []);
 
+  // --- Supabase Authentication & Session Synchronizer ---
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
+    const handleAuthSession = async (session: any) => {
+      if (session?.user) {
+        try {
+          const { data: adminProfile, error } = await supabase
+            .from('admin_users')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+          if (error || !adminProfile) {
+            console.error('Access denied. No admin profile found.', error);
+            await supabase.auth.signOut();
+            setIsAdminLoggedIn(false);
+            setCurrentAdminUser(null);
+          } else {
+            const adminUser: AdminUser = {
+              id: adminProfile.id,
+              name: adminProfile.name || 'Admin Staff',
+              email: adminProfile.email || session.user.email,
+              role: adminProfile.role as any,
+            };
+            setIsAdminLoggedIn(true);
+            setCurrentAdminUser(adminUser);
+          }
+        } catch (err) {
+          console.error('Error fetching admin profile:', err);
+          setIsAdminLoggedIn(false);
+          setCurrentAdminUser(null);
+        }
+      } else {
+        setIsAdminLoggedIn(false);
+        setCurrentAdminUser(null);
+      }
+    };
+
+    // 1. Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      handleAuthSession(session);
+    });
+
+    // 2. Subscribe to session changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      handleAuthSession(session);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  // --- Fetch Contacts from Supabase ---
+  useEffect(() => {
+    if (isSupabaseConfigured && isAdminLoggedIn) {
+      const fetchContacts = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('contact_requests')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+          if (error) {
+            console.error('Error fetching contact requests:', error);
+            triggerToast('❌ Failed to fetch contact requests from database.', 'error');
+          } else if (data) {
+            const mapped: ContactRequest[] = data.map(item => ({
+              id: item.id,
+              name: item.name,
+              email: item.email,
+              porosity: item.porosity || undefined,
+              phone: item.phone || undefined,
+              message: item.message,
+              photoAttachment: item.photo_attachment || undefined,
+              date: item.date || item.created_at?.split('T')[0],
+              status: item.status as any,
+            }));
+            setContactRequests(mapped);
+          }
+        } catch (err) {
+          console.error('Error fetching contact requests:', err);
+        }
+      };
+      fetchContacts();
+    } else if (isSupabaseConfigured && !isAdminLoggedIn) {
+      setContactRequests([]);
+    }
+  }, [isAdminLoggedIn]);
+
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
 
   const triggerToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
@@ -398,9 +495,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => { localStorage.setItem('cartiae_gallery', JSON.stringify(gallery)); }, [gallery]);
   useEffect(() => { localStorage.setItem('cartiae_blogs', JSON.stringify(blogs)); }, [blogs]);
   useEffect(() => { localStorage.setItem('cartiae_discounts', JSON.stringify(discountCodes)); }, [discountCodes]);
-  useEffect(() => { localStorage.setItem('cartiae_home', JSON.stringify(homepageContent)); }, [homepageContent]);
   useEffect(() => { localStorage.setItem('cartiae_services', JSON.stringify(services)); }, [services]);
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      localStorage.setItem('cartiae_contacts', JSON.stringify(contactRequests));
+    }
+  }, [contactRequests, isSupabaseConfigured]);
   useEffect(() => { localStorage.setItem('cartiae_newsletter', JSON.stringify(newsletterSignups)); }, [newsletterSignups]);
+  useEffect(() => { localStorage.setItem('cartiae_home', JSON.stringify(homepageContent)); }, [homepageContent]);
   useEffect(() => { localStorage.setItem('cartiae_cart', JSON.stringify(cart)); }, [cart]);
   useEffect(() => { localStorage.setItem('cartiae_orders', JSON.stringify(orders)); }, [orders]);
   useEffect(() => { localStorage.setItem('cartiae_contacts', JSON.stringify(contactRequests)); }, [contactRequests]);
@@ -416,34 +518,110 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [currentAdminUser]);
 
   // --- Contact Request Operations ---
-  const addContactRequest = (request: Omit<ContactRequest, 'id' | 'date' | 'status'>) => {
+  const addContactRequest = async (request: Omit<ContactRequest, 'id' | 'date' | 'status'>) => {
+    const id = `CON-${Math.floor(100 + Math.random() * 900)}`;
+    const date = new Date().toISOString().split('T')[0];
+    const status = 'Pending';
+
     const newRequest: ContactRequest = {
       ...request,
-      id: `CON-${Math.floor(100 + Math.random() * 900)}`,
-      date: new Date().toISOString().split('T')[0],
-      status: 'Pending'
+      id,
+      date,
+      status
     };
+
     setContactRequests(prev => [newRequest, ...prev]);
 
     if (emailNotificationsEnabled) {
       triggerToast(`✉ Dispatching notification email regarding ${request.name}'s contact message!`, 'success');
-      console.log(`[SIMULATOR] Admin Email Notification: New contact form inquiry from ${request.name} <${request.email}>.`);
-    } else {
-      console.log(`[SIMULATOR] Admin Email Notification suppressed (Settings set to Disabled) for submission from ${request.name}.`);
+    }
+
+    if (isSupabaseConfigured) {
+      try {
+        const { error } = await supabase
+          .from('contact_requests')
+          .insert({
+            id,
+            name: request.name,
+            email: request.email,
+            phone: request.phone || null,
+            message: request.message,
+            porosity: request.porosity || null,
+            photo_attachment: request.photoAttachment || null,
+            status,
+            date
+          });
+
+        if (error) {
+          console.error('Failed to save contact request to database:', error);
+          triggerToast('⚠️ Local submission succeeded, but failed to sync to database.', 'info');
+        }
+      } catch (err) {
+        console.error('Database connection error during contact submission:', err);
+      }
     }
   };
 
-  const respondToContactRequest = (id: string) => {
+  const respondToContactRequest = async (id: string) => {
     setContactRequests(prev => prev.map(req => req.id === id ? { ...req, status: 'Responded' } : req));
+    if (isSupabaseConfigured) {
+      try {
+        const { error } = await supabase
+          .from('contact_requests')
+          .update({ status: 'Responded' })
+          .eq('id', id);
+
+        if (error) {
+          console.error('Failed to update contact request status on database:', error);
+          triggerToast('❌ Failed to update status in database.', 'error');
+        }
+      } catch (err) {
+        console.error('Database update error:', err);
+      }
+    }
   };
 
-  const deleteContactRequest = (id: string) => {
-    writeTombstone(TOMBSTONE_KEYS.contacts, id);
+  const deleteContactRequest = async (id: string) => {
     setContactRequests(prev => prev.filter(req => req.id !== id));
+    if (isSupabaseConfigured) {
+      try {
+        const { error } = await supabase
+          .from('contact_requests')
+          .delete()
+          .eq('id', id);
+
+        if (error) {
+          console.error('Failed to delete contact request from database:', error);
+          triggerToast('❌ Failed to delete from database.', 'error');
+        } else {
+          triggerToast('✓ Inquiry deleted successfully.', 'success');
+        }
+      } catch (err) {
+        console.error('Database delete error:', err);
+      }
+    } else {
+      writeTombstone(TOMBSTONE_KEYS.contacts, id);
+      triggerToast('✓ Inquiry deleted successfully.', 'success');
+    }
   };
 
-  const updateContactRequestStatus = (id: string, status: 'Pending' | 'Responded' | 'Read' | 'Archived') => {
+  const updateContactRequestStatus = async (id: string, status: 'Pending' | 'Responded' | 'Read' | 'Archived') => {
     setContactRequests(prev => prev.map(req => req.id === id ? { ...req, status } : req));
+    if (isSupabaseConfigured) {
+      try {
+        const { error } = await supabase
+          .from('contact_requests')
+          .update({ status })
+          .eq('id', id);
+
+        if (error) {
+          console.error('Failed to update status on database:', error);
+          triggerToast('❌ Failed to update status in database.', 'error');
+        }
+      } catch (err) {
+        console.error('Database status update error:', err);
+      }
+    }
   };
 
   // --- EBook Operations ---
@@ -562,9 +740,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setDiscountCodes(prev => prev.filter(item => item.id !== id));
   };
 
+  const updateDiscountCode = (id: string, patch: Partial<DiscountCode>) => {
+    setDiscountCodes(prev => prev.map(item => item.id === id ? { ...item, ...patch } : item));
+  };
+
   // --- CMS Content ---
   const updateHomepageContent = (content: Partial<HomepageContent>) => {
     setHomepageContent(prev => ({ ...prev, ...content }));
+  };
+
+  const addService = (service: Omit<Service, 'id'>) => {
+    const newService: Service = {
+      ...service,
+      id: `svc-${Date.now()}`
+    };
+    setServices(prev => [...prev, newService]);
   };
 
   const updateService = (id: string, patch: Partial<Service>) => {
@@ -729,27 +919,74 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     { email: 'content@cartiaerae.com', passwords: ['content'], user: { id: 'adm-003', name: 'Brianna Smith (Editor)', email: 'content@cartiaerae.com', role: 'content_manager' as const } },
   ];
 
-  const loginAdmin = (email: string, password: string): boolean => {
-    const match = ADMIN_CREDENTIALS.find(
-      (cred) => cred.email.toLowerCase() === email.trim().toLowerCase() && cred.passwords.includes(password)
-    );
-    const user: AdminUser | null = match ? match.user : null;
+  const loginAdmin = async (email: string, password: string): Promise<boolean> => {
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: email.trim().toLowerCase(),
+          password,
+        });
 
-    if (user) {
-      setIsAdminLoggedIn(true);
-      setCurrentAdminUser(user);
-      localStorage.setItem('cartiae_admin_auth', 'true');
-      localStorage.setItem('cartiae_admin_user', JSON.stringify(user));
-      return true;
+        if (error) {
+          triggerToast(`❌ Login failed: ${error.message}`, 'error');
+          return false;
+        }
+
+        if (data.user) {
+          const { data: adminProfile, error: profileError } = await supabase
+            .from('admin_users')
+            .select('*')
+            .eq('id', data.user.id)
+            .single();
+
+          if (profileError || !adminProfile) {
+            triggerToast('❌ Access denied: You are not authorized as administrator.', 'error');
+            await supabase.auth.signOut();
+            return false;
+          }
+          
+          triggerToast(`✓ Welcome back, ${adminProfile.name}!`, 'success');
+          return true;
+        }
+        return false;
+      } catch (err) {
+        console.error('Authentication error:', err);
+        triggerToast('❌ An authentication error occurred.', 'error');
+        return false;
+      }
+    } else {
+      const match = ADMIN_CREDENTIALS.find(
+        (cred) => cred.email.toLowerCase() === email.trim().toLowerCase() && cred.passwords.includes(password)
+      );
+      const user: AdminUser | null = match ? match.user : null;
+
+      if (user) {
+        setIsAdminLoggedIn(true);
+        setCurrentAdminUser(user);
+        localStorage.setItem('cartiae_admin_auth', 'true');
+        localStorage.setItem('cartiae_admin_user', JSON.stringify(user));
+        triggerToast(`✓ Welcome back, ${user.name}! (Demo Mode)`, 'success');
+        return true;
+      }
+      return false;
     }
-    return false;
   };
 
-  const logoutAdmin = () => {
-    setIsAdminLoggedIn(false);
-    setCurrentAdminUser(null);
-    localStorage.removeItem('cartiae_admin_auth');
-    localStorage.removeItem('cartiae_admin_user');
+  const logoutAdmin = async () => {
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.auth.signOut();
+        triggerToast('✓ Logged out successfully.', 'info');
+      } catch (err) {
+        console.error('Error logging out:', err);
+      }
+    } else {
+      setIsAdminLoggedIn(false);
+      setCurrentAdminUser(null);
+      localStorage.removeItem('cartiae_admin_auth');
+      localStorage.removeItem('cartiae_admin_user');
+      triggerToast('✓ Logged out successfully (Demo Mode).', 'info');
+    }
   };
 
   return (
@@ -762,9 +999,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addVideo, updateVideo, deleteVideo,
       addGalleryItem, updateGalleryItem, deleteGalleryItem,
       addBlogPost, updateBlogPost, deleteBlogPost, likeBlogPost,
-      addDiscountCode, deleteDiscountCode,
+      addDiscountCode, updateDiscountCode, deleteDiscountCode,
       updateHomepageContent,
-      updateService,
+      addService, updateService,
       deleteService,
       signupNewsletter,
       addToCart, removeFromCart, updateCartQuantity, applyPromoCode, clearCart,

@@ -162,37 +162,76 @@ On cancel  → /checkout/cancel   (cart still intact)
 
 ---
 
-## ⚠️ Backend Status — Current Data Persistence (Important)
+## ⚠️ Backend Status — Database & Auth Status (Phase 1 Complete)
 
-> **The current version of the site uses browser `localStorage` for all admin data.**  
-> This is a functional demo/prototype system — not a production database.
+> [!NOTE]
+> **Phase 1 of the Supabase backend migration is complete!**
+> Admin authentication and visitor contact requests are now secured by **Supabase**. Other entities (products, eBooks, videos, etc.) still use client-side `localStorage` with seed data, operating in a hybrid/fallback mode if environment variables are missing.
 
 ### What This Means For You
 
-All products, eBooks, videos, gallery items, blog posts, discount codes, orders, and contact requests you manage through the Admin Portal are saved **only in the browser on the device you're using**.
+1. **Administrative Authentication**: Plaintext credentials have been removed from the client bundle. Staff must be registered in your Supabase Auth dashboard, and their roles are verified securely via the database.
+2. **Contact Requests**: Submissions from the public Contact page are sent directly to your Supabase `contact_requests` table and loaded on the admin dashboard.
+3. **Demo Fallback**: If Supabase environment variables are missing, the system warns the console in development and falls back to the original localStorage simulation for all flows.
 
-| Limitation | Explanation |
-|---|---|
-| **Not multi-device** | Admin changes on your laptop are not visible on your phone or another computer |
-| **Not persistent across browsers** | Clearing browser cache or using a different browser wipes all data |
-| **Customers can't reach you** | Contact form submissions and orders are stored on the customer's browser only — you cannot see them from another device |
-| **No real payments** | Stripe checkout is built and structured but the server-side session creation is commented out — no money is actually collected |
+---
 
-### What You Currently Can Do Safely
+## 🔐 Admin Authentication Setup & Roles
 
-✅ Manage your admin catalog (products, eBooks) as a single-device demo  
-✅ Upload and delete videos, gallery photos, blog posts  
-✅ Test the full checkout flow in simulation mode  
-✅ Review the contact form UI and submission flow  
+Admin access is controlled by a custom `admin_users` profile table linked to Supabase Auth UUIDs. 
 
-### What's Required for Full Production
+### How to Add a Staff Member
 
-To run the site as a real, multi-device business platform you will need:
+1. **Create Auth Credentials**:
+   - Go to your **Supabase Dashboard** → **Authentication** → **Users**.
+   - Click **Add User** → **Create User**, input their email and password, and click save.
+   - Copy the generated **User ID** (UUID).
 
-1. **A real database** — Supabase (recommended), Firebase, or Postgres
-2. **Backend API functions** — Netlify Functions or a separate Express/Node server
-3. **Stripe backend** — a server function to call `stripe.checkout.sessions.create()` and return the redirect URL
-4. **Email delivery** — SendGrid or Postmark integration to send eBook download links automatically
-5. **Secure admin authentication** — JWT tokens with server-side session validation instead of hardcoded passwords
+2. **Map User to Role**:
+   - Go to the **Supabase SQL Editor**.
+   - Execute an `INSERT` statement to assign a role (`super_admin`, `store_manager`, or `content_manager`) to their UUID.
+   ```sql
+   INSERT INTO public.admin_users (id, name, email, role)
+   VALUES (
+     'PASTE-USER-UUID-HERE',
+     'Staff Member Name',
+     'staff@cartiaerae.com',
+     'store_manager' -- or 'super_admin' / 'content_manager'
+   );
+   ```
 
-Contact your developer when you're ready to connect a real backend.
+---
+
+## 🛠️ Database Setup (SQL Schema)
+
+To bootstrap your database tables and secure access rules, execute the DDL schema in the project root:
+- Refer to [supabase_schema.sql](file:///C:/Users/Anderson/Documents/antigravity/jolly-archimedes/supabase_schema.sql) in your local files.
+- It configures Row Level Security (RLS) policies allowing public submissions but restricting retrieval and updates to verified admin staff.
+
+---
+
+## ⚡ Environment Configurations
+
+Create a `.env` file in your project root using the template below:
+```env
+# 🌐 Supabase Integration (Phase 1)
+VITE_SUPABASE_URL="https://your-project.supabase.co"
+VITE_SUPABASE_ANON_KEY="your-anon-key-here"
+
+# 💳 Stripe Payment Keys
+VITE_STRIPE_PUBLIC_KEY=pk_test_51...
+VITE_STRIPE_SECRET_KEY=sk_test_51...
+
+# ✉ SMTP/Email Configurations
+VITE_SENDGRID_API_KEY=SG.example...
+VITE_SENDER_EMAIL=hello@cartiaerae.com
+```
+
+---
+
+## 🚀 Remaining Production Steps (Phase 2 & 3)
+
+To fully transition the platform, the following remaining scopes will need database migration:
+1. **Catalog & Content Persistence**: Migrate products, eBooks, videos, and gallery lookbooks to Supabase.
+2. **Order Management**: Connect checkout order receipts to a database table instead of transient localStorage.
+3. **eBook Deliverability**: Link SendGrid function to dispatch download keys upon Stripe checkout webhook confirmation.
