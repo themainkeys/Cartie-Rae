@@ -5,12 +5,12 @@
   --font-sans: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", monospace;
   
-  /* ─── Neutral / Base Palette (replaces all brown tones) ─── */
-  --color-brand-cream:     #FAFAFA;   /* zinc-50  — near white */
-  --color-brand-beige:     #F4F4F5;   /* zinc-100 — soft light gray */
-  --color-brand-warm-tan:  #D4D4D8;   /* zinc-300 — subtle border gray */
-  --color-brand-chocolate: #52525B;   /* zinc-600 — mid charcoal */
-  --color-brand-dark:      #18181B;   /* zinc-950 — true charcoal/near-black */
+  /* ─── Neutral / Base Palette (warm cream tones) ─── */
+  --color-brand-cream:     #FAF6F0;   /* warm ivory — main page background */
+  --color-brand-beige:     #F2EAE0;   /* warm sand — card/hover background */
+  --color-brand-warm-tan:  #C4A882;   /* warm tan — borders and dividers */
+  --color-brand-chocolate: #52382B;   /* deep warm brown — headings/labels */
+  --color-brand-dark:      #2C1810;   /* richest brown — body text/icons */
 
   /* ─── Pink Accent Palette (unchanged) ─── */
   --color-brand-pink-light: #FFF0F3;  /* soft blush */
