@@ -397,6 +397,7 @@ export const AdminPortal: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // Dashboard Sub-tabs
   const [activeTab, setActiveTab] = useState<'overview' | 'catalog' | 'contacts' | 'design'>('overview');
@@ -599,19 +600,27 @@ export const AdminPortal: React.FC = () => {
     return true;
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
     if (!email || !email.includes('@')) {
       setAuthError('Please enter a valid administrative staff email.');
       return;
     }
-    const success = loginAdmin(email, password);
-    if (!success) {
-      setAuthError('Incorrect staff email or password. Access denied.');
-    } else {
-      setEmail('');
-      setPassword('');
+    setIsLoggingIn(true);
+    try {
+      const success = await loginAdmin(email, password);
+      if (!success) {
+        setAuthError('Incorrect staff email or password. Access denied.');
+      } else {
+        setEmail('');
+        setPassword('');
+      }
+    } catch (err) {
+      setAuthError('An error occurred during authentication. Please try again.');
+      console.error(err);
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
@@ -1087,10 +1096,11 @@ export const AdminPortal: React.FC = () => {
                   id="admin-email-input"
                   type="email"
                   required
+                  disabled={isLoggingIn}
                   placeholder="e.g. admin@cartiae.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 bg-white border border-[#E5D5C8] text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-center font-sans transition-all duration-150 shadow-xs"
+                  className="w-full px-4 py-3 bg-white border border-[#E5D5C8] text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-center font-sans transition-all duration-150 shadow-xs disabled:opacity-75 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -1100,10 +1110,11 @@ export const AdminPortal: React.FC = () => {
                   id="admin-password-input"
                   type="password"
                   required
+                  disabled={isLoggingIn}
                   placeholder="Insert secret staff key to entry"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 bg-white border border-[#E5D5C8] text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-center font-mono transition-all duration-150 shadow-xs"
+                  className="w-full px-4 py-3 bg-white border border-[#E5D5C8] text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-center font-mono transition-all duration-150 shadow-xs disabled:opacity-75 disabled:cursor-not-allowed"
                 />
               </div>
             </div>
@@ -1111,10 +1122,20 @@ export const AdminPortal: React.FC = () => {
             <button
               id="admin-login-submit"
               type="submit"
-              className="w-full bg-gradient-to-r from-brand-rose to-brand-berry hover:from-brand-berry hover:to-brand-rose text-white py-3 px-4 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 focus:outline-none shadow-[0_4px_12px_rgba(194,57,90,0.18)] hover:shadow-[0_6px_16px_rgba(194,57,90,0.25)] hover:-translate-y-0.5"
+              disabled={isLoggingIn}
+              className="w-full bg-gradient-to-r from-brand-rose to-brand-berry hover:from-brand-berry hover:to-brand-rose text-white py-3 px-4 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 focus:outline-none shadow-[0_4px_12px_rgba(194,57,90,0.18)] hover:shadow-[0_6px_16px_rgba(194,57,90,0.25)] hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              <ShieldCheck className="w-4 h-4 text-white/95" />
-              <span>Verify Authorization</span>
+              {isLoggingIn ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Verifying...</span>
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="w-4 h-4 text-white/95" />
+                  <span>Verify Authorization</span>
+                </>
+              )}
             </button>
           </form>
 
