@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../context/AppContext';
-import { isSupabaseConfigured } from '../services/supabaseClient';
+import { isSupabaseConfigured, isMediaUploadEnabled } from '../services/supabaseClient';
+import { uploadMedia } from '../services/mediaUpload';
 import { Product, EBook, DiscountCode, TikTokVideo, PhotoGalleryItem, ContactRequest, AdminRole } from '../types';
 import { 
   ShieldCheck, Lock, LogOut, CheckCircle2, TrendingUp, ShoppingBag, 
@@ -125,6 +126,8 @@ interface ImageDropzoneProps {
 
 const ImageDropzone: React.FC<ImageDropzoneProps> = ({ imageValue, onImageChange, label, prefersReducedMotion = false }) => {
   const [isDragActive, setIsDragActive] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDrag = (e: React.DragEvent) => {
@@ -137,17 +140,50 @@ const ImageDropzone: React.FC<ImageDropzoneProps> = ({ imageValue, onImageChange
     }
   };
 
+  // Compress to a JPEG data URL, then (if Supabase Storage is configured) upload
+  // the compressed image and store the PERSISTENT public URL. Falls back to the
+  // local base64 data URL when storage is unavailable or the upload fails.
   const processFile = async (file: File) => {
+    setUploadError(null);
+    let compressedDataUrl = '';
     try {
-      const compressed = await compressImage(file);
-      onImageChange(compressed);
+      compressedDataUrl = await compressImage(file);
     } catch (error) {
-      console.error("Failed to compress image:", error);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        onImageChange(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      console.error('Failed to compress image:', error);
+    }
+
+    if (!isMediaUploadEnabled) {
+      // Demo/local mode: keep the base64 preview (persists in localStorage).
+      if (compressedDataUrl) {
+        onImageChange(compressedDataUrl);
+      } else {
+        const reader = new FileReader();
+        reader.onloadend = () => onImageChange(reader.result as string);
+        reader.readAsDataURL(file);
+      }
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      // Prefer the compressed JPEG; fall back to the original file bytes.
+      let uploadFile: File = file;
+      if (compressedDataUrl) {
+        const blob = await (await fetch(compressedDataUrl)).blob();
+        uploadFile = new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' });
+      }
+      const result = await uploadMedia(uploadFile, 'images');
+      if ('url' in result) {
+        onImageChange(result.url);
+      } else {
+        setUploadError(result.error);
+        if (compressedDataUrl) onImageChange(compressedDataUrl); // keep local preview so work isn't lost
+      }
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed.');
+      if (compressedDataUrl) onImageChange(compressedDataUrl);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -188,7 +224,12 @@ const ImageDropzone: React.FC<ImageDropzoneProps> = ({ imageValue, onImageChange
         onChange={handleChange}
         className="hidden"
       />
-      {imageValue ? (
+      {isUploading ? (
+        <div className="flex items-center gap-2 text-brand-chocolate">
+          <div className="w-4 h-4 border-2 border-brand-rose border-t-transparent rounded-full animate-spin" />
+          <span className="text-[10px] font-bold">Uploading {label}…</span>
+        </div>
+      ) : imageValue ? (
         <div className="flex items-center gap-3 w-full">
           <img
             src={imageValue}
@@ -198,6 +239,7 @@ const ImageDropzone: React.FC<ImageDropzoneProps> = ({ imageValue, onImageChange
           <div className="text-left flex-1 min-w-0">
             <p className="text-[10px] font-bold text-brand-chocolate truncate">{label} Uploaded</p>
             <p className="text-[9px] text-[#A67E6B] font-medium">Click anywhere to replace file</p>
+            {uploadError && <p className="text-[9px] text-red-600 font-medium truncate">Saved locally (upload failed: {uploadError})</p>}
           </div>
           <span
             className="text-[9px] text-brand-rose font-bold bg-brand-pink-light/50 px-2 py-1 rounded hover:bg-brand-rose hover:text-white transition-colors whitespace-nowrap"
@@ -210,6 +252,7 @@ const ImageDropzone: React.FC<ImageDropzoneProps> = ({ imageValue, onImageChange
           <Camera className="w-5 h-5 text-brand-rose mb-1" />
           <span className="text-[10px] font-bold text-brand-chocolate">{label} Graphic</span>
           <span className="text-[9px] text-[#8C6D62] mt-0.5">Drag & drop here or click to browse</span>
+          {uploadError && <span className="text-[9px] text-red-600 font-medium mt-1">Upload failed: {uploadError}</span>}
         </div>
       )}
     </div>
@@ -225,15 +268,40 @@ interface VideoDropzoneProps {
 
 const VideoDropzone: React.FC<VideoDropzoneProps> = ({ videoValue, onVideoChange, label, prefersReducedMotion = false }) => {
   const [isDragActive, setIsDragActive] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const processFile = (file: File) => {
+  const processFile = async (file: File) => {
     if (!file.type.startsWith('video/')) {
       alert('Please select a valid video file (MP4/WebM).');
       return;
     }
-    const localUrl = URL.createObjectURL(file);
-    onVideoChange(localUrl, file);
+    setUploadError(null);
+
+    if (!isMediaUploadEnabled) {
+      // Demo/local mode only: a blob URL is TEMPORARY and is lost on refresh.
+      // Configure Supabase Storage to persist uploaded videos.
+      const localUrl = URL.createObjectURL(file);
+      onVideoChange(localUrl, file);
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const result = await uploadMedia(file, 'videos');
+      if ('url' in result) {
+        onVideoChange(result.url, file); // persistent public URL
+      } else {
+        setUploadError(result.error);
+        onVideoChange(URL.createObjectURL(file), file); // temporary fallback preview
+      }
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed.');
+      onVideoChange(URL.createObjectURL(file), file);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleDrag = (e: React.DragEvent) => {
@@ -283,7 +351,12 @@ const VideoDropzone: React.FC<VideoDropzoneProps> = ({ videoValue, onVideoChange
         onChange={handleChange}
         className="hidden"
       />
-      {videoValue && videoValue.startsWith('blob:') ? (
+      {isUploading ? (
+        <div className="flex items-center gap-2 text-brand-chocolate">
+          <div className="w-4 h-4 border-2 border-brand-rose border-t-transparent rounded-full animate-spin" />
+          <span className="text-[10px] font-bold">Uploading {label}…</span>
+        </div>
+      ) : videoValue && (videoValue.startsWith('blob:') || /\.(mp4|webm)(\?|$)/i.test(videoValue) || videoValue.includes('/storage/v1/object/public/media/')) ? (
         <div className="flex items-center gap-3 w-full">
           <div className="w-12 h-12 rounded-lg border border-brand-warm-tan/20 bg-black flex items-center justify-center overflow-hidden shrink-0">
             <video src={videoValue} className="w-full h-full object-cover" muted playsInline />
@@ -291,6 +364,9 @@ const VideoDropzone: React.FC<VideoDropzoneProps> = ({ videoValue, onVideoChange
           <div className="text-left flex-1 min-w-0">
             <p className="text-[10px] font-bold text-brand-chocolate truncate">{label} Loaded</p>
             <p className="text-[9px] text-[#A67E6B] font-medium">Click anywhere to replace file</p>
+            {uploadError
+              ? <p className="text-[9px] text-red-600 font-medium truncate">Temporary only (upload failed: {uploadError})</p>
+              : videoValue.startsWith('blob:') && <p className="text-[9px] text-amber-600 font-medium">Temporary — configure storage to persist</p>}
           </div>
           <span
             className="text-[9px] text-brand-rose font-bold bg-brand-pink-light/50 px-2 py-1 rounded hover:bg-brand-rose hover:text-white transition-colors whitespace-nowrap"
