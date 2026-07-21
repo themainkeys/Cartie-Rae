@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Mail, Instagram, ArrowRight, Sparkles, Check, PhoneCall, ShieldCheck } from 'lucide-react';
+import { Mail, ArrowRight, Sparkles, Check } from 'lucide-react';
 
 interface FooterProps {
   setActivePart: (part: string) => void;
@@ -63,6 +63,46 @@ export const Footer: React.FC<FooterProps> = ({ setActivePart }) => {
               >
                 Instagram
               </a>
+            </div>
+
+            {/* Newsletter signup — functional in demo/local mode (stores locally). */}
+            <div className="pt-4 max-w-sm">
+              <h5 className="font-serif text-xs font-semibold uppercase tracking-[0.2em] text-brand-rose mb-2 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" />
+                Join the List
+              </h5>
+              {success ? (
+                <div className="flex items-center gap-2 text-xs text-emerald-400 font-medium bg-emerald-950/30 border border-emerald-800/40 rounded-lg px-3 py-2.5">
+                  <Check className="w-4 h-4 shrink-0" />
+                  <span>You're on the list — thank you!</span>
+                </div>
+              ) : (
+                <form onSubmit={handleSubscribe} className="space-y-1.5" noValidate>
+                  <div className="flex items-stretch gap-2">
+                    <div className="relative flex-1">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-brand-beige/40" />
+                      <input
+                        id="footer-newsletter-email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="Your email address"
+                        aria-label="Email address for newsletter"
+                        className="w-full pl-9 pr-3 py-2.5 bg-brand-chocolate/20 border border-brand-chocolate/40 rounded-lg text-xs text-brand-cream placeholder-brand-beige/40 focus:outline-none focus:ring-1 focus:ring-brand-rose focus:border-brand-rose transition-all"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      aria-label="Subscribe to newsletter"
+                      className="shrink-0 flex items-center justify-center px-3.5 bg-brand-rose hover:bg-brand-berry text-white rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-brand-rose/40"
+                    >
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                  {error && <p className="text-[10px] text-brand-rose font-medium pl-1">{error}</p>}
+                  <p className="text-[10px] text-brand-beige/40 pl-1">Wash-day tips &amp; new guides. No spam.</p>
+                </form>
+              )}
             </div>
           </div>
 
