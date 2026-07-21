@@ -24,7 +24,10 @@ npm install
    ```bash
    cp .env.example .env
    ```
-2. Open `.env` and fill in your Stripe, database, and JWT security keys.
+2. Open `.env` and fill in values. **Nothing is required to run locally** — the app
+   degrades to clearly-labeled demo behavior when integrations are absent. Note the
+   `VITE_` (browser-safe) vs. non-prefixed (server-only) distinction in the file;
+   never put a secret key behind a `VITE_` prefix.
 
 ### Step 3: Run the Development Server
 ```bash
@@ -58,7 +61,9 @@ Phase 1 of the Supabase backend migration has been integrated for secure staff a
 ### Step 1: Bootstrapping the Database
 1. Go to your [Supabase Dashboard](https://supabase.com) and create a new project.
 2. Open the **SQL Editor** in the dashboard.
-3. Copy and run the SQL statements from [supabase_schema.sql](file:///C:/Users/Anderson/Documents/antigravity/jolly-archimedes/supabase_schema.sql) to create the tables (`admin_users` and `contact_requests`) and configure Row Level Security (RLS) policies.
+3. Create the `admin_users` and `contact_requests` tables and configure Row Level
+   Security (RLS) so only verified admin staff can read/update them while the
+   public can submit contact requests.
 
 ### Step 2: Setting up Staff Auth Accounts
 1. Go to **Authentication** -> **Users** in the Supabase Dashboard.
@@ -85,16 +90,32 @@ Phase 1 of the Supabase backend migration has been integrated for secure staff a
 
 ---
 
-## ⚡ Production Persistence & Persisting Mock Services (Phase 2 & 3)
+## ⚡ Production Status & Remaining Backend Work
 
-For remaining entities (products, eBooks, videos, etc.), the platform still operates in local-first demo mode (sandbox) by default. To hook them up to live databases:
+See **`audit_report.md`** for the full breakdown of implemented / demo /
+backend-required behavior. Summary:
 
-1. **Stripe Payments Integration**:
-   - In `src/services/stripe.ts`, replace the simulator redirect URL with your backend API endpoint `POST /api/checkout/create-session`.
-   - Configure a webhook receiver on your backend listening for `checkout.session.completed` events to decrement product inventory and trigger digital delivery.
-2. **Secure eBook Delivery**:
-   - Digital download generation (generating signed expiring tokens) should be handled on your server-side environment.
-   - The token verification logic is documented in `src/services/ebookDelivery.ts`. Ensure links expire after 24 hours.
-3. **Media Upload Persistence**:
-   - The drag-and-drop CMS console dropzone in `src/views/AdminPortal.tsx` calls `mediaAPI.upload` in `src/services/api.ts`.
-   - Swap the S3/storage upload mock with a real FormData request to save user uploaded images.
+**Working now:** storefront browsing, product/eBook filtering & search, Visuals
+deep links, newsletter capture (local), cart, and the demo admin console.
+
+**Demo / `localStorage` only:** products, eBooks, videos, gallery, orders, and
+newsletter signups persist per-browser and are not authenticated.
+
+**Requires a backend to be production-ready:**
+
+1. **Auth (Supabase):** until `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` are
+   set, the admin console is a passwordless **demo** role picker (not secure).
+   With them set, `AppContext.loginAdmin` uses real Supabase Auth + `admin_users`.
+2. **Payments (Stripe):** checkout already posts to the serverless function
+   `netlify/functions/create-checkout-session.js`. It stays in **demo mode**
+   (disabled, never fakes success) until `VITE_STRIPE_PUBLISHABLE_KEY` and the
+   server-side `STRIPE_SECRET_KEY` / `SITE_URL` are configured. Add a
+   `checkout.session.completed` webhook to persist orders and trigger delivery.
+3. **eBook delivery:** `src/services/ebookDelivery.ts` ships a **labeled demo**
+   token (base64 — encoding, not security) plus a `productionDelivery` interface.
+   Real delivery must generate short-lived **signed URLs** server-side (e.g.
+   Supabase Storage `createSignedUrl`) after verifying the purchase, from a
+   **private** bucket. Never expose permanent private files publicly.
+4. **Media uploads:** `mediaAPI.upload` in `src/services/api.ts` is a local
+   placeholder (object URL). Swap it for a real upload to private storage
+   (Supabase Storage / S3) via a backend endpoint.
