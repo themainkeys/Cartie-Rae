@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../context/AppContext';
+import { isSupabaseConfigured } from '../services/supabaseClient';
 import { Product, EBook, DiscountCode, TikTokVideo, PhotoGalleryItem, ContactRequest, AdminRole } from '../types';
 import { 
   ShieldCheck, Lock, LogOut, CheckCircle2, TrendingUp, ShoppingBag, 
@@ -386,7 +387,7 @@ export const AdminPortal: React.FC = () => {
     addGalleryItem, updateGalleryItem, deleteGalleryItem,
     addBlogPost, updateBlogPost, deleteBlogPost,
     addDiscountCode, updateDiscountCode, deleteDiscountCode,
-    updateHomepageContent, fulfillOrder, loginAdmin, logoutAdmin,
+    updateHomepageContent, fulfillOrder, loginAdmin, demoLogin, logoutAdmin,
     respondToContactRequest, deleteContactRequest, updateContactRequestStatus,
     emailNotificationsEnabled, setEmailNotificationsEnabled, prefersReducedMotion,
     services, addService, updateService, deleteService,
@@ -594,10 +595,26 @@ export const AdminPortal: React.FC = () => {
   const totalSales = orders.reduce((acc, order) => acc + order.total, 0);
   const pendingOrdersCount = orders.filter(o => o.status === 'Pending').length;
 
+  // Enforces the current admin's role against the operation's allowed roles.
+  // NOTE: This is a client-side UX guard only. In demo mode it can be bypassed by
+  // manipulating client state; real authorization MUST be enforced server-side
+  // (Supabase Row Level Security / backend checks). See audit_report.md.
   const checkPermission = (allowedRoles: AdminRole[]): boolean => {
     if (!currentAdminUser) return false;
-    // Frictionless administration: Allow any authenticated administrator to perform CMS operations
-    return true;
+    return allowedRoles.includes(currentAdminUser.role);
+  };
+
+  // Same check, but surfaces a clear message to restricted users when denied.
+  // Returns true when allowed (no toast), false when denied (toast shown).
+  const requirePermission = (allowedRoles: AdminRole[]): boolean => {
+    const allowed = checkPermission(allowedRoles);
+    if (!allowed) {
+      triggerToast(
+        `Your role (${currentAdminUser?.role.replace('_', ' ') ?? 'guest'}) does not have permission for this action.`,
+        'error'
+      );
+    }
+    return allowed;
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -626,7 +643,7 @@ export const AdminPortal: React.FC = () => {
 
   const handleCmsUpdate = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!checkPermission(['super_admin', 'content_manager'])) return;
+    if (!requirePermission(['super_admin', 'content_manager'])) return;
     updateHomepageContent({
       heroHeadline: cmsHeroHead,
       heroSubheadline: cmsHeroSub,
@@ -771,7 +788,7 @@ export const AdminPortal: React.FC = () => {
 
   const handleAddProductSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!checkPermission(['super_admin', 'store_manager'])) return;
+    if (!requirePermission(['super_admin', 'store_manager'])) return;
     addProduct({
       id: `prod-${Date.now()}`,
       name: prodName,
@@ -792,7 +809,7 @@ export const AdminPortal: React.FC = () => {
 
   const handleAddEBookSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!checkPermission(['super_admin', 'store_manager'])) return;
+    if (!requirePermission(['super_admin', 'store_manager'])) return;
     addEBook({
       id: `ebook-${Date.now()}`,
       name: ebName,
@@ -817,7 +834,7 @@ export const AdminPortal: React.FC = () => {
   };
 
   const handleSaveProduct = (id: string) => {
-    if (!checkPermission(['super_admin', 'store_manager', 'content_manager'])) return;
+    if (!requirePermission(['super_admin', 'store_manager'])) return;
     const orig = products.find(p => p.id === id);
     if (!orig) return;
     updateProduct(id, {
@@ -832,7 +849,7 @@ export const AdminPortal: React.FC = () => {
   };
 
   const handleStartEditProduct = (p: Product) => {
-    if (!checkPermission(['super_admin', 'store_manager', 'content_manager'])) return;
+    if (!requirePermission(['super_admin', 'store_manager'])) return;
     setEditingProductId(p.id);
     setEditProdName(p.name);
     setEditProdCategory(p.category);
@@ -842,7 +859,7 @@ export const AdminPortal: React.FC = () => {
   };
 
   const handleSaveEBook = (id: string) => {
-    if (!checkPermission(['super_admin', 'store_manager', 'content_manager'])) return;
+    if (!requirePermission(['super_admin', 'store_manager'])) return;
     const orig = ebooks.find(e => e.id === id);
     if (!orig) return;
     updateEBook(id, {
@@ -856,7 +873,7 @@ export const AdminPortal: React.FC = () => {
   };
 
   const handleStartEditEBook = (e: EBook) => {
-    if (!checkPermission(['super_admin', 'store_manager', 'content_manager'])) return;
+    if (!requirePermission(['super_admin', 'store_manager'])) return;
     setEditingEBookId(e.id);
     setEditEbName(e.name);
     setEditEbPages(e.pages.toString());
@@ -867,7 +884,7 @@ export const AdminPortal: React.FC = () => {
 
   const handleAddDiscountSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!checkPermission(['super_admin'])) return;
+    if (!requirePermission(['super_admin', 'store_manager'])) return;
     addDiscountCode({
       code: discName.toUpperCase().trim(),
       discountPercent: parseInt(discPercent) || 15,
@@ -913,7 +930,7 @@ export const AdminPortal: React.FC = () => {
       triggerToast('Mobile TikTok links (vm.tiktok.com) are shortened and blocked from embedding by TikTok. Please paste a desktop video link or enter the 19-digit Video ID directly.', 'error');
       return;
     }
-    if (!checkPermission(['super_admin', 'content_manager'])) return;
+    if (!requirePermission(['super_admin', 'content_manager'])) return;
 
     // Simulate file uploads to cloud storage bucket
     if (uploadedVideoFile) {
@@ -989,7 +1006,7 @@ export const AdminPortal: React.FC = () => {
   };
 
   const moveFeaturedVideo = (id: string, direction: 'up' | 'down') => {
-    if (!checkPermission(['super_admin', 'content_manager'])) return;
+    if (!requirePermission(['super_admin', 'content_manager'])) return;
 
     // Get current featured videos, sorted by featuredOrder
     const featured = videos
@@ -1026,7 +1043,7 @@ export const AdminPortal: React.FC = () => {
   const handleAddGallerySubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!galCaption || !galImage) return;
-    if (!checkPermission(['super_admin', 'content_manager'])) return;
+    if (!requirePermission(['super_admin', 'content_manager'])) return;
     
     if (editingGalleryId) {
       updateGalleryItem(editingGalleryId, {
@@ -1083,69 +1100,116 @@ export const AdminPortal: React.FC = () => {
             <Lock className="w-6 h-6 text-brand-rose" />
           </div>
 
-          <h1 className="font-serif text-2xl font-extrabold text-brand-dark tracking-tight mb-2">Cartiae Rae Staff Authorization</h1>
-          <p className="font-sans text-xs text-[#8C6D62] leading-relaxed max-w-xs mx-auto mb-8">
-            Authorized administrative entrance. Insert verified credentials to update catalog inventories, edit storefront copy fields, and review consultations.
-          </p>
+          {isSupabaseConfigured ? (
+            /* ── PRODUCTION: real Supabase Auth (email + password) ── */
+            <>
+              <h1 className="font-serif text-2xl font-extrabold text-brand-dark tracking-tight mb-2">Cartiae Rae Staff Authorization</h1>
+              <p className="font-sans text-xs text-[#8C6D62] leading-relaxed max-w-xs mx-auto mb-8">
+                Authorized administrative entrance. Sign in with your Supabase staff credentials to manage the storefront.
+              </p>
 
-          <form onSubmit={handleLogin} className="space-y-5">
-            <div className="text-left space-y-4">
-              <div>
-                <label className="block text-[10px] tracking-wider uppercase font-extrabold text-[#8C6D62] mb-1.5 pl-1">Staff Email Address</label>
-                <input
-                  id="admin-email-input"
-                  type="email"
-                  required
+              <form onSubmit={handleLogin} className="space-y-5">
+                <div className="text-left space-y-4">
+                  <div>
+                    <label className="block text-[10px] tracking-wider uppercase font-extrabold text-[#8C6D62] mb-1.5 pl-1">Staff Email Address</label>
+                    <input
+                      id="admin-email-input"
+                      type="email"
+                      required
+                      disabled={isLoggingIn}
+                      placeholder="e.g. admin@cartiae.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full px-4 py-3 bg-white border border-[#E5D5C8] text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-center font-sans transition-all duration-150 shadow-xs disabled:opacity-75 disabled:cursor-not-allowed"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] tracking-wider uppercase font-extrabold text-[#8C6D62] mb-1.5 pl-1">Administrative Password</label>
+                    <input
+                      id="admin-password-input"
+                      type="password"
+                      required
+                      disabled={isLoggingIn}
+                      placeholder="Your Supabase Auth password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full px-4 py-3 bg-white border border-[#E5D5C8] text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-center font-mono transition-all duration-150 shadow-xs disabled:opacity-75 disabled:cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  id="admin-login-submit"
+                  type="submit"
                   disabled={isLoggingIn}
-                  placeholder="e.g. admin@cartiae.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 bg-white border border-[#E5D5C8] text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-center font-sans transition-all duration-150 shadow-xs disabled:opacity-75 disabled:cursor-not-allowed"
-                />
+                  className="w-full bg-gradient-to-r from-brand-rose to-brand-berry hover:from-brand-berry hover:to-brand-rose text-white py-3 px-4 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 focus:outline-none shadow-[0_4px_12px_rgba(194,57,90,0.18)] hover:shadow-[0_6px_16px_rgba(194,57,90,0.25)] hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {isLoggingIn ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Verifying...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="w-4 h-4 text-white/95" />
+                      <span>Verify Authorization</span>
+                    </>
+                  )}
+                </button>
+              </form>
+
+              {authError && <p className="text-brand-rose text-xs mt-4 font-bold bg-[#FDF1F2] border border-brand-rose/10 p-2.5 rounded-xl">{authError}</p>}
+
+              <div className="mt-8 pt-6 border-t border-[#E5D5C8]/50 text-[10.5px] text-[#A67E6B] font-medium leading-relaxed">
+                🔒 Authorized Staff Access Only.<br />
+                Roles are verified server-side against your Supabase <span className="font-mono">admin_users</span> table.
+              </div>
+            </>
+          ) : (
+            /* ── DEMO: passwordless role preview (Supabase not configured) ── */
+            <>
+              <h1 className="font-serif text-2xl font-extrabold text-brand-dark tracking-tight mb-2">Admin Console — Demo Mode</h1>
+
+              <div className="text-left bg-amber-50 border border-amber-200 rounded-xl p-3.5 mb-6 flex gap-2.5">
+                <Lock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <p className="text-[10.5px] text-amber-800 leading-relaxed">
+                  <span className="font-bold uppercase tracking-wide">Not secure — demo only.</span> Supabase Auth is not
+                  configured, so there is no real login and no password. Pick a role to preview the console.
+                  Real security requires server-side authentication.
+                </p>
               </div>
 
-              <div>
-                <label className="block text-[10px] tracking-wider uppercase font-extrabold text-[#8C6D62] mb-1.5 pl-1">Administrative Password</label>
-                <input
-                  id="admin-password-input"
-                  type="password"
-                  required
-                  disabled={isLoggingIn}
-                  placeholder="Insert secret staff key to entry"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 bg-white border border-[#E5D5C8] text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-center font-mono transition-all duration-150 shadow-xs disabled:opacity-75 disabled:cursor-not-allowed"
-                />
+              <p className="font-sans text-[11px] text-[#8C6D62] uppercase tracking-widest font-bold mb-3">Preview as</p>
+              <div className="space-y-2.5 text-left">
+                {([
+                  { role: 'super_admin' as AdminRole,     label: 'Super Admin',     desc: 'Full access to everything',                  Icon: ShieldCheck },
+                  { role: 'store_manager' as AdminRole,   label: 'Store Manager',   desc: 'Products, eBooks, orders, discounts, analytics', Icon: Package },
+                  { role: 'content_manager' as AdminRole, label: 'Content Manager', desc: 'Videos, gallery, homepage & blog content',    Icon: Video },
+                ]).map(({ role, label, desc, Icon }) => (
+                  <button
+                    key={role}
+                    id={`demo-login-${role}`}
+                    onClick={() => demoLogin(role)}
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-white border border-[#E5D5C8] hover:border-brand-rose rounded-xl transition-all duration-150 shadow-xs hover:shadow-md hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-brand-rose/20 text-left group"
+                  >
+                    <span className="w-9 h-9 rounded-lg bg-brand-pink-light text-brand-rose flex items-center justify-center shrink-0">
+                      <Icon className="w-4 h-4" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-xs font-extrabold text-brand-dark group-hover:text-brand-rose transition-colors">{label}</span>
+                      <span className="block text-[10px] text-[#8C6D62] leading-snug">{desc}</span>
+                    </span>
+                  </button>
+                ))}
               </div>
-            </div>
 
-            <button
-              id="admin-login-submit"
-              type="submit"
-              disabled={isLoggingIn}
-              className="w-full bg-gradient-to-r from-brand-rose to-brand-berry hover:from-brand-berry hover:to-brand-rose text-white py-3 px-4 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 focus:outline-none shadow-[0_4px_12px_rgba(194,57,90,0.18)] hover:shadow-[0_6px_16px_rgba(194,57,90,0.25)] hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed"
-            >
-              {isLoggingIn ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Verifying...</span>
-                </>
-              ) : (
-                <>
-                  <ShieldCheck className="w-4 h-4 text-white/95" />
-                  <span>Verify Authorization</span>
-                </>
-              )}
-            </button>
-          </form>
-
-          {authError && <p className="text-brand-rose text-xs mt-4 font-bold bg-[#FDF1F2] border border-brand-rose/10 p-2.5 rounded-xl">{authError}</p>}
-          
-          <div className="mt-8 pt-6 border-t border-[#E5D5C8]/50 text-[10.5px] text-[#A67E6B] font-medium leading-relaxed">
-            🔒 Authorized Staff Access Only.<br />
-            Use your assigned staff email and password to sign in.<br />
-            Contact the site owner if you need access credentials.
-          </div>
+              <div className="mt-8 pt-6 border-t border-[#E5D5C8]/50 text-[10.5px] text-[#A67E6B] font-medium leading-relaxed">
+                To enable real authentication, set <span className="font-mono">VITE_SUPABASE_URL</span> and{' '}
+                <span className="font-mono">VITE_SUPABASE_ANON_KEY</span> and register staff in Supabase Auth.
+              </div>
+            </>
+          )}
         </div>
       ) : (
         
@@ -1803,7 +1867,7 @@ export const AdminPortal: React.FC = () => {
                                     id={`delete-prod-list-${p.id}`}
                                     onClick={() => {
                                       if (confirm(`Delete physical "${p.name}" from catalog?`)) {
-                                        if (checkPermission(['super_admin', 'store_manager', 'content_manager'])) {
+                                        if (requirePermission(['super_admin', 'store_manager'])) {
                                           deleteProduct(p.id);
                                           triggerToast(`🗑 "${p.name}" removed from the product catalog.`, 'success');
                                         }
@@ -2070,7 +2134,7 @@ export const AdminPortal: React.FC = () => {
                                     id={`delete-ebook-list-${e.id}`}
                                     onClick={() => {
                                       if (confirm(`Remove digital textbook "${e.name}" from catalog?`)) {
-                                        if (checkPermission(['super_admin', 'store_manager', 'content_manager'])) {
+                                        if (requirePermission(['super_admin', 'store_manager'])) {
                                           deleteEBook(e.id);
                                           triggerToast(`🗑 "${e.name}" removed from the eBook catalog.`, 'success');
                                         }
@@ -2164,7 +2228,7 @@ export const AdminPortal: React.FC = () => {
                             <button
                               id={`fulfill-btn-${o.id}`}
                               onClick={() => {
-                                if (checkPermission(['super_admin', 'store_manager'])) {
+                                if (requirePermission(['super_admin', 'store_manager'])) {
                                   fulfillOrder(o.id);
                                 }
                               }}
@@ -2289,7 +2353,7 @@ export const AdminPortal: React.FC = () => {
                             <button
                               id={`toggle-discount-${c.id}`}
                               onClick={() => {
-                                if (checkPermission(['super_admin'])) {
+                                if (requirePermission(['super_admin', 'store_manager'])) {
                                   updateDiscountCode(c.id, { isActive: !c.isActive });
                                   triggerToast(`"${c.code}" ${c.isActive ? 'deactivated' : 'activated'}.`, 'info');
                                 }
@@ -2306,7 +2370,7 @@ export const AdminPortal: React.FC = () => {
                               id={`delete-discount-${c.id}`}
                               onClick={() => {
                                 if (confirm(`Remove promo Coupon "${c.code}" completely?`)) {
-                                  if (checkPermission(['super_admin'])) {
+                                  if (requirePermission(['super_admin', 'store_manager'])) {
                                     deleteDiscountCode(c.id);
                                     triggerToast(`🗑 Discount code "${c.code}" deleted.`, 'success');
                                   }
@@ -2717,7 +2781,7 @@ export const AdminPortal: React.FC = () => {
                         <div className="flex gap-2">
                           <button
                             onClick={() => {
-                              if (!checkPermission(['super_admin', 'content_manager'])) return;
+                              if (!requirePermission(['super_admin', 'content_manager'])) return;
                               const url = edits.imageUrl.trim();
                               if (!url) { triggerToast('Please enter an image URL.', 'error'); return; }
                               updateService(svc.id, { image: url });
@@ -2729,7 +2793,7 @@ export const AdminPortal: React.FC = () => {
                           </button>
                           <button
                             onClick={() => {
-                              if (!checkPermission(['super_admin'])) return;
+                              if (!requirePermission(['super_admin'])) return;
                               if (!window.confirm(`Delete "${svc.name}"? This cannot be undone.`)) return;
                               deleteService(svc.id);
                               triggerToast(`"${svc.name}" deleted.`, 'success');
@@ -2756,7 +2820,7 @@ export const AdminPortal: React.FC = () => {
                   <button
                     id="admin-add-service-btn"
                     onClick={() => {
-                      if (!checkPermission(['super_admin', 'content_manager'])) return;
+                      if (!requirePermission(['super_admin', 'content_manager'])) return;
                       addService({
                         name: 'New Service',
                         description: 'Describe your service here.',
@@ -2885,7 +2949,7 @@ export const AdminPortal: React.FC = () => {
                         {/* Save */}
                         <button
                           onClick={() => {
-                            if (!checkPermission(['super_admin', 'content_manager'])) return;
+                            if (!requirePermission(['super_admin', 'content_manager'])) return;
                             const parseLines = (raw: string) => raw.split('\n').map(l => l.trim()).filter(Boolean);
                             const name = edits.name.trim();
                             if (!name) { triggerToast('Service name cannot be empty.', 'error'); return; }
@@ -2933,7 +2997,7 @@ export const AdminPortal: React.FC = () => {
                   <button
                     id="admin-add-blog-btn"
                     onClick={() => {
-                      if (!checkPermission(['super_admin', 'content_manager'])) return;
+                      if (!requirePermission(['super_admin', 'content_manager'])) return;
                       setBlogTitle(''); setBlogExcerpt(''); setBlogContent('');
                       setBlogReadTime('5 min read'); setBlogImage(''); setBlogCategory('Growth Tips');
                       setEditingBlogId(null);
@@ -3082,7 +3146,7 @@ export const AdminPortal: React.FC = () => {
                                   id={`delete-blog-${post.id}`}
                                   onClick={() => {
                                     if (confirm(`Remove blog post "${post.title}"?`)) {
-                                      if (checkPermission(['super_admin', 'content_manager'])) {
+                                      if (requirePermission(['super_admin', 'content_manager'])) {
                                         if (editingBlogId === post.id) setEditingBlogId(null);
                                         deleteBlogPost(post.id);
                                         triggerToast(`🗑 "${post.title}" removed from blog.`, 'success');
@@ -3745,7 +3809,7 @@ export const AdminPortal: React.FC = () => {
                               <button
                                 onClick={() => {
                                   if (confirm(`Remove video "${vid.title}"?`)) {
-                                    if (checkPermission(['super_admin', 'store_manager', 'content_manager'])) {
+                                    if (requirePermission(['super_admin', 'content_manager'])) {
                                       deleteVideo(vid.id);
                                       triggerToast(`🗑 "${vid.title}" removed from the video feed.`, 'success');
                                     }
@@ -3955,7 +4019,7 @@ export const AdminPortal: React.FC = () => {
                             <button
                               onClick={() => {
                                 if (confirm(`Remove photo "${gObj.caption}"?`)) {
-                                  if (checkPermission(['super_admin', 'store_manager', 'content_manager'])) {
+                                  if (requirePermission(['super_admin', 'content_manager'])) {
                                     deleteGalleryItem(gObj.id);
                                     triggerToast(`🗑 "${gObj.caption}" removed from the Lookbook.`, 'success');
                                   }

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { EBook, Product, TikTokVideo, PhotoGalleryItem, BlogPost, DiscountCode, CartItem, Order, NewsletterSignup, HomepageContent, WishlistItem, ContactRequest, AdminUser, Service } from '../types';
+import { EBook, Product, TikTokVideo, PhotoGalleryItem, BlogPost, DiscountCode, CartItem, Order, NewsletterSignup, HomepageContent, WishlistItem, ContactRequest, AdminUser, AdminRole, Service } from '../types';
 import { initialEBooks, initialProducts, initialVideos, initialGallery, initialBlogPosts, initialDiscountCodes, initialHomepageContent, initialServices } from '../data/initialData';
 import { supabase, isSupabaseConfigured } from '../services/supabaseClient';
 
@@ -36,6 +36,61 @@ function filterTombstoned<T extends { id: string }>(items: T[], tombstoneKey: st
   const deleted = readTombstones(tombstoneKey);
   if (deleted.size === 0) return items;
   return items.filter(item => !deleted.has(item.id));
+}
+// ────────────────────────────────────────────────────────────────────────────
+
+// ─── Demo-mode admin session ────────────────────────────────────────────────
+// SECURITY: Frontend-only auth is NOT secure. When Supabase is not configured the
+// app runs in an explicitly-labeled DEMO mode: there are NO passwords and NO
+// hidden frontend secret — the login screen lets you pick a role to preview the
+// console. Real security requires server-side validation (Supabase Auth + RLS).
+//
+// We persist only a MINIMAL session ({ role, exp }) and always re-derive the user
+// object (name/email/role) from this trusted map keyed by the stored role. A
+// tampered/unknown role or an expired session is rejected and cleared. This can
+// reduce, but cannot fully prevent, client-side tampering — that's inherent to a
+// browser-only demo and is why production must validate on the server.
+const DEMO_SESSION_KEY = 'cartiae_admin_session';
+const DEMO_SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
+
+const DEMO_ROLE_PROFILES: Record<AdminRole, AdminUser> = {
+  super_admin:     { id: 'demo-super',   name: 'Demo Super Admin',     email: 'demo-super@cartiaerae.local',   role: 'super_admin' },
+  store_manager:   { id: 'demo-store',   name: 'Demo Store Manager',   email: 'demo-store@cartiaerae.local',   role: 'store_manager' },
+  content_manager: { id: 'demo-content', name: 'Demo Content Manager', email: 'demo-content@cartiaerae.local', role: 'content_manager' },
+};
+
+function clearDemoSession(): void {
+  localStorage.removeItem(DEMO_SESSION_KEY);
+  // Clean up any legacy keys from the old hardcoded-credential implementation.
+  localStorage.removeItem('cartiae_admin_auth');
+  localStorage.removeItem('cartiae_admin_user');
+}
+
+// Reads and validates the stored demo session. Returns the trusted user profile
+// or null (clearing anything invalid/expired) — never trusts stored user fields.
+function readValidDemoSession(): AdminUser | null {
+  try {
+    const raw = localStorage.getItem(DEMO_SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { role?: string; exp?: number };
+    if (!parsed || typeof parsed.exp !== 'number' || Date.now() > parsed.exp) {
+      clearDemoSession();
+      return null;
+    }
+    const profile = parsed.role ? DEMO_ROLE_PROFILES[parsed.role as AdminRole] : undefined;
+    if (!profile) {
+      clearDemoSession();
+      return null;
+    }
+    return profile;
+  } catch {
+    clearDemoSession();
+    return null;
+  }
+}
+
+function writeDemoSession(role: AdminRole): void {
+  localStorage.setItem(DEMO_SESSION_KEY, JSON.stringify({ role, exp: Date.now() + DEMO_SESSION_TTL_MS }));
 }
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -125,7 +180,8 @@ interface AppContextType {
   fulfillOrder: (id: string) => void;
   
   // Admin auth
-  loginAdmin: (email: string, password: string) => Promise<boolean>;
+  loginAdmin: (email: string, password: string) => Promise<boolean>; // Supabase (production) path
+  demoLogin: (role: AdminRole) => void; // demo mode only — no password, clearly labeled
   logoutAdmin: () => void;
 
   // Settings & Preferences
@@ -352,13 +408,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(() => {
     if (isSupabaseConfigured) return false;
-    return localStorage.getItem('cartiae_admin_auth') === 'true';
+    return readValidDemoSession() !== null;
   });
 
   const [currentAdminUser, setCurrentAdminUser] = useState<AdminUser | null>(() => {
     if (isSupabaseConfigured) return null;
-    const local = localStorage.getItem('cartiae_admin_user');
-    return local ? JSON.parse(local) : null;
+    return readValidDemoSession();
   });
 
   const [wishlist, setWishlist] = useState<WishlistItem[]>(() => {
@@ -509,13 +564,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => { localStorage.setItem('cartiae_applied_discount', JSON.stringify(appliedDiscount)); }, [appliedDiscount]);
   useEffect(() => { localStorage.setItem('cartiae_wishlist', JSON.stringify(wishlist)); }, [wishlist]);
   useEffect(() => { localStorage.setItem('cartiae_email_notifications_enabled', String(emailNotificationsEnabled)); }, [emailNotificationsEnabled]);
-  useEffect(() => {
-    if (currentAdminUser) {
-      localStorage.setItem('cartiae_admin_user', JSON.stringify(currentAdminUser));
-    } else {
-      localStorage.removeItem('cartiae_admin_user');
-    }
-  }, [currentAdminUser]);
+  // NOTE: we intentionally do NOT persist the full admin user object. In demo mode
+  // only a minimal { role, exp } session is stored (see demoLogin / logoutAdmin);
+  // in Supabase mode the session is owned by Supabase Auth.
 
   // --- Contact Request Operations ---
   const addContactRequest = async (request: Omit<ContactRequest, 'id' | 'date' | 'status'>) => {
@@ -912,64 +963,61 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // --- Admin Auth ---
-  // Credential pairs: email must match password role exactly
-  const ADMIN_CREDENTIALS = [
-    { email: 'admin@cartiaerae.com', passwords: ['admin', 'cartiae123'], user: { id: 'adm-001', name: 'Cartiae Rae', email: 'admin@cartiaerae.com', role: 'super_admin' as const } },
-    { email: 'manager@cartiaerae.com', passwords: ['manager'], user: { id: 'adm-002', name: 'Elena Vance (Manager)', email: 'manager@cartiaerae.com', role: 'store_manager' as const } },
-    { email: 'content@cartiaerae.com', passwords: ['content'], user: { id: 'adm-003', name: 'Brianna Smith (Editor)', email: 'content@cartiaerae.com', role: 'content_manager' as const } },
-  ];
+  // SECURITY: No hardcoded credentials exist in this bundle. Production auth goes
+  // through Supabase Auth (server-verified). Demo mode uses a passwordless,
+  // clearly-labeled role picker (see `demoLogin`) — it is a preview, not security.
 
+  // Supabase (production) login. Only used when Supabase is configured.
   const loginAdmin = async (email: string, password: string): Promise<boolean> => {
-    if (isSupabaseConfigured) {
-      try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: email.trim().toLowerCase(),
-          password,
-        });
+    if (!isSupabaseConfigured) {
+      // In demo mode there is no password login — the UI calls demoLogin(role) instead.
+      triggerToast('❌ Password login requires Supabase Auth. Running in demo mode.', 'error');
+      return false;
+    }
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
 
-        if (error) {
-          triggerToast(`❌ Login failed: ${error.message}`, 'error');
+      if (error) {
+        triggerToast(`❌ Login failed: ${error.message}`, 'error');
+        return false;
+      }
+
+      if (data.user) {
+        const { data: adminProfile, error: profileError } = await supabase
+          .from('admin_users')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
+
+        if (profileError || !adminProfile) {
+          triggerToast('❌ Access denied: You are not authorized as administrator.', 'error');
+          await supabase.auth.signOut();
           return false;
         }
 
-        if (data.user) {
-          const { data: adminProfile, error: profileError } = await supabase
-            .from('admin_users')
-            .select('*')
-            .eq('id', data.user.id)
-            .single();
-
-          if (profileError || !adminProfile) {
-            triggerToast('❌ Access denied: You are not authorized as administrator.', 'error');
-            await supabase.auth.signOut();
-            return false;
-          }
-          
-          triggerToast(`✓ Welcome back, ${adminProfile.name}!`, 'success');
-          return true;
-        }
-        return false;
-      } catch (err) {
-        console.error('Authentication error:', err);
-        triggerToast('❌ An authentication error occurred.', 'error');
-        return false;
-      }
-    } else {
-      const match = ADMIN_CREDENTIALS.find(
-        (cred) => cred.email.toLowerCase() === email.trim().toLowerCase() && cred.passwords.includes(password)
-      );
-      const user: AdminUser | null = match ? match.user : null;
-
-      if (user) {
-        setIsAdminLoggedIn(true);
-        setCurrentAdminUser(user);
-        localStorage.setItem('cartiae_admin_auth', 'true');
-        localStorage.setItem('cartiae_admin_user', JSON.stringify(user));
-        triggerToast(`✓ Welcome back, ${user.name}! (Demo Mode)`, 'success');
+        triggerToast(`✓ Welcome back, ${adminProfile.name}!`, 'success');
         return true;
       }
       return false;
+    } catch (err) {
+      console.error('Authentication error:', err);
+      triggerToast('❌ An authentication error occurred.', 'error');
+      return false;
     }
+  };
+
+  // Demo-mode login: passwordless role preview. No secret, no real authorization.
+  const demoLogin = (role: AdminRole) => {
+    if (isSupabaseConfigured) return; // never use demo login when real auth is available
+    const profile = DEMO_ROLE_PROFILES[role];
+    if (!profile) return;
+    writeDemoSession(role);
+    setIsAdminLoggedIn(true);
+    setCurrentAdminUser(profile);
+    triggerToast(`✓ Demo Mode — previewing as ${profile.name}.`, 'info');
   };
 
   const logoutAdmin = async () => {
@@ -983,8 +1031,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } else {
       setIsAdminLoggedIn(false);
       setCurrentAdminUser(null);
-      localStorage.removeItem('cartiae_admin_auth');
-      localStorage.removeItem('cartiae_admin_user');
+      clearDemoSession();
       triggerToast('✓ Logged out successfully (Demo Mode).', 'info');
     }
   };
@@ -1007,7 +1054,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addToCart, removeFromCart, updateCartQuantity, applyPromoCode, clearCart,
       addToWishlist, removeFromWishlist, moveToWishlist, moveToCart,
       createOrder, fulfillOrder,
-      loginAdmin, logoutAdmin,
+      loginAdmin, demoLogin, logoutAdmin,
       addContactRequest, respondToContactRequest, deleteContactRequest, updateContactRequestStatus,
       emailNotificationsEnabled, setEmailNotificationsEnabled,
       prefersReducedMotion
