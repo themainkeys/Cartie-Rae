@@ -161,15 +161,6 @@ export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openC
 
             {/* Right Side Actions */}
             <div className="flex items-center gap-4">
-              {/* Admin link — subtle, text only */}
-              <a
-                id="admin-nav-link-desktop"
-                href="/admin"
-                className="text-[10px] font-medium uppercase tracking-[0.18em] text-brand-dark/35 hover:text-brand-rose transition-colors duration-300"
-              >
-                Admin
-              </a>
-
               {/* Shopping Cart Trigger */}
               <button
                 id="cart-trigger-btn-desktop"
@@ -273,12 +264,6 @@ export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openC
                 <p className="font-sans text-[10px] uppercase tracking-[0.2em] text-zinc-400">
                   Cartiae Rae Hair Studio • Healthy Hair Regimens Made Simple
                 </p>
-                <a
-                  href="/admin"
-                  className="mt-2 inline-block text-[9px] uppercase tracking-widest text-brand-dark/35 hover:text-brand-rose transition-colors font-sans"
-                >
-                  Admin
-                </a>
               </div>
             </motion.div>
           )}
