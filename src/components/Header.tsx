@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Menu, X } from 'lucide-react';
+import { ShoppingBag, Menu, X, Lock } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -10,7 +10,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openCart }) => {
-  const { cart, prefersReducedMotion } = useApp();
+  const { cart, isAdminLoggedIn, prefersReducedMotion } = useApp();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -41,23 +41,24 @@ export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openC
 
   return (
     <>
-      {/* Top Banner Accent with simple wording */}
+      {/* Top Banner */}
       <div className="bg-brand-beige text-brand-dark text-[10px] uppercase tracking-[0.25em] py-2 px-4 text-center font-sans font-medium border-b border-brand-warm-tan/30 select-none">
         <span>Enjoy 15% off with code <strong className="font-bold">GROW4C</strong> • Instant download on all eBooks</span>
       </div>
 
       <header className={`sticky top-0 z-40 transition-all duration-300 ${
-        isScrolled 
-          ? 'bg-brand-cream/85 backdrop-blur-md py-1 shadow-sm border-b border-brand-warm-tan/10' 
+        isScrolled
+          ? 'bg-brand-cream/85 backdrop-blur-md py-1 shadow-sm border-b border-brand-warm-tan/10'
           : 'bg-brand-cream/95 py-3 border-b border-brand-warm-tan/15'
       }`}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          {/* Mobile Navigation Layout */}
+
+          {/* ── Mobile ── */}
           <div className={`flex items-center justify-between transition-all duration-300 md:hidden relative ${
             isScrolled ? 'h-14' : 'h-20'
           }`}>
-            
-            {/* LEFT SIDE: Minimal Hamburger Menu Toggle */}
+
+            {/* Left: Hamburger */}
             <div className="flex w-1/4 justify-start items-center">
               <button
                 id="menu-toggle-btn"
@@ -72,7 +73,7 @@ export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openC
               </button>
             </div>
 
-            {/* ABSOLUTE CENTER: Simplified Logo */}
+            {/* Center: Logo */}
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center text-center">
               <button
                 id="brand-logo-btn-mobile"
@@ -88,9 +89,18 @@ export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openC
               </button>
             </div>
 
-            {/* RIGHT SIDE: Cart only on mobile */}
+            {/* Right: Lock + Cart */}
             <div className="flex w-1/4 justify-end space-x-3 items-center">
-              {/* Shopping Cart Trigger */}
+              <button
+                id="admin-nav-trigger-mobile"
+                onClick={() => handleNavClick('admin')}
+                className={`${isAdminLoggedIn ? 'text-brand-rose' : 'text-brand-dark/40 hover:text-brand-rose'} p-1.5 transition-colors focus:outline-none cursor-pointer`}
+                title={isAdminLoggedIn ? 'Admin Dashboard' : 'Staff Portal Login'}
+                aria-label="Staff Access Portal"
+              >
+                <Lock className="w-4 h-4 stroke-[1.5]" />
+              </button>
+
               <button
                 id="cart-trigger-btn-mobile"
                 onClick={openCart}
@@ -100,7 +110,7 @@ export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openC
                 <ShoppingBag className="w-4.5 h-4.5 text-brand-dark stroke-[1.5]" />
                 <AnimatePresence>
                   {cartCount > 0 && (
-                    <motion.span 
+                    <motion.span
                       key="cart-count-mobile"
                       initial={{ scale: prefersReducedMotion ? 1 : 0.6, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
@@ -115,11 +125,12 @@ export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openC
             </div>
           </div>
 
-          {/* Desktop Editorial Layout */}
+          {/* ── Desktop ── */}
           <div className={`hidden md:flex items-center justify-between transition-all duration-300 w-full ${
             isScrolled ? 'h-14' : 'h-20'
           }`}>
-            {/* Left Brand Logo */}
+
+            {/* Logo */}
             <button
               id="brand-logo-btn-desktop"
               onClick={() => handleNavClick('home')}
@@ -133,7 +144,7 @@ export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openC
               </span>
             </button>
 
-            {/* Middle Nav Items */}
+            {/* Nav items */}
             <nav className="flex items-center gap-6 lg:gap-8">
               {navItems.map((item) => {
                 const isActive = activePart === item.key;
@@ -148,7 +159,7 @@ export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openC
                   >
                     {item.label}
                     {isActive && (
-                      <motion.span 
+                      <motion.span
                         layoutId="activeTabUnderline"
                         className="absolute bottom-[-1px] left-0 right-0 h-[1.5px] bg-brand-rose"
                         transition={{ type: 'spring', stiffness: 380, damping: 30 }}
@@ -159,18 +170,18 @@ export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openC
               })}
             </nav>
 
-            {/* Right Side Actions */}
-            <div className="flex items-center gap-4">
-              {/* Admin link — subtle, text only */}
-              <a
-                id="admin-nav-link-desktop"
-                href="/admin"
-                className="text-[10px] font-medium uppercase tracking-[0.18em] text-brand-dark/35 hover:text-brand-rose transition-colors duration-300"
+            {/* Right: Lock + Cart */}
+            <div className="flex items-center gap-3">
+              <button
+                id="admin-nav-trigger-desktop"
+                onClick={() => handleNavClick('admin')}
+                className={`${isAdminLoggedIn ? 'text-brand-rose' : 'text-brand-dark/40 hover:text-brand-rose'} p-1.5 transition-colors focus:outline-none cursor-pointer`}
+                title={isAdminLoggedIn ? 'Admin Dashboard' : 'Staff Portal Login'}
+                aria-label="Staff Access Portal"
               >
-                Admin
-              </a>
+                <Lock className="w-4 h-4 stroke-[1.5]" />
+              </button>
 
-              {/* Shopping Cart Trigger */}
               <button
                 id="cart-trigger-btn-desktop"
                 onClick={openCart}
@@ -180,7 +191,7 @@ export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openC
                 <ShoppingBag className="w-4.5 h-4.5 text-brand-dark stroke-[1.5]" />
                 <AnimatePresence>
                   {cartCount > 0 && (
-                    <motion.span 
+                    <motion.span
                       key="cart-count-desktop"
                       initial={{ scale: prefersReducedMotion ? 1 : 0.6, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
@@ -196,7 +207,7 @@ export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openC
           </div>
         </div>
 
-        {/* Minimalist Slide-Down/Overlay Menu */}
+        {/* Mobile Overlay */}
         <AnimatePresence>
           {isMenuOpen && (
             <motion.div
@@ -206,10 +217,8 @@ export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openC
               transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
               className="fixed inset-x-0 top-0 h-screen bg-brand-cream/98 z-50 flex flex-col justify-between overflow-y-auto"
             >
-              {/* Overlay Header */}
               <div className="max-w-7xl mx-auto px-6 lg:px-8 w-full">
                 <div className="flex items-center justify-between h-20 border-b border-brand-warm-tan/10">
-                  {/* Close Button */}
                   <button
                     id="menu-close-btn"
                     onClick={() => setIsMenuOpen(false)}
@@ -221,18 +230,13 @@ export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openC
                       Close
                     </span>
                   </button>
-
-                  {/* Logo Centered */}
                   <span className="font-serif text-xl sm:text-2xl tracking-normal text-brand-dark select-none absolute left-1/2 top-10 -translate-x-1/2 -translate-y-1/2">
                     Cartiae Rae
                   </span>
-
-                  {/* Empty container for symmetry */}
                   <div className="w-10 h-10" />
                 </div>
               </div>
 
-              {/* Navigation links */}
               <div className="max-w-3xl mx-auto px-6 py-12 flex-1 flex flex-col justify-center w-full">
                 <div className="space-y-6 sm:space-y-8">
                   <span className="font-sans text-[10px] uppercase tracking-[0.3em] text-brand-rose font-bold block mb-4">
@@ -255,8 +259,8 @@ export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openC
                             0{index + 1}
                           </span>
                           <span className={`font-serif text-2xl sm:text-3xl tracking-normal transition-all duration-300 ${
-                            isActive 
-                              ? 'text-brand-rose font-semibold pl-2' 
+                            isActive
+                              ? 'text-brand-rose font-semibold pl-2'
                               : 'text-brand-dark hover:text-brand-rose hover:pl-2'
                           }`}>
                             {item.label}
@@ -268,17 +272,25 @@ export const Header: React.FC<HeaderProps> = ({ activePart, setActivePart, openC
                 </div>
               </div>
 
-              {/* Menu Footer */}
               <div className="w-full bg-brand-cream py-8 border-t border-brand-warm-tan/15 text-center px-6">
                 <p className="font-sans text-[10px] uppercase tracking-[0.2em] text-zinc-400">
                   Cartiae Rae Hair Studio • Healthy Hair Regimens Made Simple
                 </p>
-                <a
-                  href="/admin"
-                  className="mt-2 inline-block text-[9px] uppercase tracking-widest text-brand-dark/35 hover:text-brand-rose transition-colors font-sans"
-                >
-                  Admin
-                </a>
+                {isAdminLoggedIn ? (
+                  <button
+                    onClick={() => handleNavClick('admin')}
+                    className="mt-2 text-[9px] uppercase tracking-widest text-[#B11B41] underline font-semibold focus:outline-none cursor-pointer"
+                  >
+                    Go to Admin Panel
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleNavClick('admin')}
+                    className="mt-2 text-[9px] uppercase tracking-widest text-brand-dark/50 hover:text-brand-rose transition-colors font-sans focus:outline-none cursor-pointer"
+                  >
+                    Staff Access
+                  </button>
+                )}
               </div>
             </motion.div>
           )}
