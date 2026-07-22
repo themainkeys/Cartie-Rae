@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { EBook, Product, TikTokVideo, PhotoGalleryItem, BlogPost, DiscountCode, CartItem, Order, NewsletterSignup, HomepageContent, WishlistItem, ContactRequest, AdminUser, AdminRole, Service } from '../types';
 import { initialEBooks, initialProducts, initialVideos, initialGallery, initialBlogPosts, initialDiscountCodes, initialHomepageContent, initialServices } from '../data/initialData';
-import { supabase, isSupabaseConfigured } from '../services/supabaseClient';
+import { supabase, isSupabaseConfigured, hasSupabaseCredentials } from '../services/supabaseClient';
 
 // ─── Tombstone helpers ──────────────────────────────────────────────────────
 // A "tombstone" is a persisted Set of deleted IDs per entity type.
@@ -183,6 +183,9 @@ interface AppContextType {
   loginAdmin: (email: string, password: string) => Promise<boolean>; // Supabase (production) path
   demoLogin: (role: AdminRole) => void; // demo mode only — no password, clearly labeled
   logoutAdmin: () => void;
+
+  // Cloud Sync (Push Computer State → Mobile & Visitors)
+  syncSiteToCloud: () => Promise<boolean>;
 
   // Settings & Preferences
   emailNotificationsEnabled: boolean;
@@ -500,6 +503,59 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setContactRequests([]);
     }
   }, [isAdminLoggedIn]);
+
+  // --- Load Cloud Snapshot on Mount (so cellphones get exact computer site) ---
+  useEffect(() => {
+    if (!hasSupabaseCredentials) return;
+
+    const loadCloudSnapshot = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('site_snapshots')
+          .select('data')
+          .eq('id', 'main')
+          .single();
+
+        if (!error && data?.data) {
+          const snap = data.data;
+
+          if (Array.isArray(snap.videos) && snap.videos.length > 0) {
+            setVideos(snap.videos);
+            localStorage.setItem('cartiae_videos', JSON.stringify(snap.videos));
+          }
+          if (snap.homepageContent && (snap.homepageContent.heroHeadline || snap.homepageContent.heroSubheadline)) {
+            setHomepageContent(snap.homepageContent);
+            localStorage.setItem('cartiae_home', JSON.stringify(snap.homepageContent));
+          }
+          if (Array.isArray(snap.products) && snap.products.length > 0) {
+            setProducts(snap.products);
+            localStorage.setItem('cartiae_products', JSON.stringify(snap.products));
+          }
+          if (Array.isArray(snap.ebooks) && snap.ebooks.length > 0) {
+            setEbooks(snap.ebooks);
+            localStorage.setItem('cartiae_ebooks', JSON.stringify(snap.ebooks));
+          }
+          if (Array.isArray(snap.gallery) && snap.gallery.length > 0) {
+            setGallery(snap.gallery);
+            localStorage.setItem('cartiae_gallery', JSON.stringify(snap.gallery));
+          }
+          if (Array.isArray(snap.services) && snap.services.length > 0) {
+            setServices(snap.services);
+            localStorage.setItem('cartiae_services', JSON.stringify(snap.services));
+          }
+          if (Array.isArray(snap.blogs) && snap.blogs.length > 0) {
+            setBlogs(snap.blogs);
+            localStorage.setItem('cartiae_blogs', JSON.stringify(snap.blogs));
+          }
+        }
+      } catch (err) {
+        console.error('[Supabase] loadCloudSnapshot error:', err);
+      }
+    };
+
+    loadCloudSnapshot();
+  }, []);
+
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
 
@@ -1111,6 +1167,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // --- Sync Site Snapshot to Cloud (Cellphones & Visitors) ---
+  const syncSiteToCloud = async (): Promise<boolean> => {
+    if (!hasSupabaseCredentials) {
+      triggerToast('⚠️ Supabase credentials missing. Data saved locally.', 'info');
+      return false;
+    }
+
+    try {
+      const snapshot = {
+        videos,
+        homepageContent,
+        products,
+        ebooks,
+        gallery,
+        services,
+        blogs,
+        discountCodes,
+        updatedAt: new Date().toISOString(),
+      };
+
+      const { error } = await supabase
+        .from('site_snapshots')
+        .upsert({
+          id: 'main',
+          data: snapshot,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (error) {
+        console.error('[Supabase] site_snapshots error:', error);
+        triggerToast(`⚠️ Sync failed: ${error.message}`, 'error');
+        return false;
+      }
+
+      triggerToast('📱 Website synced to Cloud! Cellphones will now display this exact setup.', 'success');
+      return true;
+    } catch (err: any) {
+      console.error('[Supabase] site_snapshots exception:', err);
+      triggerToast(`⚠️ Sync failed: ${err.message || 'Network error'}`, 'error');
+      return false;
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       ebooks, products, videos, gallery, blogs, discountCodes, homepageContent, services, newsletterSignups, cart, orders, appliedDiscount, isAdminLoggedIn, currentAdminUser, wishlist,
@@ -1131,6 +1230,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createOrder, fulfillOrder,
       loginAdmin, demoLogin, logoutAdmin,
       addContactRequest, respondToContactRequest, deleteContactRequest, updateContactRequestStatus,
+      syncSiteToCloud,
       emailNotificationsEnabled, setEmailNotificationsEnabled,
       prefersReducedMotion
     }}>

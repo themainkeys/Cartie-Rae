@@ -9,7 +9,7 @@ import {
   BookOpen, Mail, BadgePercent, Settings, Book, Package, Plus, 
   Trash2, Edit, Save, ToggleLeft, ToggleRight, ListFilter, RotateCcw, Sparkles,
   Video, Image, MessageSquare, Phone, MapPin, Camera, Eye, Archive, Inbox, Check,
-  Globe, Radio, X
+  Globe, Radio, X, Smartphone, RefreshCw
 } from 'lucide-react';
 
 // Resolve video types and parameters for YT, TikTok, or direct video
@@ -512,8 +512,11 @@ export const AdminPortal: React.FC = () => {
     respondToContactRequest, deleteContactRequest, updateContactRequestStatus,
     emailNotificationsEnabled, setEmailNotificationsEnabled, prefersReducedMotion,
     services, addService, updateService, deleteService,
+    syncSiteToCloud,
     triggerToast
   } = useApp();
+
+  const [isSyncingCloud, setIsSyncingCloud] = useState(false);
 
   // Auth form states
   const [email, setEmail] = useState('');
@@ -911,8 +914,17 @@ export const AdminPortal: React.FC = () => {
     if (saved > 0) {
       triggerToast(`✓ ${saved} change${saved > 1 ? 's' : ''} saved — everything is live on storefront!`, 'success');
     } else {
-      triggerToast('Everything is already up to date ✓', 'info');
+      triggerToast('Everything is up to date ✓', 'info');
     }
+
+    // Also push snapshot to cloud so cellphones get updated immediately
+    syncSiteToCloud();
+  };
+
+  const handleManualCloudSync = async () => {
+    setIsSyncingCloud(true);
+    await syncSiteToCloud();
+    setIsSyncingCloud(false);
   };
 
   const handleAddProductSubmit = (e: React.FormEvent) => {
@@ -1470,6 +1482,22 @@ export const AdminPortal: React.FC = () => {
                 <Globe className="w-3.5 h-3.5" />
                 <span>View Storefront</span>
               </a>
+
+              {/* Sync to Mobile Button */}
+              <button
+                id="admin-sync-mobile-btn"
+                onClick={handleManualCloudSync}
+                disabled={isSyncingCloud}
+                className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-brand-dark bg-brand-pink-light hover:bg-brand-pink border border-brand-rose/30 rounded-xl transition-all duration-200 focus:outline-none shadow-xs hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                title="Sync exact computer website setup to cellphones and visitors"
+              >
+                {isSyncingCloud ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-brand-rose" />
+                ) : (
+                  <Smartphone className="w-3.5 h-3.5 text-brand-rose" />
+                )}
+                <span>{isSyncingCloud ? 'Syncing...' : 'Sync to Mobile'}</span>
+              </button>
 
               {/* Save All Changes — always visible */}
               <button
