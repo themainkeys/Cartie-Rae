@@ -9,7 +9,7 @@ import {
   BookOpen, Mail, BadgePercent, Settings, Book, Package, Plus, 
   Trash2, Edit, Save, ToggleLeft, ToggleRight, ListFilter, RotateCcw, Sparkles,
   Video, Image, MessageSquare, Phone, MapPin, Camera, Eye, Archive, Inbox, Check,
-  Globe, Radio
+  Globe, Radio, X
 } from 'lucide-react';
 
 // Resolve video types and parameters for YT, TikTok, or direct video
@@ -284,6 +284,7 @@ const VideoDropzone: React.FC<VideoDropzoneProps> = ({ videoValue, onVideoChange
   const [isDragActive, setIsDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const processFile = async (file: File) => {
@@ -292,12 +293,12 @@ const VideoDropzone: React.FC<VideoDropzoneProps> = ({ videoValue, onVideoChange
       return;
     }
 
-    // Pre-upload size check — Supabase free tier max is 50 MB
-    const MAX_MB = 50;
+    // Pre-upload size check — supports up to 500 MB (ensure Supabase Storage limit matches)
+    const MAX_MB = 500;
     const MAX_BYTES = MAX_MB * 1024 * 1024;
     if (file.size > MAX_BYTES) {
       const sizeMB = (file.size / 1024 / 1024).toFixed(1);
-      setUploadError(`File is ${sizeMB} MB — max allowed is ${MAX_MB} MB. Compress the video or use a YouTube/TikTok URL instead.`);
+      setUploadError(`File is ${sizeMB} MB — max allowed is ${MAX_MB} MB. Use a YouTube or TikTok URL for very large videos.`);
       return;
     }
 
@@ -312,17 +313,19 @@ const VideoDropzone: React.FC<VideoDropzoneProps> = ({ videoValue, onVideoChange
     }
 
     setIsUploading(true);
+    setUploadProgress(0);
     try {
-      const result = await uploadMedia(file, 'videos');
+      const result = await uploadMedia(file, 'videos', (pct) => setUploadProgress(pct));
       if ('url' in result) {
+        setUploadProgress(100);
         onVideoChange(result.url, file); // persistent public URL
       } else {
         // Make error message user-friendly
         let friendlyError = result.error;
         if (result.error.includes('exceeded the maximum allowed')) {
-          friendlyError = `File too large for storage. Go to Supabase → Storage → Settings and raise the file size limit, or use a YouTube/TikTok URL instead.`;
+          friendlyError = `File too large — go to Supabase → Storage → Settings and raise the file size limit.`;
         } else if (result.error.includes('row-level security') || result.error.includes('policy')) {
-          friendlyError = `Permission denied. Run the storage RLS fix SQL in Supabase (ask your developer).`;
+          friendlyError = `Permission denied — run the storage RLS fix SQL in Supabase.`;
         }
         setUploadError(friendlyError);
         onVideoChange(URL.createObjectURL(file), file); // temporary fallback preview
@@ -383,9 +386,18 @@ const VideoDropzone: React.FC<VideoDropzoneProps> = ({ videoValue, onVideoChange
         className="hidden"
       />
       {isUploading ? (
-        <div className="flex items-center gap-2 text-brand-chocolate">
-          <div className="w-4 h-4 border-2 border-brand-rose border-t-transparent rounded-full animate-spin" />
-          <span className="text-[10px] font-bold">Uploading {label}…</span>
+        <div className="flex flex-col items-center gap-2 w-full px-2">
+          <div className="flex items-center gap-2 text-brand-chocolate">
+            <div className="w-4 h-4 border-2 border-brand-rose border-t-transparent rounded-full animate-spin shrink-0" />
+            <span className="text-[10px] font-bold">Uploading {label}… {uploadProgress > 0 ? `${uploadProgress}%` : ''}</span>
+          </div>
+          {/* Progress bar */}
+          <div className="w-full bg-brand-warm-tan/20 rounded-full h-1.5 overflow-hidden">
+            <div
+              className="bg-brand-rose h-1.5 rounded-full transition-all duration-300"
+              style={{ width: `${uploadProgress}%` }}
+            />
+          </div>
         </div>
       ) : videoValue && (videoValue.startsWith('blob:') || /\.(mp4|webm)(\?|$)/i.test(videoValue) || videoValue.includes('/storage/v1/object/public/media/')) ? (
         <div className="flex items-center gap-3 w-full">
@@ -539,6 +551,13 @@ export const AdminPortal: React.FC = () => {
   const [vidTiktokUrl, setVidTiktokUrl] = useState('');
   const [vidYoutubeUrl, setVidYoutubeUrl] = useState('');
   const [vidInputMode, setVidInputMode] = useState<'upload' | 'url'>('upload');
+
+  // Bulk import state
+  const [isBulkImporting, setIsBulkImporting] = useState(false);
+  const [bulkUrls, setBulkUrls] = useState('');
+  const [bulkCategory, setBulkCategory] = useState<'Wash Day' | 'Styling' | 'Protective Styles' | 'Growth Tips' | 'Product Reviews' | 'Tutorials'>('Styling');
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+  const [bulkResult, setBulkResult] = useState<string | null>(null);
 
   // Automatic YouTube/TikTok URL detector and thumbnail resolver
   useEffect(() => {
@@ -1025,6 +1044,75 @@ export const AdminPortal: React.FC = () => {
     setVidInputMode('upload');
     setIsAddingVideo(false);
     setEditingVideoId(null);
+  };
+
+  // Bulk import: parse multiple YouTube/TikTok URLs and create a video entry for each
+  const handleBulkImport = async () => {
+    if (!bulkUrls.trim()) return;
+    setIsBulkProcessing(true);
+    setBulkResult(null);
+
+    const lines = bulkUrls.split('\n').map(l => l.trim()).filter(Boolean);
+    let added = 0;
+    let skipped = 0;
+
+    for (const rawUrl of lines) {
+      const resolved = resolveVideoSource(rawUrl);
+      let videoUrl = '';
+      let youtubeUrl = '';
+      let tiktokUrl = '';
+      let thumbUrl = 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&q=80&w=800';
+      let title = 'New Video';
+
+      if (resolved.type === 'youtube' && resolved.id) {
+        youtubeUrl = rawUrl;
+        thumbUrl = `https://img.youtube.com/vi/${resolved.id}/maxresdefault.jpg`;
+        title = `YouTube Video ${resolved.id.slice(0, 6)}`;
+      } else if (resolved.type === 'tiktok') {
+        tiktokUrl = rawUrl;
+        thumbUrl = '/about-portrait.jpg';
+        title = `TikTok Video`;
+      } else if (resolved.type === 'direct') {
+        videoUrl = rawUrl;
+        title = rawUrl.split('/').pop()?.split('?')[0]?.replace(/[-_]/g, ' ') || 'Video';
+      } else {
+        skipped++;
+        continue;
+      }
+
+      addVideo({
+        title,
+        views: '0 views',
+        category: bulkCategory,
+        videoUrl,
+        youtubeUrl: youtubeUrl || undefined,
+        tiktokUrl: tiktokUrl || undefined,
+        thumbnailUrl: thumbUrl,
+        description: '',
+        relatedIds: [],
+        isFeatured: false,
+        status: 'published',
+        viewsCount: 0,
+        likesCount: 0,
+        savesCount: 0,
+        sharesCount: 0,
+        commentsCount: 0,
+        shopClicks: 0,
+        productAddClicks: 0,
+        ebookAddClicks: 0,
+        conversionCount: 0,
+      });
+      added++;
+    }
+
+    setBulkResult(
+      skipped > 0
+        ? `✅ ${added} video${added !== 1 ? 's' : ''} added. ${skipped} URL${skipped !== 1 ? 's' : ''} skipped (unrecognised format).`
+        : `✅ ${added} video${added !== 1 ? 's' : ''} added successfully!`
+    );
+    setBulkUrls('');
+    setIsBulkProcessing(false);
+    if (added > 0) triggerToast(`✓ ${added} videos imported!`, 'success');
   };
 
   const handleAddVideoSubmit = async (e: React.FormEvent) => {
@@ -3464,20 +3552,90 @@ export const AdminPortal: React.FC = () => {
                     <span className="w-1.5 h-6 bg-brand-rose rounded-full"></span>
                     TikTok & Video Feeds
                   </h3>
-                  <button
-                    onClick={() => {
-                      if (isAddingVideo) {
-                        resetVideoForm();
-                      } else {
-                        setIsAddingVideo(true);
-                      }
-                    }}
-                    className="flex items-center gap-1 text-[11px] uppercase tracking-wider font-extrabold text-white bg-brand-rose hover:bg-brand-berry px-3.5 py-1.5 rounded-full transition-all focus:outline-none"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Upload Video</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        if (isAddingVideo) {
+                          resetVideoForm();
+                        } else {
+                          setIsAddingVideo(true);
+                          setIsBulkImporting(false);
+                        }
+                      }}
+                      className="flex items-center gap-1 text-[11px] uppercase tracking-wider font-extrabold text-white bg-brand-rose hover:bg-brand-berry px-3.5 py-1.5 rounded-full transition-all focus:outline-none"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Upload Video</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsBulkImporting(!isBulkImporting);
+                        if (isAddingVideo) resetVideoForm();
+                      }}
+                      className="flex items-center gap-1 text-[11px] uppercase tracking-wider font-extrabold text-brand-rose bg-brand-pink-light hover:bg-brand-rose hover:text-white px-3.5 py-1.5 rounded-full transition-all focus:outline-none border border-brand-rose/30"
+                      title="Add multiple videos at once by pasting URLs"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Bulk Import</span>
+                    </button>
+                  </div>
                 </div>
+
+                {/* ── Bulk Import Panel ── */}
+                {isBulkImporting && (
+                  <div className="bg-brand-beige/50 border border-brand-warm-tan/40 p-5 rounded-2xl space-y-4 text-xs">
+                    <div className="flex items-center justify-between">
+                      <p className="font-serif font-bold text-brand-chocolate text-[13px]">
+                        Bulk Import Videos
+                      </p>
+                      <button type="button" onClick={() => setIsBulkImporting(false)} className="text-brand-dark/40 hover:text-brand-rose focus:outline-none">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-brand-dark/50 leading-relaxed">
+                      Paste one YouTube or TikTok URL per line. Each will become a separate video entry with auto-detected thumbnail.
+                    </p>
+                    <textarea
+                      value={bulkUrls}
+                      onChange={e => setBulkUrls(e.target.value)}
+                      placeholder={"https://youtube.com/watch?v=abc123\nhttps://youtu.be/def456\nhttps://tiktok.com/@user/video/789"}
+                      rows={6}
+                      className="w-full px-3 py-2.5 bg-white border border-brand-warm-tan/30 rounded-lg focus:outline-none font-mono text-[11px] placeholder:text-brand-dark/25 resize-none"
+                    />
+                    <div className="flex items-center gap-3">
+                      <select
+                        value={bulkCategory}
+                        onChange={e => setBulkCategory(e.target.value as typeof bulkCategory)}
+                        className="flex-1 px-3 py-2 bg-white border border-brand-warm-tan/30 rounded-lg focus:outline-none text-[11px]"
+                      >
+                        <option value="Styling">Styling</option>
+                        <option value="Wash Day">Wash Day</option>
+                        <option value="Growth Tips">Growth Tips</option>
+                        <option value="Protective Styles">Protective Styles</option>
+                        <option value="Product Reviews">Product Reviews</option>
+                        <option value="Tutorials">Tutorials</option>
+                      </select>
+                      <button
+                        type="button"
+                        disabled={isBulkProcessing || !bulkUrls.trim()}
+                        onClick={handleBulkImport}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-brand-rose hover:bg-brand-berry disabled:opacity-50 disabled:cursor-not-allowed text-white text-[11px] font-extrabold uppercase tracking-wider rounded-xl transition-all focus:outline-none"
+                      >
+                        {isBulkProcessing ? (
+                          <><div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" /> Importing…</>
+                        ) : (
+                          <><Plus className="w-3.5 h-3.5" /> Import All</>
+                        )}
+                      </button>
+                    </div>
+                    {bulkResult && (
+                      <p className={`text-[10px] font-semibold ${bulkResult.startsWith('✅') ? 'text-emerald-700' : 'text-red-600'}`}>
+                        {bulkResult}
+                      </p>
+                    )}
+                  </div>
+                )}
+
 
                 {isAddingVideo && (
                   <form onSubmit={handleAddVideoSubmit} className="bg-brand-beige/50 border border-brand-warm-tan/40 p-5 rounded-2xl space-y-4 text-xs">
