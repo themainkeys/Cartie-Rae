@@ -676,39 +676,38 @@ export const VideoGallery: React.FC = () => {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    // Break out of shared page padding on all screen sizes
-    <div className="-mx-4 sm:-mx-6 lg:-mx-8 relative bg-[#FDFAF4] min-h-screen">
+    <div className="-mx-4 sm:-mx-6 lg:-mx-8 relative bg-zinc-950 text-white min-h-[calc(100dvh-60px)] pb-6">
 
-      {/* ── Page Header (desktop only, hidden on mobile so videos fit mobile screens 100%) ── */}
+      {/* ── Page Header (desktop only) ── */}
       <div className="hidden sm:block text-center pt-7 pb-5 px-4 select-none">
         <span className="font-sans text-[10px] uppercase tracking-[0.35em] text-[#B11B41] font-bold block">
           Short-Form Masterclass
         </span>
-        <h1 className="font-serif text-3xl sm:text-4xl text-[#2C1810] font-normal mt-1">
+        <h1 className="font-serif text-3xl sm:text-4xl text-white font-normal mt-1">
           Visuals
         </h1>
-        <p className="font-sans text-[11px] text-[#543F35]/60 max-w-xs mx-auto leading-relaxed mt-1.5">
+        <p className="font-sans text-xs text-zinc-400 max-w-xs mx-auto leading-relaxed mt-1.5">
           Coily care, styling &amp; growth routines — scroll to explore.
         </p>
       </div>
 
       {/* ── Category Filter (sticky) ── */}
-      <div className="sticky top-14 z-30 bg-[#FDFAF4]/95 backdrop-blur-md border-b border-[#C4A882]/30">
-        <div className="max-w-[420px] mx-auto flex overflow-x-auto feed-no-bar px-4 gap-5 py-2.5">
+      <div className="sticky top-14 z-30 bg-zinc-950/95 backdrop-blur-md border-b border-white/10">
+        <div className="max-w-[420px] mx-auto flex overflow-x-auto feed-no-bar px-4 gap-5 py-3 select-none">
           {CATEGORIES.map((cat) => (
             <button
               key={cat}
               id={`vid-cat-${cat.toLowerCase().replace(/\s+/g, '-')}`}
               onClick={() => setActiveCategory(cat)}
-              className={`text-[10px] uppercase tracking-wider font-bold whitespace-nowrap pb-0.5 relative transition-colors flex-shrink-0 focus:outline-none ${
-                activeCategory === cat ? 'text-[#2C1810]' : 'text-[#543F35]/40 hover:text-[#543F35]/70'
+              className={`text-xs uppercase tracking-wider font-bold whitespace-nowrap pb-0.5 relative transition-colors flex-shrink-0 focus:outline-none ${
+                activeCategory === cat ? 'text-white font-bold' : 'text-zinc-400 hover:text-white'
               }`}
             >
               {cat}
               {activeCategory === cat && (
                 <motion.div
                   layoutId="activeFeedCat"
-                  className="absolute bottom-[-10px] left-0 right-0 h-[2px] bg-[#B11B41] rounded-full"
+                  className="absolute bottom-[-12px] left-0 right-0 h-[2px] bg-[#B11B41] rounded-full"
                   transition={{ type: 'spring', stiffness: 420, damping: 32 }}
                 />
               )}
@@ -725,7 +724,7 @@ export const VideoGallery: React.FC = () => {
           onClick={() => goToIndex(activeIndex - 1)}
           disabled={activeIndex === 0}
           aria-label="Previous video"
-          className="hidden lg:flex absolute z-20 w-10 h-10 rounded-full bg-[#2C1810]/10 hover:bg-[#2C1810]/20 text-[#2C1810] items-center justify-center border border-[#C4A882]/40 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+          className="hidden lg:flex absolute z-20 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white items-center justify-center border border-white/20 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
           style={{ left: 'calc(50% + 218px)', top: '28%' }}
         >
           <ChevronUp className="w-5 h-5" />
@@ -775,7 +774,7 @@ export const VideoGallery: React.FC = () => {
           onClick={() => goToIndex(activeIndex + 1)}
           disabled={activeIndex >= filteredVideos.length - 1}
           aria-label="Next video"
-          className="hidden lg:flex absolute z-20 w-10 h-10 rounded-full bg-[#2C1810]/10 hover:bg-[#2C1810]/20 text-[#2C1810] items-center justify-center border border-[#C4A882]/40 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+          className="hidden lg:flex absolute z-20 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white items-center justify-center border border-white/20 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
           style={{ left: 'calc(50% + 218px)', top: '68%' }}
         >
           <ChevronDown className="w-5 h-5" />
