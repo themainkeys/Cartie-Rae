@@ -23,9 +23,8 @@ function safeName(file: File): string {
 
 /**
  * Uploads a File (image OR video) to the media bucket under `folder/` and returns
- * its public URL. Optional `onProgress` callback receives 0-100 percentage updates.
- * `blob` argument lets callers upload a processed/compressed Blob while keeping
- * the original file's name/type for the storage path.
+ * its public URL. Optional `onProgress` callback receives 0-100 percentage updates
+ * (simulated — Supabase SDK does not expose real upload progress).
  */
 export async function uploadMedia(
   file: File,
@@ -40,45 +39,18 @@ export async function uploadMedia(
   const path = `${folder}/${safeName(file)}`;
   const body = blob ?? file;
 
-  // Use XMLHttpRequest for upload progress tracking
+  // Simulate upload progress so the UI feels responsive
+  let progressInterval: ReturnType<typeof setInterval> | null = null;
+  let simPct = 0;
   if (onProgress) {
-    return new Promise((resolve) => {
-      // Get the Supabase storage URL + anon key from the client
-      const storageUrl = `${(supabase as any).storageUrl}/object/${MEDIA_BUCKET}/${path}`;
-      const anonKey = (supabase as any).headers?.['apikey'] ?? '';
-
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', storageUrl);
-      xhr.setRequestHeader('Authorization', `Bearer ${anonKey}`);
-      xhr.setRequestHeader('apikey', anonKey);
-      xhr.setRequestHeader('x-upsert', 'false');
-      if (file.type) xhr.setRequestHeader('Content-Type', file.type);
-      xhr.setRequestHeader('Cache-Control', '3600');
-
-      xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable) {
-          onProgress(Math.round((e.loaded / e.total) * 100));
-        }
-      };
-
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          const { data } = supabase.storage.from(MEDIA_BUCKET).getPublicUrl(path);
-          onProgress(100);
-          resolve({ url: data.publicUrl });
-        } else {
-          let msg = 'Upload failed.';
-          try { msg = JSON.parse(xhr.responseText)?.message ?? msg; } catch { /* ignore */ }
-          resolve({ error: msg });
-        }
-      };
-
-      xhr.onerror = () => resolve({ error: 'Network error during upload.' });
-      xhr.send(body);
-    });
+    onProgress(0);
+    progressInterval = setInterval(() => {
+      // Advance quickly to 85%, then hold until upload completes
+      simPct = simPct < 85 ? simPct + Math.random() * 12 : simPct;
+      onProgress(Math.min(Math.round(simPct), 85));
+    }, 400);
   }
 
-  // Fallback: use Supabase SDK (no progress)
   try {
     const { error } = await supabase.storage.from(MEDIA_BUCKET).upload(path, body, {
       cacheControl: '3600',
@@ -86,13 +58,18 @@ export async function uploadMedia(
       contentType: file.type || undefined,
     });
 
+    if (progressInterval) clearInterval(progressInterval);
+
     if (error) {
       return { error: error.message };
     }
 
+    if (onProgress) onProgress(100);
+
     const { data } = supabase.storage.from(MEDIA_BUCKET).getPublicUrl(path);
     return { url: data.publicUrl };
   } catch (err) {
+    if (progressInterval) clearInterval(progressInterval);
     return { error: err instanceof Error ? err.message : 'Unknown upload error.' };
   }
 }
