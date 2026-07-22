@@ -291,6 +291,16 @@ const VideoDropzone: React.FC<VideoDropzoneProps> = ({ videoValue, onVideoChange
       alert('Please select a valid video file (MP4/WebM).');
       return;
     }
+
+    // Pre-upload size check — Supabase free tier max is 50 MB
+    const MAX_MB = 50;
+    const MAX_BYTES = MAX_MB * 1024 * 1024;
+    if (file.size > MAX_BYTES) {
+      const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+      setUploadError(`File is ${sizeMB} MB — max allowed is ${MAX_MB} MB. Compress the video or use a YouTube/TikTok URL instead.`);
+      return;
+    }
+
     setUploadError(null);
 
     if (!isMediaUploadEnabled) {
@@ -307,7 +317,14 @@ const VideoDropzone: React.FC<VideoDropzoneProps> = ({ videoValue, onVideoChange
       if ('url' in result) {
         onVideoChange(result.url, file); // persistent public URL
       } else {
-        setUploadError(result.error);
+        // Make error message user-friendly
+        let friendlyError = result.error;
+        if (result.error.includes('exceeded the maximum allowed')) {
+          friendlyError = `File too large for storage. Go to Supabase → Storage → Settings and raise the file size limit, or use a YouTube/TikTok URL instead.`;
+        } else if (result.error.includes('row-level security') || result.error.includes('policy')) {
+          friendlyError = `Permission denied. Run the storage RLS fix SQL in Supabase (ask your developer).`;
+        }
+        setUploadError(friendlyError);
         onVideoChange(URL.createObjectURL(file), file); // temporary fallback preview
       }
     } catch (err) {
@@ -379,7 +396,9 @@ const VideoDropzone: React.FC<VideoDropzoneProps> = ({ videoValue, onVideoChange
             <p className="text-[10px] font-bold text-brand-chocolate truncate">{label} Loaded</p>
             <p className="text-[9px] text-[#A67E6B] font-medium">Click anywhere to replace file</p>
             {uploadError
-              ? <p className="text-[9px] text-red-600 font-medium truncate">Temporary only (upload failed: {uploadError})</p>
+              ? <p className="text-[9px] text-red-600 font-medium leading-tight mt-0.5">
+                  ⚠ {uploadError}
+                </p>
               : videoValue.startsWith('blob:') && <p className="text-[9px] text-amber-600 font-medium">Temporary — configure storage to persist</p>}
           </div>
           <span
