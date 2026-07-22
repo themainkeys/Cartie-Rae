@@ -3,7 +3,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../context/AppContext';
 import { isSupabaseConfigured, isMediaUploadEnabled } from '../services/supabaseClient';
 import { uploadMedia } from '../services/mediaUpload';
-import { Product, EBook, DiscountCode, TikTokVideo, PhotoGalleryItem, ContactRequest, AdminRole } from '../types';
+import { Product, EBook, DiscountCode, TikTokVideo, PhotoGalleryItem, AdminRole } from '../types';
+import { ContactManager } from './admin/ContactManager';
+import { DiscountManager } from './admin/DiscountManager';
 import { 
   ShieldCheck, Lock, LogOut, CheckCircle2, TrendingUp, ShoppingBag, 
   BookOpen, Mail, BadgePercent, Settings, Book, Package, Plus, 
@@ -533,7 +535,8 @@ export const AdminPortal: React.FC = () => {
   const [designSub, setDesignSub] = useState<'cms' | 'assets' | 'settings'>('cms');
 
   // Contact requests filter state
-  const [contactFilter, setContactFilter] = useState<'All' | 'Pending' | 'Responded' | 'Read' | 'Archived'>('All');
+  // (moved to ContactManager — kept as unused to avoid breaking the hasOpenForm derived state)
+  // const [contactFilter, setContactFilter] = useState(...);
 
   // New Content Asset form states
   const [isAddingVideo, setIsAddingVideo] = useState(false);
@@ -646,10 +649,8 @@ export const AdminPortal: React.FC = () => {
   const [ebImage, setEbImage] = useState('https://images.unsplash.com/photo-1618673747378-7e0af319150f?auto=format&fit=crop&q=80&w=800');
 
   // New voucher discount state
-  const [isAddingDiscount, setIsAddingDiscount] = useState(false);
-  const [discName, setDiscName] = useState('');
-  const [discPercent, setDiscPercent] = useState('20');
-  const [discDesc, setDiscDesc] = useState('');
+  // (moved to DiscountManager)
+  // const [isAddingDiscount, setIsAddingDiscount] = useState(false);
 
   // Blog post editing / adding states
   const [editingBlogId, setEditingBlogId] = useState<string | null>(null);
@@ -706,7 +707,7 @@ export const AdminPortal: React.FC = () => {
   // ─────────────────────────────────────────────────────────────────────────
 
   // Derived: are there any unsaved/pending changes?
-  const hasOpenForm = isAddingVideo || isAddingProduct || isAddingEBook || isAddingBlog || isAddingGallery || isAddingDiscount;
+  const hasOpenForm = isAddingVideo || isAddingProduct || isAddingEBook || isAddingBlog || isAddingGallery;
   const hasUnsavedChanges = hasCmsDirty || hasOpenForm;
   // Inline editing states
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
@@ -1023,20 +1024,7 @@ export const AdminPortal: React.FC = () => {
     setEditEbImage(e.image);
   };
 
-  const handleAddDiscountSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!requirePermission(['super_admin', 'store_manager'])) return;
-    addDiscountCode({
-      code: discName.toUpperCase().trim(),
-      discountPercent: parseInt(discPercent) || 15,
-      isActive: true,
-      description: discDesc
-    });
-    setDiscName('');
-    setDiscPercent('20');
-    setDiscDesc('');
-    setIsAddingDiscount(false);
-  };
+  // handleAddDiscountSubmit moved to DiscountManager
 
   const resetVideoForm = () => {
     setVidTitle('');
@@ -2508,148 +2496,12 @@ export const AdminPortal: React.FC = () => {
           )}
 
           {/* ==================================================== */}
+          {/* ==================================================== */}
           {/* CATALOG COMPONENT: MANUAL VOUCHER PROMO DISCOUNTS    */}
+          {/* Extracted to: src/views/admin/DiscountManager.tsx     */}
           {/* ==================================================== */}
           {activeTab === 'catalog' && catalogSub === 'discounts' && (
-            <div className="bg-white border border-[#E5D5C8]/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_4px_25px_-4px_rgba(74,43,32,0.02)]">
-              <div className="flex justify-between items-center border-b border-[#E5D5C8]/30 pb-3">
-                <h3 className="font-serif text-lg font-bold text-brand-dark flex items-center gap-2">
-                  <span className="w-1.5 h-6 bg-brand-rose rounded-full"></span>
-                  Voucher Promo Discounts List
-                </h3>
-                <button
-                  id="add-discount-btn"
-                  onClick={() => setIsAddingDiscount(!isAddingDiscount)}
-                  className="flex items-center gap-1 text-[11px] uppercase tracking-wider font-extrabold text-white bg-brand-rose hover:bg-brand-berry px-3.5 py-1.5 rounded-full transition-all focus:outline-none"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Create Discount</span>
-                </button>
-              </div>
-
-              {/* Add form */}
-              {isAddingDiscount && (
-                <form onSubmit={handleAddDiscountSubmit} className="bg-brand-beige/50 border border-brand-warm-tan/40 p-5 rounded-2xl space-y-4 text-xs">
-                  <p className="font-serif font-bold text-brand-chocolate">New Coupon Specifications:</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Coupon Text Code (e.g. SAVE20)</label>
-                      <input
-                        type="text"
-                        required
-                        value={discName}
-                        onChange={(e) => setDiscName(e.target.value)}
-                        placeholder="e.g. COILS25"
-                        className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none font-mono text-center uppercase"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Discount Percent (%)</label>
-                      <input
-                        type="number"
-                        required
-                        value={discPercent}
-                        onChange={(e) => setDiscPercent(e.target.value)}
-                        className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none font-mono text-center"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Campaign Description</label>
-                      <input
-                        type="text"
-                        required
-                        value={discDesc}
-                        onChange={(e) => setDiscDesc(e.target.value)}
-                        placeholder="25% welcome newsletter discount..."
-                        className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end gap-2 text-[10.5px]">
-                    <button
-                      type="button"
-                      onClick={() => setIsAddingDiscount(false)}
-                      className="px-4 py-2 border border-brand-warm-tan hover:bg-brand-cream rounded"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-4 py-2 bg-brand-chocolate hover:bg-brand-dark text-white rounded font-bold uppercase transition"
-                    >
-                      Initialize Coupon
-                    </button>
-                  </div>
-                </form>
-              )}
-
-              {/* Discounts table */}
-              <div className="overflow-x-auto border border-brand-warm-tan/20 rounded-xl bg-white">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-brand-beige/50 border-b border-brand-warm-tan/20 text-[#8C6D62] font-semibold">
-                      <th className="p-3">Coupon Code</th>
-                      <th className="p-3">Reduction Percent</th>
-                      <th className="p-3">Trigger Description</th>
-                      <th className="p-3">Active State</th>
-                      <th className="p-3 text-center">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-brand-warm-tan/10 text-brand-dark/80">
-                    {discountCodes.map((c) => (
-                      <tr key={c.id} className="hover:bg-brand-cream/30">
-                        <td className="p-3 font-mono font-bold text-brand-rose uppercase">{c.code}</td>
-                        <td className="p-3 font-mono font-bold text-emerald-800">{c.discountPercent}% Off</td>
-                        <td className="p-3 text-zinc-600 font-medium">{c.description}</td>
-                        <td className="p-3">
-                          <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-bold ${
-                            c.isActive ? 'bg-emerald-50 text-emerald-800' : 'bg-zinc-100 text-zinc-500'
-                          }`}>
-                            {c.isActive ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td className="p-3 text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <button
-                              id={`toggle-discount-${c.id}`}
-                              onClick={() => {
-                                if (requirePermission(['super_admin', 'store_manager'])) {
-                                  updateDiscountCode(c.id, { isActive: !c.isActive });
-                                  triggerToast(`"${c.code}" ${c.isActive ? 'deactivated' : 'activated'}.`, 'info');
-                                }
-                              }}
-                              className={`p-1 px-2.5 rounded-md font-bold transition duration-150 text-[10.5px] ${
-                                c.isActive
-                                  ? 'bg-amber-50 hover:bg-amber-500 text-amber-700 hover:text-white border border-amber-200'
-                                  : 'bg-emerald-50 hover:bg-emerald-500 text-emerald-700 hover:text-white border border-emerald-200'
-                              }`}
-                            >
-                              {c.isActive ? 'Deactivate' : 'Activate'}
-                            </button>
-                            <button
-                              id={`delete-discount-${c.id}`}
-                              onClick={() => {
-                                if (confirm(`Remove promo Coupon "${c.code}" completely?`)) {
-                                  if (requirePermission(['super_admin', 'store_manager'])) {
-                                    deleteDiscountCode(c.id);
-                                    triggerToast(`🗑 Discount code "${c.code}" deleted.`, 'success');
-                                  }
-                                }
-                              }}
-                              className="p-1 px-2.5 bg-brand-pink-light hover:bg-brand-rose text-brand-rose hover:text-white rounded-md font-bold transition duration-250 text-[10.5px]"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <DiscountManager />
           )}
 
           {/* ======================================= */}
@@ -4473,193 +4325,10 @@ export const AdminPortal: React.FC = () => {
 
           {/* ======================================= */}
           {/* TAB 8: CUSTOMER INQUIRIES & ADVICE DESK */}
+          {/* Extracted to: src/views/admin/ContactManager.tsx */}
           {/* ======================================= */}
           {activeTab === 'contacts' && (
-            <div className="bg-white border border-[#E5D5C8]/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_4px_25px_-4px_rgba(74,43,32,0.02)]">
-              <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center border-b border-[#E5D5C8]/30 pb-4">
-                <div>
-                  <h3 className="font-serif text-lg font-bold text-brand-dark flex items-center gap-2">
-                    <span className="w-1.5 h-6 bg-brand-rose rounded-full"></span>
-                    Received Porosity Advice Consultations
-                  </h3>
-                  <p className="text-xs text-[#8C6D62] mt-0.5">Organize customer hair porosity and advice inquiries.</p>
-                </div>
-                
-                {/* Status Selector Filters */}
-                <div className="flex flex-wrap gap-1 bg-brand-beige/45 p-1 rounded-xl border border-brand-warm-tan/20">
-                  {(['All', 'Pending', 'Responded', 'Read', 'Archived'] as const).map((filterOpt) => {
-                    const count = filterOpt === 'All' 
-                      ? contactRequests.length 
-                      : contactRequests.filter(c => c.status === filterOpt).length;
-                    return (
-                      <motion.button
-                        key={filterOpt}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => setContactFilter(filterOpt)}
-                        className={`relative px-3 py-1.5 text-[10.5px] font-extrabold uppercase rounded-lg transition-all focus:outline-none ${
-                          contactFilter === filterOpt ? 'text-white' : 'text-[#8C6D62] hover:bg-brand-cream/60'
-                        }`}
-                      >
-                        {contactFilter === filterOpt && !prefersReducedMotion && (
-                          <motion.div layoutId="contactActiveFilter" className="absolute inset-0 bg-brand-rose rounded-lg shadow-sm" style={{ zIndex: 0 }} />
-                        )}
-                        {contactFilter === filterOpt && prefersReducedMotion && (
-                          <div className="absolute inset-0 bg-brand-rose rounded-lg shadow-sm" />
-                        )}
-                        <span className="relative z-10">{filterOpt} ({count})</span>
-                      </motion.button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {contactRequests.length === 0 ? (
-                <div className="p-10 text-center text-[#A67E6B] font-medium italic">
-                  No porosity requests received so far.
-                </div>
-              ) : contactRequests.filter(c => contactFilter === 'All' || c.status === contactFilter).length === 0 ? (
-                <div className="p-10 text-center text-[#A67E6B] font-medium italic bg-white/40 border border-dashed border-brand-warm-tan/20 rounded-2xl">
-                  No inquiries with status &quot;{contactFilter}&quot; currently list.
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {contactRequests
-                    .filter(c => contactFilter === 'All' || c.status === contactFilter)
-                    .map((req) => (
-                      <div key={req.id} className="bg-white border border-brand-warm-tan/25 p-5 rounded-2xl relative overflow-hidden flex flex-col justify-between space-y-4 shadow-sm hover:shadow transition duration-200">
-                        <div className="space-y-3">
-                          <div className="flex justify-between items-start gap-2">
-                            <div>
-                              <span className="font-mono text-[9px] font-bold bg-[#FAF6F0] p-1 rounded text-brand-rose border border-brand-warm-tan/10">{req.id}</span>
-                              <h4 className="font-serif text-sm font-bold text-brand-dark mt-1.5">{req.name}</h4>
-                              <p className="font-mono text-[10px] text-brand-dark/50">{req.email}</p>
-                            </div>
-                            <div className="text-right">
-                              <span className="font-sans text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">
-                                {req.porosity}
-                              </span>
-                              <p className="text-[9.5px] font-mono text-[#A67E6B] mt-1.5">{req.date}</p>
-                            </div>
-                          </div>
-
-                          <div className="bg-[#FAF6F0] p-3 rounded-xl border border-brand-warm-tan/15 text-xs text-brand-dark/80 italic leading-relaxed">
-                            &quot;{req.message}&quot;
-                          </div>
-
-                          {req.photoAttachment && (
-                            <div className="border border-brand-warm-tan/15 p-2 rounded-xl bg-orange-50/15 w-fit">
-                              <p className="text-[10px] font-bold uppercase text-brand-rose flex items-center gap-1 mb-1.5">
-                                <Camera className="w-3.5 h-3.5" /> Attached Reference Photo:
-                              </p>
-                              <a href={req.photoAttachment} target="_blank" rel="noreferrer" className="block relative group overflow-hidden rounded-lg cursor-zoom-in border border-brand-warm-tan/30">
-                                <img
-                                  src={req.photoAttachment}
-                                  referrerPolicy="no-referrer"
-                                  alt="Reference"
-                                  className="w-56 h-36 object-cover hover:scale-105 transition duration-300"
-                                />
-                                <div className="absolute inset-0 bg-brand-dark/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-[10.5px] font-bold uppercase tracking-wider">
-                                  Expand Photo
-                                </div>
-                              </a>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="flex flex-col sm:flex-row gap-3 pt-3 border-t border-brand-warm-tan/15 justify-between items-start sm:items-center">
-                          {/* Badge Status indicator */}
-                          <div>
-                            <span className={`text-[9.5px] uppercase tracking-wider font-extrabold px-2.5 py-1 rounded-full ${
-                              req.status === 'Responded' 
-                                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200/50' 
-                                : req.status === 'Read'
-                                ? 'bg-indigo-50 text-indigo-800 border border-indigo-200/50'
-                                : req.status === 'Archived'
-                                ? 'bg-zinc-100 text-zinc-700 border border-zinc-200/50'
-                                : 'bg-amber-50 text-amber-700 border border-amber-200/50'
-                            }`}>
-                              {req.status === 'Responded' && '✓ Replied / Open'}
-                              {req.status === 'Read' && '👁 Read / Logged'}
-                              {req.status === 'Archived' && '📁 Archived'}
-                              {req.status === 'Pending' && '● Awaiting Advice'}
-                            </span>
-                          </div>
-
-                          {/* Quick Action Operations */}
-                          <div className="flex flex-wrap gap-1.5 justify-end w-full sm:w-auto">
-                            {/* Mark read button */}
-                            {req.status === 'Pending' && (
-                              <button
-                                onClick={() => {
-                                  updateContactRequestStatus(req.id, 'Read');
-                                }}
-                                className="p-1 px-2.5 bg-[#FAF6F0] hover:bg-white text-brand-chocolate hover:text-brand-rose border border-brand-warm-tan/30 rounded-lg text-[10px] font-extrabold uppercase transition duration-150 flex items-center gap-1 focus:outline-none"
-                                title="Mark read"
-                              >
-                                <Eye className="w-3.5 h-3.5" />
-                                <span>Read</span>
-                              </button>
-                            )}
-
-                            {/* Mark responded replied button */}
-                            {req.status !== 'Responded' && req.status !== 'Archived' && (
-                              <button
-                                onClick={() => {
-                                  updateContactRequestStatus(req.id, 'Responded');
-                                }}
-                                className="p-1 px-2.5 bg-brand-chocolate hover:bg-brand-berry text-white rounded-lg text-[10px] font-extrabold uppercase transition duration-150 flex items-center gap-1 focus:outline-none"
-                                title="Mark Replied"
-                              >
-                                <Check className="w-3.5 h-3.5" />
-                                <span>Reply</span>
-                              </button>
-                            )}
-
-                            {/* Archive toggle button */}
-                            {req.status !== 'Archived' ? (
-                              <button
-                                onClick={() => {
-                                  updateContactRequestStatus(req.id, 'Archived');
-                                }}
-                                className="p-1 px-2.5 bg-zinc-50 hover:bg-zinc-100 text-zinc-600 hover:text-brand-chocolate border border-zinc-200 rounded-lg text-[10px] font-extrabold uppercase transition duration-150 flex items-center gap-1 focus:outline-none"
-                                title="Archive interaction"
-                              >
-                                <Archive className="w-3.5 h-3.5" />
-                                <span>Archive</span>
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => {
-                                  updateContactRequestStatus(req.id, 'Pending');
-                                }}
-                                className="p-1 px-2.5 bg-brand-pink-light hover:bg-brand-rose text-brand-rose hover:text-white border border-brand-rose/20 rounded-lg text-[10px] font-extrabold uppercase transition duration-150 flex items-center gap-1 focus:outline-none"
-                                title="Restore to pending folder"
-                              >
-                                <Inbox className="w-3.5 h-3.5" />
-                                <span>Reopen</span>
-                              </button>
-                            )}
-
-                            {/* Delete inquiry */}
-                            <button
-                              onClick={() => {
-                                if (confirm('Permanently delete this customer query?')) {
-                                  deleteContactRequest(req.id);
-                                  triggerToast('🗑 Contact inquiry deleted.', 'success');
-                                }
-                              }}
-                              className="p-1 px-2.5 bg-white hover:bg-red-50 text-brand-rose hover:text-red-700 border border-[#E9D9D3] rounded-lg text-[10px] font-extrabold uppercase transition duration-150 focus:outline-none"
-                              title="Trash"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              )}
-            </div>
+            <ContactManager />
           )}
 
         </div>
