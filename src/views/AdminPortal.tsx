@@ -66,6 +66,20 @@ const resolveVideoSource = (url: string) => {
   };
 };
 
+// Upload a file to Supabase Storage → returns the public URL, or null on failure
+const uploadToStorage = async (
+  file: File,
+  folder: 'thumbnails' | 'videos' | 'gallery'
+): Promise<string | null> => {
+  if (!isMediaUploadEnabled) return null;
+  const result = await uploadMedia(file, folder);
+  if ('error' in result) {
+    console.error('[Storage] upload error:', result.error);
+    return null;
+  }
+  return result.url;
+};
+
 const compressImage = (file: File, maxWidth = 1000, maxHeight = 1000, quality = 0.75): Promise<string> => {
   return new Promise((resolve, reject) => {
     if (!file.type.startsWith('image/')) {
@@ -505,6 +519,7 @@ export const AdminPortal: React.FC = () => {
   const [uploadedThumbFile, setUploadedThumbFile] = useState<File | null>(null);
   const [vidTiktokUrl, setVidTiktokUrl] = useState('');
   const [vidYoutubeUrl, setVidYoutubeUrl] = useState('');
+  const [vidInputMode, setVidInputMode] = useState<'upload' | 'url'>('upload');
 
   // Automatic YouTube/TikTok URL detector and thumbnail resolver
   useEffect(() => {
@@ -988,11 +1003,12 @@ export const AdminPortal: React.FC = () => {
     setVidYoutubeUrl('');
     setUploadedVideoFile(null);
     setUploadedThumbFile(null);
+    setVidInputMode('upload');
     setIsAddingVideo(false);
     setEditingVideoId(null);
   };
 
-  const handleAddVideoSubmit = (e: React.FormEvent) => {
+  const handleAddVideoSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!vidTitle) {
       triggerToast('Please enter a video title.', 'error');
@@ -1008,12 +1024,27 @@ export const AdminPortal: React.FC = () => {
     }
     if (!requirePermission(['super_admin', 'content_manager'])) return;
 
-    // Simulate file uploads to cloud storage bucket
+    // Upload files to Supabase Storage (if configured); fall back to local blob/base64
+    let finalVideoUrl = vidUrl;
+    let finalThumbUrl = vidThumb;
+
     if (uploadedVideoFile) {
-      console.log(`[Cloud Storage Placeholder] File uploaded: ${uploadedVideoFile.name} (${uploadedVideoFile.size} bytes)`);
+      const uploaded = await uploadToStorage(uploadedVideoFile, 'videos');
+      if (uploaded) {
+        finalVideoUrl = uploaded;
+      } else {
+        // Keep blob URL locally — warn admin
+        console.warn('[Storage] Video upload failed; using local blob URL (temporary).');
+      }
     }
+
     if (uploadedThumbFile) {
-      console.log(`[Cloud Storage Placeholder] Thumbnail uploaded: ${uploadedThumbFile.name} (${uploadedThumbFile.size} bytes)`);
+      const uploaded = await uploadToStorage(uploadedThumbFile, 'thumbnails');
+      if (uploaded) {
+        finalThumbUrl = uploaded;
+      } else {
+        console.warn('[Storage] Thumbnail upload failed; using local preview.');
+      }
     }
 
     let fOrder: number | undefined = undefined;
@@ -1034,8 +1065,8 @@ export const AdminPortal: React.FC = () => {
       title: vidTitle,
       views: vidStatus === 'draft' ? 'Draft' : (vidStatus === 'scheduled' ? 'Scheduled' : vidViews === '0 views' ? '0 views' : vidViews),
       category: vidCategory,
-      videoUrl: vidUrl,
-      thumbnailUrl: vidThumb,
+      videoUrl: finalVideoUrl,
+      thumbnailUrl: finalThumbUrl,
       description: vidDescription,
       relatedIds: vidRelatedIds,
       isFeatured: vidIsFeatured,
@@ -3419,28 +3450,82 @@ export const AdminPortal: React.FC = () => {
                        {/* ── 1. Primary Video (upload or URL) ── */}
                        <div className="space-y-2">
                          <label className="block text-[10px] uppercase font-bold text-brand-chocolate">Primary Video *</label>
-                         <input
-                           id="vid-url-input"
-                           type="url"
-                           required
-                           value={vidUrl}
-                           onChange={(e) => {
-                             setVidUrl(e.target.value);
-                             setUploadedVideoFile(null);
-                           }}
-                           placeholder="Paste MP4/WebM URL or YouTube URL (TikTok → use Social Links below)"
-                           className="w-full px-3 py-2.5 bg-brand-cream border border-brand-warm-tan/30 rounded-lg focus:outline-none font-mono text-[11px] placeholder:text-brand-dark/30"
-                         />
-                         {/* Live type detection badge */}
-                         {vidUrl.trim() && (() => {
-                           const res = resolveVideoSource(vidUrl);
-                           if (res.type === 'youtube') return <span className="inline-flex items-center gap-1 bg-red-600 text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">🔴 YouTube{vidUrl.includes('/shorts/') ? ' Shorts' : ''} detected</span>;
-                           if (res.type === 'direct') return <span className="inline-flex items-center gap-1 bg-zinc-700 text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">■ MP4 / Direct video detected ✓ will autoplay</span>;
-                           return null;
-                         })()}
-                         <p className="text-[9px] text-brand-dark/40 leading-relaxed">
-                           For best autoplay: upload MP4 or paste YouTube URL. Add TikTok link in Social Links below.
-                         </p>
+
+                         {/* Toggle tabs: Upload File / Paste URL */}
+                         <div className="flex rounded-lg border border-brand-warm-tan/35 overflow-hidden text-[10px] font-bold uppercase tracking-wider">
+                           <button
+                             type="button"
+                             onClick={() => setVidInputMode('upload')}
+                             className={`flex-1 py-1.5 flex items-center justify-center gap-1.5 transition-all ${
+                               vidInputMode === 'upload'
+                                 ? 'bg-brand-chocolate text-white'
+                                 : 'bg-brand-cream text-brand-chocolate/70 hover:bg-brand-beige/50'
+                             }`}
+                           >
+                             <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                             Upload File
+                           </button>
+                           <button
+                             type="button"
+                             onClick={() => setVidInputMode('url')}
+                             className={`flex-1 py-1.5 flex items-center justify-center gap-1.5 transition-all ${
+                               vidInputMode === 'url'
+                                 ? 'bg-brand-chocolate text-white'
+                                 : 'bg-brand-cream text-brand-chocolate/70 hover:bg-brand-beige/50'
+                             }`}
+                           >
+                             <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                             Paste URL
+                           </button>
+                         </div>
+
+                         {/* Upload Mode: VideoDropzone (prominent) */}
+                         {vidInputMode === 'upload' && (
+                           <VideoDropzone
+                             videoValue={vidUrl}
+                             onVideoChange={(newUrl, file) => {
+                               setVidUrl(newUrl);
+                               if (file) {
+                                 setUploadedVideoFile(file);
+                                 if (!vidTitle) {
+                                   const cleanName = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
+                                   setVidTitle(cleanName.charAt(0).toUpperCase() + cleanName.slice(1));
+                                 }
+                               } else {
+                                 setUploadedVideoFile(null);
+                               }
+                             }}
+                             label="Upload Video File"
+                             prefersReducedMotion={prefersReducedMotion}
+                           />
+                         )}
+
+                         {/* URL Mode: text input */}
+                         {vidInputMode === 'url' && (
+                           <>
+                             <input
+                               id="vid-url-input"
+                               type="url"
+                               value={vidUrl}
+                               onChange={(e) => {
+                                 setVidUrl(e.target.value);
+                                 setUploadedVideoFile(null);
+                               }}
+                               placeholder="Paste MP4/WebM URL or YouTube URL (TikTok → use Social Links below)"
+                               className="w-full px-3 py-2.5 bg-brand-cream border border-brand-warm-tan/30 rounded-lg focus:outline-none font-mono text-[11px] placeholder:text-brand-dark/30"
+                             />
+                             {/* Live type detection badge */}
+                             {vidUrl.trim() && (() => {
+                               const res = resolveVideoSource(vidUrl);
+                               if (res.type === 'youtube') return <span className="inline-flex items-center gap-1 bg-red-600 text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">🔴 YouTube{vidUrl.includes('/shorts/') ? ' Shorts' : ''} detected</span>;
+                               if (res.type === 'direct') return <span className="inline-flex items-center gap-1 bg-zinc-700 text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">■ MP4 / Direct video detected ✓ will autoplay</span>;
+                               return null;
+                             })()}
+                             <p className="text-[9px] text-brand-dark/40 leading-relaxed">
+                               For best autoplay: paste a YouTube URL or a direct MP4 link. Add TikTok link in Social Links below.
+                             </p>
+                           </>
+                         )}
                        </div>
 
                       {/* ── 2. Video Title ── */}
@@ -3585,7 +3670,7 @@ export const AdminPortal: React.FC = () => {
                       {/* ── 8. Advanced (collapsible) ── */}
                       <details className="border border-brand-warm-tan/30 rounded-lg">
                         <summary className="px-3 py-2 text-[10px] uppercase font-bold text-brand-chocolate cursor-pointer select-none hover:bg-brand-beige/30 rounded-lg">
-                          ▸ Advanced Options (related products, views, file upload)
+                          ▸ Advanced Options (related products, views)
                         </summary>
                         <div className="px-3 pb-4 pt-3 space-y-4">
                           {/* Simulated views */}
@@ -3624,26 +3709,9 @@ export const AdminPortal: React.FC = () => {
                               ))}
                             </div>
                           </div>
-                          {/* File upload option */}
-                          <div className="space-y-2">
-                            <label className="block text-[10px] uppercase font-bold text-[#8C6D62]">Upload Video File (alternative to link)</label>
-                            <VideoDropzone
-                              videoValue={vidUrl}
-                              onVideoChange={(newUrl, file) => {
-                                setVidUrl(newUrl);
-                                if (file) {
-                                  setUploadedVideoFile(file);
-                                  if (!vidTitle) {
-                                    const cleanName = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
-                                    setVidTitle(cleanName.charAt(0).toUpperCase() + cleanName.slice(1));
-                                  }
-                                } else {
-                                  setUploadedVideoFile(null);
-                                }
-                              }}
-                              label="Upload Video"
-                              prefersReducedMotion={prefersReducedMotion}
-                            />
+                          {/* File upload note - now handled in Primary Video section above */}
+                          <div className="text-[9px] text-brand-dark/40 leading-relaxed bg-brand-cream/60 border border-brand-warm-tan/20 rounded-lg px-3 py-2">
+                            💡 To upload a video file, use the <strong className="text-brand-chocolate">Upload File</strong> tab in the Primary Video section above.
                           </div>
                         </div>
                       </details>

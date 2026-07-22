@@ -718,39 +718,140 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // --- Video Operations ---
-  const addVideo = (video: Omit<TikTokVideo, 'id'>) => {
+  const addVideo = async (video: Omit<TikTokVideo, 'id'>) => {
     const newVideo: TikTokVideo = {
       ...video,
       id: `vid-${Date.now()}`
     };
     setVideos(prev => [newVideo, ...prev]);
+
+    if (isSupabaseConfigured) {
+      try {
+        const { error } = await supabase.from('videos').insert({
+          id: newVideo.id,
+          title: newVideo.title,
+          video_url: newVideo.videoUrl || null,
+          thumbnail_url: newVideo.thumbnailUrl || null,
+          tiktok_url: newVideo.tiktokUrl || null,
+          youtube_url: newVideo.youtubeUrl || null,
+          category: newVideo.category,
+          description: newVideo.description || null,
+          views: newVideo.views,
+          views_count: newVideo.viewsCount ?? 0,
+          likes_count: newVideo.likesCount ?? 0,
+          saves_count: newVideo.savesCount ?? 0,
+          shares_count: newVideo.sharesCount ?? 0,
+          comments_count: newVideo.commentsCount ?? 0,
+          shop_clicks: newVideo.shopClicks ?? 0,
+          product_add_clicks: newVideo.productAddClicks ?? 0,
+          ebook_add_clicks: newVideo.ebookAddClicks ?? 0,
+          conversion_count: newVideo.conversionCount ?? 0,
+          is_featured: newVideo.isFeatured ?? false,
+          featured_order: newVideo.featuredOrder ?? null,
+          status: newVideo.status ?? 'published',
+          scheduled_at: newVideo.scheduledAt || null,
+          related_ids: newVideo.relatedIds ?? [],
+        });
+        if (error) console.error('[Supabase] addVideo error:', error);
+      } catch (err) {
+        console.error('[Supabase] addVideo exception:', err);
+      }
+    }
   };
 
-  const updateVideo = (id: string, updated: Partial<TikTokVideo>) => {
+  const updateVideo = async (id: string, updated: Partial<TikTokVideo>) => {
     setVideos(prev => prev.map(item => item.id === id ? { ...item, ...updated } : item));
+
+    if (isSupabaseConfigured) {
+      try {
+        const patch: Record<string, unknown> = {};
+        if (updated.title !== undefined) patch.title = updated.title;
+        if (updated.videoUrl !== undefined) patch.video_url = updated.videoUrl;
+        if (updated.thumbnailUrl !== undefined) patch.thumbnail_url = updated.thumbnailUrl;
+        if (updated.tiktokUrl !== undefined) patch.tiktok_url = updated.tiktokUrl;
+        if (updated.youtubeUrl !== undefined) patch.youtube_url = updated.youtubeUrl;
+        if (updated.category !== undefined) patch.category = updated.category;
+        if (updated.description !== undefined) patch.description = updated.description;
+        if (updated.views !== undefined) patch.views = updated.views;
+        if (updated.isFeatured !== undefined) patch.is_featured = updated.isFeatured;
+        if (updated.featuredOrder !== undefined) patch.featured_order = updated.featuredOrder;
+        if (updated.status !== undefined) patch.status = updated.status;
+        if (updated.scheduledAt !== undefined) patch.scheduled_at = updated.scheduledAt;
+        if (updated.relatedIds !== undefined) patch.related_ids = updated.relatedIds;
+        const { error } = await supabase.from('videos').update(patch).eq('id', id);
+        if (error) console.error('[Supabase] updateVideo error:', error);
+      } catch (err) {
+        console.error('[Supabase] updateVideo exception:', err);
+      }
+    }
   };
 
-  const deleteVideo = (id: string) => {
+  const deleteVideo = async (id: string) => {
     writeTombstone(TOMBSTONE_KEYS.videos, id);
     setVideos(prev => prev.filter(item => item.id !== id));
+
+    if (isSupabaseConfigured) {
+      try {
+        const { error } = await supabase.from('videos').delete().eq('id', id);
+        if (error) console.error('[Supabase] deleteVideo error:', error);
+      } catch (err) {
+        console.error('[Supabase] deleteVideo exception:', err);
+      }
+    }
   };
 
   // --- Gallery Operations ---
-  const addGalleryItem = (item: Omit<PhotoGalleryItem, 'id'>) => {
+  const addGalleryItem = async (item: Omit<PhotoGalleryItem, 'id'>) => {
     const newItem: PhotoGalleryItem = {
       ...item,
       id: `gal-${Date.now()}`
     };
     setGallery(prev => [newItem, ...prev]);
+
+    if (isSupabaseConfigured) {
+      try {
+        const { error } = await supabase.from('gallery_items').insert({
+          id: newItem.id,
+          image_url: newItem.image,
+          caption: newItem.caption,
+          category: newItem.category,
+        });
+        if (error) console.error('[Supabase] addGalleryItem error:', error);
+      } catch (err) {
+        console.error('[Supabase] addGalleryItem exception:', err);
+      }
+    }
   };
 
-  const updateGalleryItem = (id: string, updated: Partial<Omit<PhotoGalleryItem, 'id'>>) => {
+  const updateGalleryItem = async (id: string, updated: Partial<Omit<PhotoGalleryItem, 'id'>>) => {
     setGallery(prev => prev.map(item => item.id === id ? { ...item, ...updated } : item));
+
+    if (isSupabaseConfigured) {
+      try {
+        const patch: Record<string, unknown> = {};
+        if (updated.image !== undefined) patch.image_url = updated.image;
+        if (updated.caption !== undefined) patch.caption = updated.caption;
+        if (updated.category !== undefined) patch.category = updated.category;
+        const { error } = await supabase.from('gallery_items').update(patch).eq('id', id);
+        if (error) console.error('[Supabase] updateGalleryItem error:', error);
+      } catch (err) {
+        console.error('[Supabase] updateGalleryItem exception:', err);
+      }
+    }
   };
 
-  const deleteGalleryItem = (id: string) => {
+  const deleteGalleryItem = async (id: string) => {
     writeTombstone(TOMBSTONE_KEYS.gallery, id);
     setGallery(prev => prev.filter(item => item.id !== id));
+
+    if (isSupabaseConfigured) {
+      try {
+        const { error } = await supabase.from('gallery_items').delete().eq('id', id);
+        if (error) console.error('[Supabase] deleteGalleryItem error:', error);
+      } catch (err) {
+        console.error('[Supabase] deleteGalleryItem exception:', err);
+      }
+    }
   };
 
   // --- Blog Operations ---
