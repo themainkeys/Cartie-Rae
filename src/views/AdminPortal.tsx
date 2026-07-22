@@ -1024,7 +1024,7 @@ export const AdminPortal: React.FC = () => {
     }
     if (!requirePermission(['super_admin', 'content_manager'])) return;
 
-    // Upload files to Supabase Storage (if configured); fall back to local blob/base64
+    // Upload files to Supabase Storage (if configured); fall back gracefully
     let finalVideoUrl = vidUrl;
     let finalThumbUrl = vidThumb;
 
@@ -1033,18 +1033,27 @@ export const AdminPortal: React.FC = () => {
       if (uploaded) {
         finalVideoUrl = uploaded;
       } else {
-        // Keep blob URL locally — warn admin
-        console.warn('[Storage] Video upload failed; using local blob URL (temporary).');
+        // Blob URLs are session-only — don't save them to the DB (they'll be broken for other users)
+        if (finalVideoUrl.startsWith('blob:')) {
+          finalVideoUrl = '';
+          triggerToast('⚠️ File upload failed — video saved without a playable file. Use a YouTube or TikTok URL instead.', 'error');
+        }
       }
+    } else if (finalVideoUrl.startsWith('blob:')) {
+      // Blob URL was somehow already in state — strip it
+      finalVideoUrl = '';
     }
 
     if (uploadedThumbFile) {
       const uploaded = await uploadToStorage(uploadedThumbFile, 'thumbnails');
       if (uploaded) {
         finalThumbUrl = uploaded;
-      } else {
-        console.warn('[Storage] Thumbnail upload failed; using local preview.');
+      } else if (finalThumbUrl.startsWith('blob:')) {
+        finalThumbUrl = '';
       }
+    } else if (finalThumbUrl.startsWith('blob:') || finalThumbUrl.startsWith('data:')) {
+      // data: URIs are huge — try to upload the compressed blob, otherwise strip
+      finalThumbUrl = finalThumbUrl.startsWith('blob:') ? '' : finalThumbUrl;
     }
 
     let fOrder: number | undefined = undefined;
@@ -1354,6 +1363,16 @@ export const AdminPortal: React.FC = () => {
                 <Globe className="w-3.5 h-3.5" />
                 <span>View Storefront</span>
               </a>
+
+              {/* Save All Changes — always visible */}
+              <button
+                id="admin-save-all-btn"
+                onClick={handleSaveAll}
+                className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-white bg-brand-rose hover:bg-[#C11A3F] border border-transparent rounded-xl transition-all duration-200 focus:outline-none shadow-xs hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>Save All Changes</span>
+              </button>
 
               <button
                 id="admin-logout-btn"
