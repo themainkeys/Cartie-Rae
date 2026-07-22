@@ -176,36 +176,36 @@ export const ContactPage: React.FC = () => {
 
         {/* Right Column: Services referral card */}
         <div className="lg:col-span-5 space-y-6">
-          <div className="bg-brand-dark text-brand-cream border border-brand-chocolate/40 rounded-3xl p-6 space-y-5 text-left">
-            <div className="flex items-center gap-2 border-b border-white/10 pb-3 select-none">
-              <Calendar className="w-5 h-5 text-brand-pink" />
-              <h3 className="font-serif text-lg font-bold text-white">Book a Private Session</h3>
+          <div className="bg-white text-brand-dark border-2 border-brand-warm-tan/50 rounded-3xl p-6 space-y-5 text-left shadow-sm">
+            <div className="flex items-center gap-2 border-b border-brand-warm-tan/25 pb-3 select-none">
+              <Calendar className="w-5 h-5 text-brand-rose" />
+              <h3 className="font-serif text-lg font-bold text-brand-dark">Book a Private Session</h3>
             </div>
 
-            <p className="font-sans text-[11px] text-brand-beige/70 leading-relaxed">
+            <p className="font-sans text-xs text-brand-dark/70 leading-relaxed">
               Ready to go deeper? Book a private 1-on-1 virtual strategy call with Cartiae Rae — available as a Hair Assessment Guidance Call or a Social Media Growth Coaching Call.
             </p>
 
             <div className="space-y-3">
-              <div className="flex items-start gap-3 bg-brand-chocolate/25 rounded-2xl p-4">
-                <Sparkles className="w-4 h-4 text-brand-pink shrink-0 mt-0.5" />
+              <div className="flex items-start gap-3 bg-brand-cream/80 border border-brand-warm-tan/30 rounded-2xl p-4">
+                <Sparkles className="w-4 h-4 text-brand-rose shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-serif text-sm text-white font-semibold">Hair Assessment Guidance Call</p>
-                  <p className="font-sans text-[10px] text-brand-beige/60 mt-0.5">Personalized routine review, goal setting &amp; long-term growth strategy.</p>
+                  <p className="font-serif text-sm text-brand-dark font-semibold">Hair Assessment Guidance Call</p>
+                  <p className="font-sans text-xs text-brand-dark/60 mt-0.5">Personalized routine review, goal setting &amp; long-term growth strategy.</p>
                 </div>
               </div>
-              <div className="flex items-start gap-3 bg-brand-chocolate/25 rounded-2xl p-4">
-                <Sparkles className="w-4 h-4 text-brand-pink shrink-0 mt-0.5" />
+              <div className="flex items-start gap-3 bg-brand-cream/80 border border-brand-warm-tan/30 rounded-2xl p-4">
+                <Sparkles className="w-4 h-4 text-brand-rose shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-serif text-sm text-white font-semibold">Social Media Growth Coaching Call</p>
-                  <p className="font-sans text-[10px] text-brand-beige/60 mt-0.5">Brand strategy, content pillars &amp; visibility roadmap.</p>
+                  <p className="font-serif text-sm text-brand-dark font-semibold">Social Media Growth Coaching Call</p>
+                  <p className="font-sans text-xs text-brand-dark/60 mt-0.5">Brand strategy, content pillars &amp; visibility roadmap.</p>
                 </div>
               </div>
             </div>
 
-            <div className="pt-2 border-t border-white/10">
-              <p className="font-mono text-2xl font-bold text-white">$100<span className="text-sm font-sans font-normal text-brand-beige/50 ml-1">/ session</span></p>
-              <p className="font-sans text-[10px] text-brand-beige/50 mt-1">Virtual Zoom • Confirmation within 24 hrs</p>
+            <div className="pt-2 border-t border-brand-warm-tan/25">
+              <p className="font-mono text-2xl font-bold text-brand-dark">$100<span className="text-sm font-sans font-normal text-brand-dark/50 ml-1">/ session</span></p>
+              <p className="font-sans text-xs text-brand-dark/50 mt-1">Virtual Zoom • Confirmation within 24 hrs</p>
             </div>
           </div>
 
