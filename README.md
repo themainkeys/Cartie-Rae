@@ -116,6 +116,8 @@ newsletter signups persist per-browser and are not authenticated.
    Real delivery must generate short-lived **signed URLs** server-side (e.g.
    Supabase Storage `createSignedUrl`) after verifying the purchase, from a
    **private** bucket. Never expose permanent private files publicly.
-4. **Media uploads:** `mediaAPI.upload` in `src/services/api.ts` is a local
-   placeholder (object URL). Swap it for a real upload to private storage
-   (Supabase Storage / S3) via a backend endpoint.
+4. **Media uploads:** implemented in `src/services/mediaUpload.ts` — uploads to the
+   Supabase Storage `media` bucket and returns a public URL (active whenever
+   `isMediaUploadEnabled`, i.e. Supabase creds are present). Run
+   `supabase/storage_media_setup.sql` to create the bucket + policies.
+   (`src/services/api.ts` and `src/services/ebookDelivery.ts` are unused scaffolding.)

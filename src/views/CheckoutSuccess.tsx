@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle, Download, Clock, ShoppingBag, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useApp } from '../context/AppContext';
 
 /**
  * CheckoutSuccess — displayed at /checkout/success after a completed Stripe payment.
@@ -12,13 +13,18 @@ interface CheckoutSuccessProps {
 }
 
 export const CheckoutSuccess: React.FC<CheckoutSuccessProps> = ({ openCart, setActivePart }) => {
+  const { clearCart } = useApp();
   const [sessionId, setSessionId] = useState<string | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setSessionId(params.get('session_id'));
+    // Payment succeeded → empty the cart so the paid items can't be re-purchased.
+    // (Authoritative order recording happens server-side via the Stripe webhook.)
+    clearCart();
     // Clean the URL without a page reload so the session_id doesn't persist on refresh
     window.history.replaceState({}, '', '/checkout/success');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

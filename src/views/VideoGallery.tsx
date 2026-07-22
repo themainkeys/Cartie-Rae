@@ -483,20 +483,26 @@ export const VideoGallery: React.FC = () => {
   // Dynamic Card height: calc(100dvh - 106px) on mobile so card fills mobile viewport with zero clipping
   const CARD_H = 'calc(100dvh - 106px)';
 
-  // ── Seed social data ──────────────────────────────────────────────────────
-  // Deep-link: ?video=<id> opens the matching video on load
+  // ── Deep-link: ?video=<id> opens AND scrolls to the matching video on load ──
+  // Capture the target once at mount so the category-reset effect can't clobber it.
+  const deepLinkTargetRef = useRef<string | null>(
+    typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('video') : null
+  );
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const targetId = params.get('video');
+    const targetId = deepLinkTargetRef.current;
     if (!targetId || filteredVideos.length === 0) return;
+    deepLinkTargetRef.current = null; // consume it (whether found or not)
+    // Clean the URL so the param doesn't persist on refresh.
+    window.history.replaceState({}, '', window.location.pathname);
+
     const idx = filteredVideos.findIndex(v => v.id === targetId);
-    if (idx !== -1) {
-      setActiveIndex(idx);
-      // Clean the URL so the param doesn't persist
-      const clean = window.location.pathname;
-      window.history.replaceState({}, '', clean);
-    }
-  // Only run once after filteredVideos is populated
+    if (idx === -1) return; // invalid id → fall back safely to the feed (video 0)
+
+    setActiveIndex(idx);
+    // Scroll the target card into view once the cards have mounted.
+    setTimeout(() => {
+      cardRefs.current[idx]?.scrollIntoView({ behavior: 'instant', block: 'start' });
+    }, 80);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filteredVideos.length]);
 
@@ -516,8 +522,11 @@ export const VideoGallery: React.FC = () => {
     setCommentsMap((prev) => ({ ...seedC, ...prev }));
   }, [videos]);
 
-  // ── Reset to first card when category changes ─────────────────────────────
+  // ── Reset to first card when the user CHANGES category ────────────────────
+  // Skip the initial mount so it can't override a ?video= deep-link scroll.
+  const categoryDidMountRef = useRef(false);
   useEffect(() => {
+    if (!categoryDidMountRef.current) { categoryDidMountRef.current = true; return; }
     setActiveIndex(0);
     setTimeout(() => {
       cardRefs.current[0]?.scrollIntoView({ behavior: 'instant', block: 'start' });

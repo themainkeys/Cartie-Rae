@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { EBook, Product, TikTokVideo, PhotoGalleryItem, BlogPost, DiscountCode, CartItem, Order, NewsletterSignup, HomepageContent, WishlistItem, ContactRequest, AdminUser, AdminRole, Service } from '../types';
 import { initialEBooks, initialProducts, initialVideos, initialGallery, initialBlogPosts, initialDiscountCodes, initialHomepageContent, initialServices } from '../data/initialData';
 import { supabase, isSupabaseConfigured, hasSupabaseCredentials } from '../services/supabaseClient';
@@ -220,6 +220,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           thumbnailUrl: item.thumbnailUrl?.includes('photo-1608139556157-196be06511fc')
             ? '/about-portrait.jpg'
             : item.thumbnailUrl || '/about-portrait.jpg',
+          // Strip dead blob: video URLs — they are revoked on reload and would
+          // otherwise render a permanently broken <video> on the storefront.
+          videoUrl: (item.videoUrl || '').startsWith('blob:') ? '' : item.videoUrl,
         }));
       } catch (e) {
         base = initialVideos;
@@ -574,25 +577,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [toast]);
 
   // --- Storage synchronizer triggers ---
-  useEffect(() => { localStorage.setItem('cartiae_ebooks', JSON.stringify(ebooks)); }, [ebooks]);
-  useEffect(() => { localStorage.setItem('cartiae_products', JSON.stringify(products)); }, [products]);
-  useEffect(() => { localStorage.setItem('cartiae_videos', JSON.stringify(videos)); }, [videos]);
-  useEffect(() => { localStorage.setItem('cartiae_gallery', JSON.stringify(gallery)); }, [gallery]);
-  useEffect(() => { localStorage.setItem('cartiae_blogs', JSON.stringify(blogs)); }, [blogs]);
-  useEffect(() => { localStorage.setItem('cartiae_discounts', JSON.stringify(discountCodes)); }, [discountCodes]);
-  useEffect(() => { localStorage.setItem('cartiae_services', JSON.stringify(services)); }, [services]);
+  // Quota-safe persistence: a large base64 image can overflow the ~5MB localStorage
+  // quota; without this guard the QuotaExceededError throws inside the effect and
+  // breaks the app / silently stops saving. We warn once instead.
+  const quotaWarnedRef = useRef(false);
+  const persist = (key: string, value: unknown) => {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (e) {
+      console.error(`Failed to persist "${key}" to localStorage:`, e);
+      if (!quotaWarnedRef.current) {
+        quotaWarnedRef.current = true;
+        triggerToast('Browser storage is full — recent changes may not be saved. Use smaller images or enable cloud storage.', 'error');
+      }
+    }
+  };
+
+  useEffect(() => { persist('cartiae_ebooks', ebooks); }, [ebooks]);
+  useEffect(() => { persist('cartiae_products', products); }, [products]);
+  useEffect(() => { persist('cartiae_videos', videos); }, [videos]);
+  useEffect(() => { persist('cartiae_gallery', gallery); }, [gallery]);
+  useEffect(() => { persist('cartiae_blogs', blogs); }, [blogs]);
+  useEffect(() => { persist('cartiae_discounts', discountCodes); }, [discountCodes]);
+  useEffect(() => { persist('cartiae_services', services); }, [services]);
+  // Contacts are only mirrored to localStorage in demo mode. In Supabase mode the
+  // DB is the source of truth and customer PII must NOT be copied into localStorage.
   useEffect(() => {
     if (!isSupabaseConfigured) {
-      localStorage.setItem('cartiae_contacts', JSON.stringify(contactRequests));
+      persist('cartiae_contacts', contactRequests);
     }
   }, [contactRequests, isSupabaseConfigured]);
-  useEffect(() => { localStorage.setItem('cartiae_newsletter', JSON.stringify(newsletterSignups)); }, [newsletterSignups]);
-  useEffect(() => { localStorage.setItem('cartiae_home', JSON.stringify(homepageContent)); }, [homepageContent]);
-  useEffect(() => { localStorage.setItem('cartiae_cart', JSON.stringify(cart)); }, [cart]);
-  useEffect(() => { localStorage.setItem('cartiae_orders', JSON.stringify(orders)); }, [orders]);
-  useEffect(() => { localStorage.setItem('cartiae_contacts', JSON.stringify(contactRequests)); }, [contactRequests]);
-  useEffect(() => { localStorage.setItem('cartiae_applied_discount', JSON.stringify(appliedDiscount)); }, [appliedDiscount]);
-  useEffect(() => { localStorage.setItem('cartiae_wishlist', JSON.stringify(wishlist)); }, [wishlist]);
+  useEffect(() => { persist('cartiae_newsletter', newsletterSignups); }, [newsletterSignups]);
+  useEffect(() => { persist('cartiae_home', homepageContent); }, [homepageContent]);
+  useEffect(() => { persist('cartiae_cart', cart); }, [cart]);
+  useEffect(() => { persist('cartiae_orders', orders); }, [orders]);
+  useEffect(() => { persist('cartiae_applied_discount', appliedDiscount); }, [appliedDiscount]);
+  useEffect(() => { persist('cartiae_wishlist', wishlist); }, [wishlist]);
   useEffect(() => { localStorage.setItem('cartiae_email_notifications_enabled', String(emailNotificationsEnabled)); }, [emailNotificationsEnabled]);
   // NOTE: we intentionally do NOT persist the full admin user object. In demo mode
   // only a minimal { role, exp } session is stored (see demoLogin / logoutAdmin);
@@ -600,7 +620,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // --- Contact Request Operations ---
   const addContactRequest = async (request: Omit<ContactRequest, 'id' | 'date' | 'status'>) => {
-    const id = `CON-${Math.floor(100 + Math.random() * 900)}`;
+    // Collision-resistant id (the old CON-100..999 could clash with seeds/other new rows).
+    const id = `CON-${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
     const date = new Date().toISOString().split('T')[0];
     const status = 'Pending';
 
@@ -1049,8 +1070,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // --- Order Actions ---
   const createOrder = (customerName: string, customerEmail: string, customerPhone?: string, shippingAddress?: string): Order => {
     const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
-    const discountAmount = appliedDiscount 
-      ? Math.round((subtotal * (appliedDiscount.discountPercent / 100)) * 100) / 100
+    const discountAmount = appliedDiscount
+      ? Math.round((subtotal * (Math.min(100, Math.max(0, appliedDiscount.discountPercent)) / 100)) * 100) / 100
       : 0;
     const total = Math.round((subtotal - discountAmount) * 100) / 100;
 

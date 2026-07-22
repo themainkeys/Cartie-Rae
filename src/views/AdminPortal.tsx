@@ -814,8 +814,8 @@ export const AdminPortal: React.FC = () => {
       saved++;
     }
 
-    // 2. If video form is open with a title, auto-submit it
-    if (isAddingVideo && vidTitle.trim()) {
+    // 2. If video form is open with a title, auto-submit it (role-gated; skip dead blob: URLs)
+    if (isAddingVideo && vidTitle.trim() && !vidUrl.trim().startsWith('blob:') && checkPermission(['super_admin', 'content_manager'])) {
       // Compute featuredOrder
       let fOrder: number | undefined = undefined;
       if (vidIsFeatured) {
@@ -876,8 +876,8 @@ export const AdminPortal: React.FC = () => {
       saved++;
     }
 
-    // 3. If product form is open with a name, auto-submit it
-    if (isAddingProduct && prodName.trim()) {
+    // 3. If product form is open with a name, auto-submit it (role-gated)
+    if (isAddingProduct && prodName.trim() && checkPermission(['super_admin', 'store_manager'])) {
       addProduct({
         id: `prod-${Date.now()}`,
         name: prodName,
@@ -893,8 +893,8 @@ export const AdminPortal: React.FC = () => {
       saved++;
     }
 
-    // 4. If eBook form is open with a name, auto-submit it
-    if (isAddingEBook && ebName.trim()) {
+    // 4. If eBook form is open with a name, auto-submit it (role-gated)
+    if (isAddingEBook && ebName.trim() && checkPermission(['super_admin', 'store_manager'])) {
       addEBook({
         id: `ebook-${Date.now()}`,
         name: ebName,
@@ -1028,7 +1028,8 @@ export const AdminPortal: React.FC = () => {
     if (!requirePermission(['super_admin', 'store_manager'])) return;
     addDiscountCode({
       code: discName.toUpperCase().trim(),
-      discountPercent: parseInt(discPercent) || 15,
+      // Clamp to 1–100 so a discount can never exceed the price (negative totals).
+      discountPercent: Math.min(100, Math.max(1, parseInt(discPercent) || 15)),
       isActive: true,
       description: discDesc
     });
@@ -1139,6 +1140,12 @@ export const AdminPortal: React.FC = () => {
     }
     if (vidUrl && (vidUrl.includes('vm.tiktok.com') || vidUrl.includes('vt.tiktok.com'))) {
       triggerToast('Mobile TikTok links (vm.tiktok.com) are shortened and blocked from embedding by TikTok. Please paste a desktop video link or enter the 19-digit Video ID directly.', 'error');
+      return;
+    }
+    // A blob: URL is a temporary in-memory reference that dies on refresh — never
+    // publish it. This happens when a file upload wasn't persisted to storage.
+    if (vidUrl.startsWith('blob:')) {
+      triggerToast('This video was not uploaded to storage (it would break on refresh). Configure media storage and re-upload, or use a YouTube/TikTok link.', 'error');
       return;
     }
     if (!requirePermission(['super_admin', 'content_manager'])) return;
@@ -2548,6 +2555,8 @@ export const AdminPortal: React.FC = () => {
                       <input
                         type="number"
                         required
+                        min="1"
+                        max="100"
                         value={discPercent}
                         onChange={(e) => setDiscPercent(e.target.value)}
                         className="w-full px-3 py-2 bg-brand-cream border border-brand-warm-tan/30 rounded focus:outline-none font-mono text-center"

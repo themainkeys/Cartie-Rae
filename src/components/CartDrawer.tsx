@@ -45,7 +45,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
 
   const discountAmount = useMemo(() => {
     if (!appliedDiscount) return 0;
-    return Math.round((subtotal * (appliedDiscount.discountPercent / 100)) * 100) / 100;
+    const pct = Math.min(100, Math.max(0, appliedDiscount.discountPercent));
+    return Math.round((subtotal * (pct / 100)) * 100) / 100;
   }, [appliedDiscount, subtotal]);
 
   const total = useMemo(() => {
@@ -460,7 +461,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                       {/* Back button */}
                       <button
                         type="button"
-                        onClick={() => setCheckoutStep('cart')}
+                        onClick={() => { setCheckoutStep('cart'); setCheckoutError(null); }}
                         className="text-brand-rose hover:text-brand-berry flex items-center gap-1 text-xs font-bold focus:outline-none mb-2 cursor-pointer"
                       >
                         <ArrowLeft className="w-4 h-4" />
