@@ -189,7 +189,8 @@ export const MainStore: React.FC<MainStoreProps> = ({ initialFilter = 'All', isC
 
   const discountAmount = useMemo(() => {
     if (!appliedDiscount) return 0;
-    return Math.round((subtotal * (appliedDiscount.discountPercent / 100)) * 100) / 100;
+    const pct = Math.min(100, Math.max(0, appliedDiscount.discountPercent));
+    return Math.round((subtotal * (pct / 100)) * 100) / 100;
   }, [appliedDiscount, subtotal]);
 
   const total = useMemo(() => {
