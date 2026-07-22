@@ -6,6 +6,8 @@ import { uploadMedia } from '../services/mediaUpload';
 import { Product, EBook, DiscountCode, TikTokVideo, PhotoGalleryItem, AdminRole } from '../types';
 import { ContactManager } from './admin/ContactManager';
 import { DiscountManager } from './admin/DiscountManager';
+import { OverviewDashboard } from './admin/OverviewDashboard';
+import { AdminSettings } from './admin/AdminSettings';
 import { 
   ShieldCheck, Lock, LogOut, CheckCircle2, TrendingUp, ShoppingBag, 
   BookOpen, Mail, BadgePercent, Settings, Book, Package, Plus, 
@@ -1756,62 +1758,12 @@ export const AdminPortal: React.FC = () => {
             </div>
           )}
 
-          {activeTab === 'overview' && overviewSub === 'metrics' && (
-            <div className="bg-white border border-[#E5D5C8]/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_4px_25px_-4px_rgba(74,43,32,0.02)]">
-              <h2 className="font-serif text-lg font-bold text-brand-dark border-b border-[#E5D5C8]/30 pb-3 flex items-center gap-2">
-                <span className="w-1.5 h-6 bg-brand-rose rounded-full"></span>
-                Business Health Overview
-              </h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* live store summary */}
-                <div className="bg-[#FAF7F2] p-5.5 rounded-2xl border border-[#E5D5C8]/30 space-y-4">
-                  <h3 className="font-serif text-sm font-bold text-brand-chocolate tracking-tight flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 bg-brand-rose rounded-full"></span>
-                    Store Activity
-                  </h3>
-                  <div className="space-y-3.5 text-xs">
-                    <div className="flex justify-between border-b border-[#E5D5C8]/35 pb-2 text-[#8C6D62]">
-                      <span className="font-medium">Total Orders</span>
-                      <span className="font-mono font-bold text-brand-dark">{orders.length}</span>
-                    </div>
-                    <div className="flex justify-between border-b border-[#E5D5C8]/35 pb-2 text-[#8C6D62]">
-                      <span className="font-medium">Awaiting Shipment</span>
-                      <span className="font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded">{pendingOrdersCount}</span>
-                    </div>
-                    <div className="flex justify-between border-b border-[#E5D5C8]/35 pb-2 text-[#8C6D62]">
-                      <span className="font-medium">Newsletter Subscribers</span>
-                      <span className="font-mono font-bold text-brand-dark">{newsletterSignups.length}</span>
-                    </div>
-                    <div className="flex justify-between text-[#8C6D62] pt-0.5">
-                      <span className="font-medium">Active Discount Codes</span>
-                      <span className="font-mono font-black text-brand-rose bg-brand-pink-light px-2 py-0.5 rounded">{discountCodes.filter(c => c.isActive).length}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* live status */}
-                <div className="bg-brand-dark text-white p-6 rounded-2xl border border-brand-chocolate/40 relative overflow-hidden flex flex-col justify-between shadow-md">
-                  <div className="absolute -right-16 -bottom-16 w-32 h-32 bg-brand-chocolate opacity-20 rounded-full blur-2xl"></div>
-                  <div>
-                    <h3 className="font-serif text-sm font-bold text-brand-pink flex items-center gap-1.5">
-                      <Sparkles className="w-4 h-4 fill-brand-pink text-brand-pink animate-pulse" />
-                      Live Storefront
-                    </h3>
-                    <p className="text-[11.5px] text-brand-beige/85 mt-3 leading-relaxed font-sans">
-                      Edits to your catalog, orders, discount codes and homepage copy save instantly and appear on the live storefront. Manage products, fulfill orders and respond to consultations all from here.
-                    </p>
-                  </div>
-                  <div className="flex justify-between items-center mt-5 pt-3 border-t border-white/5">
-                    <span className="text-[10px] text-[#C5A880] font-mono uppercase tracking-wider">Store Status</span>
-                    <span className="text-[10px] text-emerald-400 font-mono font-bold flex items-center gap-1 bg-white/5 px-2.5 py-0.5 rounded">
-                      <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping"></span>
-                      LIVE
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
+          {/* ===================================================== */}
+          {/* TAB 1: OVERVIEW — all sub-tabs rendered by OverviewDashboard */}
+          {/* Extracted to: src/views/admin/OverviewDashboard.tsx         */}
+          {/* ===================================================== */}
+          {activeTab === 'overview' && (
+            <OverviewDashboard overviewSub={overviewSub} requirePermission={requirePermission} />
           )}
 
           {/* ======================================= */}
@@ -2407,93 +2359,7 @@ export const AdminPortal: React.FC = () => {
             </div>
           )}
 
-          {/* ============================================== */}
-          {/* OVERVIEW SYSTEM COMPONENT: CUSTOMER ORDERS LIST */}
-          {/* ============================================== */}
-          {activeTab === 'overview' && overviewSub === 'orders' && (
-            <div className="bg-white border border-[#E5D5C8]/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_4px_25px_-4px_rgba(74,43,32,0.02)]">
-              <h3 className="font-serif text-lg font-bold text-brand-dark border-b border-[#E5D5C8]/30 pb-3 flex items-center gap-2">
-                <span className="w-1.5 h-6 bg-emerald-600 rounded-full animate-pulse"></span>
-                Authorized Customer Orders Ledger
-              </h3>
-
-              <div className="overflow-x-auto border border-brand-warm-tan/20 rounded-xl bg-white">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-brand-beige/50 border-b border-brand-warm-tan/20 text-[#8C6D62] font-semibold">
-                      <th className="p-3">Order ID</th>
-                      <th className="p-3">Customer Profile</th>
-                      <th className="p-3">Items Purchased</th>
-                      <th className="p-3 text-right">Invoice Paid</th>
-                      <th className="p-3">Date Received</th>
-                      <th className="p-3 text-center">Delivery Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-brand-warm-tan/10 text-brand-dark/80">
-                    {orders.map((o) => (
-                      <tr key={o.id} className="hover:bg-brand-cream/30">
-                        <td className="p-3 font-mono font-bold text-brand-rose">{o.id}</td>
-                        <td className="p-3">
-                          <p className="font-semibold text-brand-chocolate">{o.customerName}</p>
-                          <p className="text-[10px] text-brand-dark/50 font-mono mt-0.5">{o.customerEmail}</p>
-                          {o.customerPhone && (
-                            <p className="text-[10px] text-[#8C6D62] font-mono mt-0.5 flex items-center gap-1">
-                              <Phone className="w-3 h-3 text-brand-rose" />
-                              <span>{o.customerPhone}</span>
-                            </p>
-                          )}
-                          {o.shippingAddress && (
-                            <p className="text-[10px] text-zinc-600 mt-1.5 max-w-[240px] bg-brand-beige/50 p-1.5 rounded-lg border border-brand-warm-tan/20 flex items-start gap-1 leading-normal">
-                              <MapPin className="w-3.5 h-3.5 text-brand-rose mt-0.5 flex-shrink-0" />
-                              <span>{o.shippingAddress}</span>
-                            </p>
-                          )}
-                        </td>
-                        <td className="p-3">
-                          <div className="space-y-1">
-                            {o.items.map((item, idx) => (
-                              <p key={idx} className="line-clamp-1 max-w-[200px]">
-                                • {item.name} x{item.quantity}
-                              </p>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="p-3 text-right font-mono font-bold text-emerald-900">
-                          ${o.total.toFixed(2)}
-                          {o.discountCodeApplied && (
-                            <span className="text-[9px] uppercase tracking-wider text-brand-rose block font-semibold mt-0.5">
-                              ({o.discountCodeApplied})
-                            </span>
-                          )}
-                        </td>
-                        <td className="p-3 font-mono">{o.date}</td>
-                        <td className="p-3 text-center">
-                          {o.status === 'Fulfilled' ? (
-                            <span className="bg-emerald-50 text-emerald-800 text-[10.5px] font-bold px-2.5 py-1 rounded-full border border-emerald-200/50 flex items-center justify-center gap-1 w-fit mx-auto">
-                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                              <span>Dispatched / Done</span>
-                            </span>
-                          ) : (
-                            <button
-                              id={`fulfill-btn-${o.id}`}
-                              onClick={() => {
-                                if (requirePermission(['super_admin', 'store_manager'])) {
-                                  fulfillOrder(o.id);
-                                }
-                              }}
-                              className="p-1 px-3 bg-brand-rose hover:bg-brand-berry text-white rounded-md text-[10px] font-bold uppercase tracking-wider transition-all"
-                            >
-                              Mark Dispatched
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
+          {/* Orders tab — handled inside OverviewDashboard */}
 
           {/* ==================================================== */}
           {/* ==================================================== */}
@@ -3362,62 +3228,7 @@ export const AdminPortal: React.FC = () => {
               )}
             </div>
           )}
-
-
-
-          {/* =================================================== */}
-          {/* OVERVIEW SYSTEM COMPONENT: SUBSCRIBERS EMAIL DIRECTORY */}
-          {/* =================================================== */}
-          {activeTab === 'overview' && overviewSub === 'subscribers' && (
-            <div className="bg-white border border-[#E5D5C8]/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_4px_25px_-4px_rgba(74,43,32,0.02)]">
-              <h3 className="font-serif text-lg font-bold text-brand-dark border-b border-[#E5D5C8]/30 pb-3 flex items-center gap-2">
-                <span className="w-1.5 h-6 bg-brand-rose rounded-full animate-pulse"></span>
-                &apos;The Growth List&apos; Subscribers logs
-              </h3>
-
-              <div className="overflow-x-auto border border-brand-warm-tan/20 rounded-xl bg-white">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-brand-beige/50 border-b border-brand-warm-tan/20 text-[#8C6D62] font-semibold">
-                      <th className="p-3">Reference Index</th>
-                      <th className="p-3">Subscriber Email Address</th>
-                      <th className="p-3">Join Date Status</th>
-                      <th className="p-3 text-center">Source Stream</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-brand-warm-tan/10 text-brand-dark/80 font-mono">
-                    {/* Simulated lists */}
-                    <tr className="hover:bg-brand-cream/30">
-                      <td className="p-3 text-[#A67E6B]">1</td>
-                      <td className="p-3 text-brand-chocolate font-bold">charnelle.davis@gmail.com</td>
-                      <td className="p-3">2026-06-03</td>
-                      <td className="p-3 text-center font-sans">
-                        <span className="bg-brand-pink-light text-brand-rose px-2 py-0.5 rounded text-[10px]">Footer Form</span>
-                      </td>
-                    </tr>
-                    <tr className="hover:bg-brand-cream/30">
-                      <td className="p-3 text-[#A67E6B]">2</td>
-                      <td className="p-3 text-brand-chocolate font-bold">sasha.styles@yahoo.com</td>
-                      <td className="p-3">2026-06-04</td>
-                      <td className="p-3 text-center font-sans">
-                        <span className="bg-brand-pink-light text-brand-rose px-2 py-0.5 rounded text-[10px]">Footer Form</span>
-                      </td>
-                    </tr>
-                    {newsletterSignups.map((sub, sIdx) => (
-                      <tr key={sub.id} className="hover:bg-brand-cream/30">
-                        <td className="p-3 text-[#A67E6B]">{sIdx + 3}</td>
-                        <td className="p-3 text-brand-chocolate font-bold">{sub.email}</td>
-                        <td className="p-3">{sub.date}</td>
-                        <td className="p-3 text-center font-sans">
-                          <span className="bg-emerald-50 text-emerald-800 border border-emerald-200/50 px-2 py-0.5 rounded text-[10px]">Live Signup Form</span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
+          {/* Subscribers tab — handled inside OverviewDashboard */}
 
           {/* ======================================= */}
           {/* STORE EDITOR COMPONENT: A/V MEDIA ASSETS */}
@@ -4263,64 +4074,10 @@ export const AdminPortal: React.FC = () => {
 
           {/* ==================================================== */}
           {/* STORE EDITOR COMPONENT: PORTAL SETTINGS             */}
+          {/* Extracted to: src/views/admin/AdminSettings.tsx      */}
           {/* ==================================================== */}
           {activeTab === 'design' && designSub === 'settings' && (
-            <div className="bg-white border border-[#E5D5C8]/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_4px_25px_-4px_rgba(74,43,32,0.02)] max-w-2xl animate-fade-in">
-              <div className="flex justify-between items-center border-b border-[#E5D5C8]/30 pb-3">
-                <h3 className="font-serif text-lg font-bold text-brand-dark flex items-center gap-2">
-                  <span className="w-1.5 h-6 bg-brand-rose rounded-full"></span>
-                  Administrative Portal Settings
-                </h3>
-              </div>
-              
-              <p className="text-xs text-[#8C6D62] leading-relaxed">
-                Configure back-office notification preference rules and simulation triggers for the <strong>Cartiae Rae</strong> brand registry.
-              </p>
-
-              <div className="bg-[#FAF7F2] rounded-2xl border border-[#E5D5C8]/40 p-5 mt-4 space-y-6">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="space-y-1">
-                    <h4 className="font-serif text-sm font-bold text-brand-dark flex items-center gap-1.5">
-                      <Mail className="w-4 h-4 text-brand-rose" />
-                      Contact Submissions Email Notifications
-                    </h4>
-                    <p className="text-[11px] text-[#8C6D62] leading-relaxed max-w-md">
-                      When enabled, the platform triggers a visual e-mail dispatcher simulation and delivers responsive toast log updates to the creator whenever customers submit natural advice porosity forms.
-                    </p>
-                  </div>
-                  
-                  <button
-                    onClick={() => setEmailNotificationsEnabled(!emailNotificationsEnabled)}
-                    className="p-1 focus:outline-none transition duration-150 relative self-center"
-                    aria-label="Toggle email notifications"
-                    id="toggle-email-notifications-btn"
-                  >
-                    {emailNotificationsEnabled ? (
-                      <ToggleRight className="w-12 h-12 text-brand-rose" />
-                    ) : (
-                      <ToggleLeft className="w-12 h-12 text-[#8C6D62]/40" />
-                    )}
-                  </button>
-                </div>
-                
-                <div className="pt-4 border-t border-[#E5D5C8]/30 flex items-center justify-between text-[11px]">
-                  <span className="text-brand-chocolate/70 font-mono">Simulated Target:</span>
-                  <span className="bg-white px-2.5 py-1 rounded-md border border-[#E5D5C8]/50 font-mono text-brand-dark font-semibold">
-                    Themainkeys@gmail.com
-                  </span>
-                </div>
-              </div>
-
-              {/* Quick simulation card */}
-              <div className="border border-[#E5D5C8]/50 rounded-2xl p-5 space-y-3 bg-[#FAF7F2]/40 text-xs">
-                <h4 className="font-serif font-bold text-brand-dark">How to test this trigger:</h4>
-                <ol className="list-decimal pl-4 space-y-1.5 text-[#8C6D62] leading-relaxed text-[11px]">
-                  <li>Navigate to the <span className="font-semibold text-brand-rose">Contact Studio</span> tab in the main shop storefront menu.</li>
-                  <li>Inquire through the <strong>Porosity advice desk</strong> form by filling your name, porosity type, and natural hair questions.</li>
-                  <li>Click submit to trigger either an immediate <strong>✉ Dispatch email log</strong> toast or a silent request submission based on this setting!</li>
-                </ol>
-              </div>
-            </div>
+            <AdminSettings />
           )}
 
           {/* ======================================= */}
