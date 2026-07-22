@@ -11,6 +11,20 @@
 
 import { CartItem, DiscountCode } from '../types';
 
+/**
+ * Browser-safe configuration check. Only the PUBLISHABLE key is ever read on the
+ * frontend — the secret key lives exclusively in the Netlify function's env
+ * (STRIPE_SECRET_KEY) and must never appear in this bundle.
+ *
+ * When false, the storefront runs checkout in DEMO mode: the UI stays functional
+ * but no real Stripe session is created (see the guard in `redirectToCheckout`).
+ */
+const publishableKey = (import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '').trim();
+export const isStripeConfigured =
+  publishableKey !== '' &&
+  publishableKey !== 'pk_test_...' &&
+  publishableKey.startsWith('pk_');
+
 export interface StripeCheckoutRequest {
   cart: CartItem[];
   customerEmail: string;
@@ -39,6 +53,15 @@ export const stripeService = {
       shippingAddress,
       appliedDiscount,
     } = request;
+
+    // DEMO MODE: no publishable key configured → do not attempt a real payment.
+    // We never fake a successful checkout; we tell the caller it's unavailable.
+    if (!isStripeConfigured) {
+      return {
+        success: false,
+        error: 'Checkout is in demo mode — the Stripe payment gateway is not configured yet.',
+      };
+    }
 
     try {
       const response = await fetch('/.netlify/functions/create-checkout-session', {

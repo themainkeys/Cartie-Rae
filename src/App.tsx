@@ -259,8 +259,12 @@ export const AppContent: React.FC = () => {
     } else if (params.get('product') || params.get('ebook')) {
       setActivePart('shop');
     } else if (params.get('video')) {
-      // Deep-link to Visuals page; VideoGallery reads ?video=id on mount
-      setActivePart('visuals');
+      // Deep-link to the Visuals page. The Visuals view is rendered under the
+      // 'tutorials' route key (see below and Header/Footer), so we must use that
+      // same key here — otherwise the page never mounts and renders blank.
+      // VideoGallery then reads ?video=id on mount and scrolls it into view,
+      // falling back safely to the feed if the id is unknown.
+      setActivePart('tutorials');
     }
   }, []);
 

@@ -5,7 +5,7 @@ import {
   CheckCircle, Download, Smartphone, Sparkles, ChevronRight, ShoppingBag, Heart, Clock, AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { stripeService } from '../services/stripe';
+import { stripeService, isStripeConfigured } from '../services/stripe';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -545,15 +545,27 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                         <h4 className="font-serif text-xs font-extrabold uppercase tracking-widest text-brand-chocolate border-b border-brand-warm-tan/30 pb-1.5 select-none">
                           {holdsPhysicalItems ? '3. Secure Payment' : '2. Secure Payment'}
                         </h4>
-                        <div className="flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-xl p-3.5">
-                          <Lock className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                          <div>
-                            <p className="text-[10.5px] font-bold text-emerald-800 uppercase tracking-wide">Stripe Secured Checkout</p>
-                            <p className="text-[10px] text-emerald-700 mt-0.5 leading-relaxed">
-                              Clicking the button below will redirect you to Stripe's secure, encrypted payment page. Your card details are never shared with us.
-                            </p>
+                        {isStripeConfigured ? (
+                          <div className="flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-xl p-3.5">
+                            <Lock className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-[10.5px] font-bold text-emerald-800 uppercase tracking-wide">Stripe Secured Checkout</p>
+                              <p className="text-[10px] text-emerald-700 mt-0.5 leading-relaxed">
+                                Clicking the button below will redirect you to Stripe's secure, encrypted payment page. Your card details are never shared with us.
+                              </p>
+                            </div>
                           </div>
-                        </div>
+                        ) : (
+                          <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-3.5">
+                            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-[10.5px] font-bold text-amber-800 uppercase tracking-wide">Demo Mode — Payment Disabled</p>
+                              <p className="text-[10px] text-amber-700 mt-0.5 leading-relaxed">
+                                The Stripe payment gateway is not configured yet, so no real payment will be taken. Add the Stripe keys to enable live checkout.
+                              </p>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                     </div>

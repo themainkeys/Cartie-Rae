@@ -16,6 +16,13 @@ interface MainStoreProps {
   openCart: () => void;
 }
 
+// Physical product categories that are ENABLED for display (client-approved config).
+// A product whose category is NOT listed here is intentionally hidden. This is a
+// deliberate, separate concept from the filter-tab list (`categories` below):
+// hiding/showing a tab must never, on its own, hide the products from the "All"
+// view. Conflating the two is what previously hid every physical product.
+const ENABLED_PRODUCT_CATEGORIES = ['Hair Oils', 'Accessories', 'Treatments'];
+
 export const MainStore: React.FC<MainStoreProps> = ({ initialFilter = 'All', isCartOpen, closeCart, openCart }) => {
   const { 
     products, ebooks, cart, appliedDiscount,
@@ -146,18 +153,25 @@ export const MainStore: React.FC<MainStoreProps> = ({ initialFilter = 'All', isC
 
   // Filter items logic
   const filteredProducts = useMemo(() => {
-    return products.filter(p => {
-      // Check if product's category is currently in active categories list
-      // Note: 'Accessories' or 'Hair Oils' could be added to categories list in the future
-      const isCategoryActive = categories.includes(p.category) || (p.category === 'Accessories' && categories.includes('Tools'));
-      if (!isCategoryActive) return false;
+    // Never show products while the eBooks-only tab is active.
+    if (activeCategory === 'eBooks') return [];
 
+    return products.filter(p => {
+      // Visibility is governed by the client-approved enabled-category config,
+      // NOT by the filter-tab list. This is the fix for the bug where physical
+      // products never appeared because the tab list ('All','eBooks') never
+      // contained a product category like 'Hair Oils'.
+      if (!ENABLED_PRODUCT_CATEGORIES.includes(p.category)) return false;
+
+      // Category filter: 'All' shows every enabled product; a specific category
+      // narrows to it. Search matches name or description, and works alongside
+      // the category filter.
       const matchCat = activeCategory === 'All' || p.category === activeCategory;
       const matchSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           p.description.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchCat && matchSearch && activeCategory !== 'eBooks';
+      return matchCat && matchSearch;
     });
-  }, [products, activeCategory, searchQuery, categories]);
+  }, [products, activeCategory, searchQuery]);
 
   const filteredEBooks = useMemo(() => {
     return ebooks.filter(eb => {

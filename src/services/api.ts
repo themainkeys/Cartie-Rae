@@ -15,69 +15,37 @@ const SIMULATE_LATENCY_MS = 300;
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
- * 1. Admin Authentication API
+ * 1. Admin Authentication API — SERVER-SIDE INTEGRATION POINT ONLY
+ *
+ * SECURITY: There are intentionally NO credentials, passwords, or role grants
+ * in this file. Frontend-only authentication is not secure and any secret placed
+ * here would ship in the browser bundle. Real authentication is handled by
+ * Supabase Auth (see `services/supabaseClient.ts` and `context/AppContext.tsx`
+ * `loginAdmin`). These stubs exist as documented wiring points for a backend and
+ * must never trust a client-supplied token or fabricate a user/role.
  */
 export const authAPI = {
   /**
-   * Log in administrative staff
+   * Log in administrative staff.
+   * Integration point: perform this against Supabase Auth or your backend
+   * (e.g. `supabase.auth.signInWithPassword(...)`), never against a client-side
+   * credential list.
    */
-  async login(email: string, password: string): Promise<{ success: boolean; user?: AdminUser; error?: string }> {
-    await delay(SIMULATE_LATENCY_MS);
-    
-    // Production note: Replace with real JWT login endpoint e.g., POST /api/auth/login
-    const cleanEmail = email.trim().toLowerCase();
-    
-    // Simulated credential database match
-    if (password === 'admin' || password === 'super_admin_pass') {
-      return {
-        success: true,
-        user: {
-          id: 'adm-001',
-          name: 'Cartiae Rae',
-          email: cleanEmail,
-          role: 'super_admin',
-        }
-      };
-    } else if (password === 'manager' || password === 'manager_pass') {
-      return {
-        success: true,
-        user: {
-          id: 'adm-002',
-          name: 'Elena Vance (Manager)',
-          email: cleanEmail,
-          role: 'store_manager',
-        }
-      };
-    } else if (password === 'content' || password === 'content_pass') {
-      return {
-        success: true,
-        user: {
-          id: 'adm-003',
-          name: 'Brianna Smith (Editor)',
-          email: cleanEmail,
-          role: 'content_manager',
-        }
-      };
-    }
-    
+  async login(): Promise<{ success: boolean; user?: AdminUser; error?: string }> {
     return {
       success: false,
-      error: 'Invalid staff email or password signature.'
+      error: 'Client-side login is disabled. Authenticate via Supabase Auth / a backend.'
     };
   },
 
   /**
-   * Validate session token
+   * Validate a session token.
+   * Integration point: verify the session on the server (e.g. `supabase.auth.getUser()`
+   * or a signed-token check in a serverless function). Returning null here is
+   * deliberate — an unverified client token must never grant a role.
    */
-  async validateSession(token: string): Promise<AdminUser | null> {
-    // Production note: Call GET /api/auth/me with Authorization header
-    if (!token) return null;
-    return {
-      id: 'adm-001',
-      name: 'Cartiae Rae',
-      email: 'admin@cartiaerae.com',
-      role: 'super_admin'
-    };
+  async validateSession(): Promise<AdminUser | null> {
+    return null;
   }
 };
 

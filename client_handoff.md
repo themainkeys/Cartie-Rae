@@ -1,237 +1,146 @@
 # Client Handoff Guide — Cartiae Rae storefront
 
-Welcome to your finalized premium creator platform! This platform has been built to mirror the luxury, minimalist, and feminine aesthetics of top beauty brands like **Rhode** and **Apple**, while remaining simple and intuitive for you to manage.
-
-This guide provides everything you need to operate, edit, and expand the platform.
+Welcome to your creator platform. This guide covers how to operate and edit the
+site, and — importantly — **what is fully working today vs. what still needs a
+backend** before it is production-ready. Please read the "Production Status"
+section and `audit_report.md` before going live.
 
 ---
 
 ## 🔗 Quick Reference URLs
-- **Production URL**: [https://cartiaerae.netlify.app](https://cartiaerae.netlify.app)
-- **Local Dev Server**: `http://localhost:3000` (after running `npm run dev`)
+- **Production URL**: https://cartiaerae.netlify.app
+- **Local Dev Server**: `http://localhost:3000` (after `npm run dev`)
 
 ---
 
-## 🔑 Administrative Credentials (CMS Console)
-To access the CMS Console and update your storefront, click **Admin** in the footer of your website. Enter one of the following credentials depending on the role you wish to simulate:
+## 🔑 Admin Console Access
 
-1. **Super Admin** (Full control over catalog, content, discounts, and design copywriting):
-   - **Username**: `admin`
-   - **Password**: `cartiae123`
+Click **Admin** in the footer to open the console. How you log in depends on
+whether Supabase Auth is configured:
 
-2. **Store Manager** (Manages orders, products, and eBooks; blocked from design copywriting and global settings):
-   - **Username**: `manager`
-   - **Password**: `cartiae123`
+### Demo mode (Supabase not configured) — **not secure**
+The login screen shows a **passwordless role picker** clearly labeled "Demo
+Mode". Pick a role to preview the console:
 
-3. **Content Manager** (Manages videos, gallery items, and copywriting; blocked from catalog database modifications and order lists):
-   - **Username**: `content`
-   - **Password**: `cartiae123`
+- **Super Admin** — full access to everything.
+- **Store Manager** — products, eBooks, orders, discounts, store analytics.
+- **Content Manager** — videos, gallery, homepage content, blog/editorial.
 
----
+There are **no passwords** in demo mode — this is a preview only and must not be
+relied on for security. There are intentionally **no credentials stored anywhere
+in the app**.
 
-## 💎 Premium Customer Experience Features
+### Production mode (Supabase configured) — real login
+Once you set the Supabase environment variables and register staff (below), the
+login screen becomes a real email + password form backed by **Supabase Auth**,
+and roles are verified server-side against your `admin_users` table.
 
-### 1. Minimalist Homepage
-- **Clean Structure**: The landing page features a hero portrait of Cartiae Rae, a brief elegant brand introduction, and immediate, clean navigation cards linking directly to the main site paths: **eBook**, **Services**, **Visuals**, and **Shop**. All cluttered sections (testimonials, bio cards, product sliders, and newsletters) have been removed for high-intent conversion.
-
-### 2. Private Coaching & Services Page
-- **Coaching Products**: Dedicated Services page featuring two private virtual calls ($100 each): *Hair Assessment Guidance Call* and *Social Media Growth Coaching Call*, complete with deliverables, notices, and disclaimers.
-- **Digital Booking Workflow**: Booking a coaching session adds a virtual item to the cart. During checkout, these digital service items bypass the shipping address form. On success, the Cart Drawer displays clear instructions: *"Virtual Booking Confirmed: We will contact you at your email address within 24 hours to schedule your session."*
-
-### 3. Immersive Watch Tutorials (Visuals)
-- **Step Into the Studio**: The video feed is renamed to **Visuals** and features a clean grid.
-- **Isolated Hover Previews**: Muted video previews play automatically on desktop mouse hover and stop instantly when the mouse leaves.
-- **Lightbox Details**: Clicking a card opens a full-screen theater overlay, allowing comments, and listing products featured. The `"Cornrows"` category has been retired.
-
-### 4. Simplified Lookbook (Gallery)
-- **Lookbook view**: Replaces the old multi-tab lookbook sections with a sleek, minimalist slideshow styled as a premium Editorial Lookbook. The `"Lifestyle"` category has been retired.
-
-### 5. Streamlined Contact & FAQs
-- **Contact Form**: Removed porosity, hair type, and reference photo attachment fields. Added a **Phone Number** field and renamed the submit button to a bold `"Dispatch Message to Cartiae Rae"`.
-- **Frequently Asked Questions**: Updated answers to detail the instant eBook delivery process and how 1-on-1 consultations are booked and scheduled.
----
-
-## 🛠️ CMS Console Operations (How to Manage Content)
-
-### 1. Adding a Video Tutorial
-1. Navigate to the **Admin Portal** and log in.
-2. Select the **Videos** tab.
-3. Paste a YouTube or TikTok link into the **Video URL** field. 
-   * **YouTube Auto-Thumbnails**: Pasting a YouTube link automatically extracts its ID and fetches a high-definition thumbnail.
-   * **TikTok Link Parsing**: Paste raw 19-digit video IDs or standard desktop links. (Mobile links will prompt you to input desktop URLs or raw IDs due to TikTok redirect limits).
-   * **Local File Uploads**: Drag and drop (or select) `.mp4` files inside the dropzone for direct hosting.
-4. Pick a category, write a title and description, and check **Featured Video** if it should appear first.
-5. Set release status: **Publish Now**, **Save Draft**, or **Schedule** for future release.
-6. Click **Publish Video**.
-
-### 2. Featured Video Reordering
-Inside the **Videos** tab, use the featured reordering pane to click Up (`↑`) and Down (`↓`) arrow indicators. This instantly swaps their position inside your storefront's video feed.
-
-### 3. Editing Store Catalog (Products & eBooks)
-Navigate to the **Catalog** tab. You can click **Edit** directly inside any row of your Products or eBooks table to change titles, stock status, pages, prices, and quantities inline.
+> ⚠️ **Do not deploy with real customer data or payments in demo mode.** Configure
+> Supabase Auth first so access is actually authenticated.
 
 ---
 
-## ⚡ Technical Architecture & Deployment
+## 👥 Roles & Permissions
 
-### 1. Environment Configurations
-Create a `.env` file in your project root using the templates below:
-```env
-# Stripe Payment Keys
-VITE_STRIPE_PUBLIC_KEY=pk_test_51...
-VITE_STRIPE_SECRET_KEY=sk_test_51...
+| Area | Super Admin | Store Manager | Content Manager |
+|---|:---:|:---:|:---:|
+| Products & eBooks | ✅ | ✅ | — |
+| Orders, Discounts, Analytics | ✅ | ✅ | — |
+| Videos & Gallery | ✅ | — | ✅ |
+| Homepage / Blog / Services text | ✅ | — | ✅ |
 
-# eBook Email Delivery Configurations
-VITE_SENDGRID_API_KEY=SG.example...
-VITE_SENDER_EMAIL=hello@cartiaerae.com
-```
-
-### 2. Local Setup
-```bash
-# Install dependencies
-npm install
-
-# Run local development server
-npm run dev
-
-# Run TypeScript checking
-npm run lint
-
-# Build production bundle
-npm run build
-```
-
-### 3. Deployment Flow (Netlify)
-If you update files, compile locally first and run a draft deploy to check the build:
-```bash
-npm run build
-npx netlify deploy --dir=dist
-```
-Copy the generated `deployId` from the terminal output, update it in `scratch/deploy.js`, and run:
-```bash
-node scratch/deploy.js
-```
-This promotes your draft build to the live production URL.
+Restricted users who try a blocked action get a clear on-screen message. (These
+role checks are a UX guard — real enforcement also happens server-side via
+Supabase Row Level Security once configured.)
 
 ---
 
-## 💳 Stripe Integration (Phase 1 — Real Payments)
+## 🛠️ Managing Content
 
-Real Stripe checkout is now wired up via a Netlify serverless function. When a customer clicks **"Continue to Secure Payment"**, they are redirected to Stripe's hosted checkout page. No card details ever touch this server.
+- **Videos (Visuals):** Admin → *Store Editor*. Paste a YouTube/TikTok link or
+  upload an MP4, pick a category, add a title/description, set featured/status.
+- **Catalog (Products & eBooks):** Admin → *Catalog & Coupons*. Add items and
+  edit rows inline (name, price, stock, pages).
+- **Homepage & copy:** Admin → *Store Editor* CMS panel.
+- **Consultations:** Admin → *Consult Inquiries*.
 
-### How to Add Stripe Keys to Netlify
+---
 
-1. Go to [dashboard.stripe.com](https://dashboard.stripe.com) → **Developers** → **API keys**
-2. Copy your **Publishable key** and **Secret key**
-3. In Netlify: go to **Site settings** → **Environment variables** → **Add variable** for each:
+## 💳 Stripe Payments
+
+Checkout is wired to a Netlify serverless function
+(`netlify/functions/create-checkout-session.js`) that creates a Stripe Hosted
+Checkout session. **Card details never touch our servers.**
+
+Until Stripe keys are configured, checkout runs in **demo mode**: the cart shows a
+"Demo Mode — Payment Disabled" notice and no payment is attempted (it never fakes
+a successful order).
+
+### Add Stripe keys (in Netlify → Site settings → Environment variables)
 
 | Variable | Where to get it | Scope |
 |---|---|---|
-| `STRIPE_SECRET_KEY` | Stripe Dashboard → API keys | Functions only (server-side) |
-| `VITE_STRIPE_PUBLISHABLE_KEY` | Stripe Dashboard → API keys | Frontend (safe to expose) |
-| `STRIPE_WEBHOOK_SECRET` | Stripe Dashboard → Webhooks → Signing secret | Functions only |
-| `SITE_URL` | Your Netlify site URL, e.g. `https://cartiaerae.netlify.app` | Functions only |
+| `VITE_STRIPE_PUBLISHABLE_KEY` | Stripe → API keys (`pk_...`) | **Frontend** (safe to expose) |
+| `STRIPE_SECRET_KEY` | Stripe → API keys (`sk_...`) | **Server only** — never `VITE_` prefixed |
+| `STRIPE_WEBHOOK_SECRET` | Stripe → Webhooks → Signing secret | Server only |
+| `SITE_URL` | Your site URL, no trailing slash | Server only |
 
-### Testing with Stripe Test Mode
+> 🚫 **Never** prefix the secret key with `VITE_` and never commit real keys to
+> Git. `VITE_`-prefixed variables are compiled into the public browser bundle.
 
-1. Use keys starting with `pk_test_` and `sk_test_`
-2. Use Stripe's test card: **`4242 4242 4242 4242`**, any future expiry, any 3-digit CVV
-3. Complete a test checkout — you will be redirected to `/checkout/success`
-4. Click "back" or cancel — you will land on `/checkout/cancel` with your cart intact
-
-### Switching to Live Mode
-
-1. Replace `pk_test_` → `pk_live_` and `sk_test_` → `sk_live_` in Netlify environment variables
-2. Redeploy the site (a new deploy picks up the new variables automatically)
-3. **Never commit real keys to Git** — always set them in Netlify's dashboard
-
-### Checkout Flow
-
-```
-Customer clicks "Continue to Secure Payment"
-  ↓
-CartDrawer POSTs to /.netlify/functions/create-checkout-session
-  ↓
-Netlify function validates cart + creates Stripe session
-  ↓
-Browser redirects to Stripe hosted checkout page
-  ↓
-On success → /checkout/success  (receipt shown)
-On cancel  → /checkout/cancel   (cart still intact)
-```
+Test with `pk_test_`/`sk_test_` and card `4242 4242 4242 4242` (any future expiry,
+any CVV). Switch to `pk_live_`/`sk_live_` and redeploy when ready.
 
 ---
 
-## ⚠️ Backend Status — Database & Auth Status (Phase 1 Complete)
+## 🔐 Enabling Real Auth & Database (Supabase)
 
-> [!NOTE]
-> **Phase 1 of the Supabase backend migration is complete!**
-> Admin authentication and visitor contact requests are now secured by **Supabase**. Other entities (products, eBooks, videos, etc.) still use client-side `localStorage` with seed data, operating in a hybrid/fallback mode if environment variables are missing.
-
-### What This Means For You
-
-1. **Administrative Authentication**: Plaintext credentials have been removed from the client bundle. Staff must be registered in your Supabase Auth dashboard, and their roles are verified securely via the database.
-2. **Contact Requests**: Submissions from the public Contact page are sent directly to your Supabase `contact_requests` table and loaded on the admin dashboard.
-3. **Demo Fallback**: If Supabase environment variables are missing, the system warns the console in development and falls back to the original localStorage simulation for all flows.
-
----
-
-## 🔐 Admin Authentication Setup & Roles
-
-Admin access is controlled by a custom `admin_users` profile table linked to Supabase Auth UUIDs. 
-
-### How to Add a Staff Member
-
-1. **Create Auth Credentials**:
-   - Go to your **Supabase Dashboard** → **Authentication** → **Users**.
-   - Click **Add User** → **Create User**, input their email and password, and click save.
-   - Copy the generated **User ID** (UUID).
-
-2. **Map User to Role**:
-   - Go to the **Supabase SQL Editor**.
-   - Execute an `INSERT` statement to assign a role (`super_admin`, `store_manager`, or `content_manager`) to their UUID.
+1. Create a Supabase project. In the SQL editor, create `admin_users` and
+   `contact_requests` tables with Row Level Security enabled.
+2. **Add staff:** Supabase Dashboard → Authentication → Users → Add User (email +
+   password). Copy their User ID (UUID).
+3. Map the UUID to a role:
    ```sql
    INSERT INTO public.admin_users (id, name, email, role)
-   VALUES (
-     'PASTE-USER-UUID-HERE',
-     'Staff Member Name',
-     'staff@cartiaerae.com',
-     'store_manager' -- or 'super_admin' / 'content_manager'
-   );
+   VALUES ('PASTE-USER-UUID', 'Staff Name', 'staff@cartiaerae.com',
+           'store_manager'); -- or 'super_admin' / 'content_manager'
+   ```
+4. Set env vars (Netlify or `.env`):
+   ```env
+   VITE_SUPABASE_URL="https://your-project.supabase.co"
+   VITE_SUPABASE_ANON_KEY="your-anon-key"
    ```
 
 ---
 
-## 🛠️ Database Setup (SQL Schema)
+## 🧱 Local Setup
 
-To bootstrap your database tables and secure access rules, execute the DDL schema in the project root:
-- Refer to [supabase_schema.sql](file:///C:/Users/Anderson/Documents/antigravity/jolly-archimedes/supabase_schema.sql) in your local files.
-- It configures Row Level Security (RLS) policies allowing public submissions but restricting retrieval and updates to verified admin staff.
-
----
-
-## ⚡ Environment Configurations
-
-Create a `.env` file in your project root using the template below:
-```env
-# 🌐 Supabase Integration (Phase 1)
-VITE_SUPABASE_URL="https://your-project.supabase.co"
-VITE_SUPABASE_ANON_KEY="your-anon-key-here"
-
-# 💳 Stripe Payment Keys
-VITE_STRIPE_PUBLIC_KEY=pk_test_51...
-VITE_STRIPE_SECRET_KEY=sk_test_51...
-
-# ✉ SMTP/Email Configurations
-VITE_SENDGRID_API_KEY=SG.example...
-VITE_SENDER_EMAIL=hello@cartiaerae.com
+```bash
+npm install
+npm run dev      # local dev server on :3000
+npm run lint     # TypeScript type-check (tsc --noEmit)
+npm run build    # production build into dist/
 ```
 
+Environment variables: copy `.env.example` to `.env` and fill in values. Nothing
+is required just to run the site locally — missing integrations degrade to clearly
+labeled demo behavior.
+
 ---
 
-## 🚀 Remaining Production Steps (Phase 2 & 3)
+## ✅ Production Status (read before launch — see `audit_report.md`)
 
-To fully transition the platform, the following remaining scopes will need database migration:
-1. **Catalog & Content Persistence**: Migrate products, eBooks, videos, and gallery lookbooks to Supabase.
-2. **Order Management**: Connect checkout order receipts to a database table instead of transient localStorage.
-3. **eBook Deliverability**: Link SendGrid function to dispatch download keys upon Stripe checkout webhook confirmation.
+**Working now (safe):** storefront browsing, product/eBook filtering & search,
+Visuals deep links, newsletter capture (local), cart, demo admin console.
+
+**Demo / local only (per-browser `localStorage`):** products, eBooks, videos,
+gallery, orders, newsletter signups, and (in demo mode) admin access. Data does
+not sync between devices/visitors and is not authenticated.
+
+**Needs a backend before production:**
+- **Auth:** configure Supabase Auth (until then, demo role picker — not secure).
+- **Data persistence:** migrate catalog/orders/content to Supabase.
+- **Payments:** set Stripe keys + function env (checkout is disabled otherwise).
+- **eBook delivery:** files must live in a **private** bucket and be delivered via
+  short-lived **signed URLs** generated server-side after a verified purchase. The
+  current in-app token is a labeled **demo** (base64 — not secure/tamper-proof).
