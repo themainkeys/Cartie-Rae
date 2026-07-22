@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../context/AppContext';
+import { supabase, isSupabaseConfigured } from '../services/supabaseClient';
 import { Product, EBook, DiscountCode, TikTokVideo, PhotoGalleryItem, ContactRequest, AdminRole } from '../types';
 import { 
   ShieldCheck, Lock, LogOut, CheckCircle2, TrendingUp, ShoppingBag, 
@@ -62,6 +63,30 @@ const resolveVideoSource = (url: string) => {
     id: '',
     url: cleanUrl
   };
+};
+
+// Upload a file to Supabase Storage → returns the public URL, or null on failure
+const uploadToStorage = async (
+  file: File,
+  folder: 'thumbnails' | 'videos' | 'gallery'
+): Promise<string | null> => {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = `${folder}/${Date.now()}-${safeName}`;
+    const { data, error } = await supabase.storage
+      .from('media')
+      .upload(path, file, { contentType: file.type, upsert: false });
+    if (error || !data) {
+      console.error('[Storage] upload error:', error);
+      return null;
+    }
+    const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(data.path);
+    return publicUrl;
+  } catch (err) {
+    console.error('[Storage] upload exception:', err);
+    return null;
+  }
 };
 
 const compressImage = (file: File, maxWidth = 1000, maxHeight = 1000, quality = 0.75): Promise<string> => {
@@ -901,7 +926,7 @@ export const AdminPortal: React.FC = () => {
     setEditingVideoId(null);
   };
 
-  const handleAddVideoSubmit = (e: React.FormEvent) => {
+  const handleAddVideoSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!vidTitle) {
       triggerToast('Please enter a video title.', 'error');
@@ -917,12 +942,27 @@ export const AdminPortal: React.FC = () => {
     }
     if (!checkPermission(['super_admin', 'content_manager'])) return;
 
-    // Simulate file uploads to cloud storage bucket
+    // Upload files to Supabase Storage (if configured); fall back to local blob/base64
+    let finalVideoUrl = vidUrl;
+    let finalThumbUrl = vidThumb;
+
     if (uploadedVideoFile) {
-      console.log(`[Cloud Storage Placeholder] File uploaded: ${uploadedVideoFile.name} (${uploadedVideoFile.size} bytes)`);
+      const uploaded = await uploadToStorage(uploadedVideoFile, 'videos');
+      if (uploaded) {
+        finalVideoUrl = uploaded;
+      } else {
+        // Keep blob URL locally — warn admin
+        console.warn('[Storage] Video upload failed; using local blob URL (temporary).');
+      }
     }
+
     if (uploadedThumbFile) {
-      console.log(`[Cloud Storage Placeholder] Thumbnail uploaded: ${uploadedThumbFile.name} (${uploadedThumbFile.size} bytes)`);
+      const uploaded = await uploadToStorage(uploadedThumbFile, 'thumbnails');
+      if (uploaded) {
+        finalThumbUrl = uploaded;
+      } else {
+        console.warn('[Storage] Thumbnail upload failed; using local preview.');
+      }
     }
 
     let fOrder: number | undefined = undefined;
@@ -943,8 +983,8 @@ export const AdminPortal: React.FC = () => {
       title: vidTitle,
       views: vidStatus === 'draft' ? 'Draft' : (vidStatus === 'scheduled' ? 'Scheduled' : vidViews === '0 views' ? '0 views' : vidViews),
       category: vidCategory,
-      videoUrl: vidUrl,
-      thumbnailUrl: vidThumb,
+      videoUrl: finalVideoUrl,
+      thumbnailUrl: finalThumbUrl,
       description: vidDescription,
       relatedIds: vidRelatedIds,
       isFeatured: vidIsFeatured,
