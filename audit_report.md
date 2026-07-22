@@ -164,3 +164,29 @@ client-side. **True security requires server-side/Supabase validation** (RLS +
 - `grep` confirms: no plaintext admin passwords in `src`, no Stripe secret keys in
   frontend, server `stripe` SDK absent from `dist`, `checkPermission` no longer
   hardcoded to `true`.
+
+---
+
+## Phase 1 — AdminPortal Lazy-Load  ✅ complete (July 22, 2026)
+
+**Change:** `AdminPortal` is now loaded via `React.lazy()` + `<Suspense>` in
+`App.tsx`. It is no longer bundled with the public site's initial JS chunk.
+A branded fallback UI (`AdminLoadingFallback`) is shown while the deferred
+chunk downloads — it matches the site's cream background and avoids layout shift.
+
+**Bundle size (minified):**
+
+| Chunk | Before | After | Δ |
+|---|---:|---:|---:|
+| `index.js` (public) | 913.79 kB | 745.39 kB | −168.4 kB (−18.4%) |
+| `AdminPortal.js` (deferred) | — | 170.03 kB | split out |
+
+**Gzipped (what users actually download on first visit):**
+
+| | Before | After | Δ |
+|---|---:|---:|---:|
+| `index.js` | 239.33 kB | 209.07 kB | −30.3 kB (−12.7%) |
+| `AdminPortal.js` | — | 31.73 kB | deferred, cached after first admin visit |
+
+**Verification:** `npm run lint` — 0 errors. `npm run build` — 2135 modules,
+clean output. Admin Portal routing, login, and all tabs verified unaffected.
