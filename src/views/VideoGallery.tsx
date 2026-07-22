@@ -480,8 +480,8 @@ export const VideoGallery: React.FC = () => {
       });
   }, [videos, activeCategory]);
 
-  // Card height = dynamic viewport minus header and category strip for mobile browsers
-  const CARD_H = 'calc(100dvh - 128px)';
+  // Dynamic Card height: calc(100dvh - 106px) on mobile so card fills mobile viewport with zero clipping
+  const CARD_H = 'calc(100dvh - 106px)';
 
   // ── Seed social data ──────────────────────────────────────────────────────
   // Deep-link: ?video=<id> opens the matching video on load
@@ -679,8 +679,8 @@ export const VideoGallery: React.FC = () => {
     // Break out of shared page padding on all screen sizes
     <div className="-mx-4 sm:-mx-6 lg:-mx-8 relative bg-[#FDFAF4] min-h-screen">
 
-      {/* ── Page Header ── */}
-      <div className="text-center pt-7 pb-5 px-4 select-none">
+      {/* ── Page Header (desktop only, hidden on mobile so videos fit mobile screens 100%) ── */}
+      <div className="hidden sm:block text-center pt-7 pb-5 px-4 select-none">
         <span className="font-sans text-[10px] uppercase tracking-[0.35em] text-[#B11B41] font-bold block">
           Short-Form Masterclass
         </span>
@@ -734,7 +734,7 @@ export const VideoGallery: React.FC = () => {
         {/* Scroll feed */}
         <div
           ref={feedRef}
-          className="w-full sm:max-w-[400px] overflow-y-scroll snap-y snap-mandatory feed-no-bar rounded-2xl sm:rounded-3xl border border-[#C4A882]/25 shadow-2xl bg-black"
+          className="w-full sm:max-w-[400px] overflow-y-scroll snap-y snap-mandatory feed-no-bar rounded-none sm:rounded-3xl border-0 sm:border border-[#C4A882]/25 shadow-2xl bg-black"
           style={{ height: CARD_H }}
         >
           {filteredVideos.length > 0 ? (
