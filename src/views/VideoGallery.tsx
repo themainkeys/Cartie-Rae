@@ -272,31 +272,31 @@ const VideoFeedCard = React.forwardRef<HTMLDivElement, VideoFeedCardProps>(
           className={`absolute inset-0 z-10 transition-opacity duration-600 pointer-events-none ${overlayVisible ? 'opacity-100' : 'opacity-0'}`}
         >
           {/* Left: metadata + Shop button */}
-          <div className="absolute left-4 bottom-16 right-16 flex flex-col gap-2.5 pointer-events-auto">
+          <div className="absolute left-4 bottom-14 right-16 flex flex-col gap-2 pointer-events-auto">
             {/* Creator + Category pill */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-sm px-2.5 py-1 rounded-full border border-white/10">
+            <div className="flex items-center gap-2 flex-wrap select-none">
+              <div className="flex items-center gap-1.5 bg-white/20 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/20">
                 <img
                   src="/about-portrait.jpg"
                   alt="Cartiae Rae"
                   className="w-4 h-4 rounded-full object-cover object-top"
                   referrerPolicy="no-referrer"
                 />
-                <span className="text-white text-[9px] font-bold tracking-wide font-sans">Cartiae Rae</span>
+                <span className="text-white text-xs font-bold tracking-wide font-sans">Cartiae Rae</span>
               </div>
-              <span className="bg-[#B11B41]/90 backdrop-blur-sm text-white text-[8px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded border border-white/10 font-mono">
+              <span className="bg-[#B11B41] text-white text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-0.5 rounded-full border border-white/10 font-mono shadow-sm">
                 {video.category}
               </span>
             </div>
 
             {/* Title */}
-            <h2 className="text-white font-serif text-[17px] font-bold leading-tight tracking-tight">
+            <h2 className="text-white font-serif text-base sm:text-lg font-bold leading-tight tracking-tight drop-shadow-md">
               {video.title}
             </h2>
 
             {/* Description */}
             {(video.description || getDescription(video.id)) && (
-              <p className="text-white/62 text-[11px] leading-relaxed line-clamp-2 font-sans">
+              <p className="text-white/85 text-xs leading-relaxed line-clamp-2 font-sans max-w-sm drop-shadow-sm">
                 {video.description || getDescription(video.id)}
               </p>
             )}
@@ -305,9 +305,9 @@ const VideoFeedCard = React.forwardRef<HTMLDivElement, VideoFeedCardProps>(
             {relatedItems.length > 0 && (
               <button
                 onClick={(e) => { e.stopPropagation(); onShopClick(); }}
-                className="flex items-center gap-1.5 bg-white/95 hover:bg-[#B11B41] text-black hover:text-white px-3.5 py-2 rounded-xl text-[10px] font-extrabold uppercase tracking-widest w-fit transition-all duration-300 shadow-lg hover:scale-[1.02] active:scale-[0.97]"
+                className="flex items-center gap-1.5 bg-white hover:bg-[#B11B41] text-brand-dark hover:text-white px-4 py-2.5 rounded-xl text-xs font-extrabold uppercase tracking-wider w-fit transition-all duration-300 shadow-xl hover:scale-[1.02] active:scale-[0.97] min-h-[40px] cursor-pointer"
               >
-                <ShoppingBag className="w-3 h-3 shrink-0" />
+                <ShoppingBag className="w-3.5 h-3.5 shrink-0 text-brand-rose group-hover:text-white" />
                 Shop the Look ({relatedItems.length})
               </button>
             )}
@@ -480,8 +480,8 @@ export const VideoGallery: React.FC = () => {
       });
   }, [videos, activeCategory]);
 
-  // Card height = viewport minus header (≈56px) and category strip (≈48px)
-  const CARD_H = 'calc(100svh - 104px)';
+  // Card height = dynamic viewport minus header and category strip for mobile browsers
+  const CARD_H = 'calc(100dvh - 128px)';
 
   // ── Seed social data ──────────────────────────────────────────────────────
   // Deep-link: ?video=<id> opens the matching video on load
@@ -734,7 +734,7 @@ export const VideoGallery: React.FC = () => {
         {/* Scroll feed */}
         <div
           ref={feedRef}
-          className="w-full sm:max-w-[390px] overflow-y-scroll snap-y snap-mandatory feed-no-bar"
+          className="w-full sm:max-w-[400px] overflow-y-scroll snap-y snap-mandatory feed-no-bar rounded-2xl sm:rounded-3xl border border-[#C4A882]/25 shadow-2xl bg-black"
           style={{ height: CARD_H }}
         >
           {filteredVideos.length > 0 ? (
@@ -862,11 +862,11 @@ export const VideoGallery: React.FC = () => {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 18 }}
               transition={{ type: 'spring', damping: 26, stiffness: 210 }}
-              className="w-full max-w-4xl h-[88vh] md:h-[620px] bg-[#FDFAF4] rounded-[28px] overflow-hidden flex flex-col md:flex-row shadow-2xl"
+              className="w-full max-w-4xl max-h-[90vh] md:h-[620px] bg-[#FDFAF4] rounded-3xl overflow-hidden flex flex-col md:flex-row shadow-2xl border border-[#C4A882]/30"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Left: Video player */}
-              <div className="w-full md:w-[290px] h-[42%] md:h-full bg-black relative flex-shrink-0 flex items-center justify-center overflow-hidden">
+              <div className="w-full md:w-[320px] aspect-video md:aspect-auto md:h-full bg-black relative flex-shrink-0 flex items-center justify-center overflow-hidden">
                 {/* YouTube */}
                 {modalResolved.type === 'youtube' && (
                   <iframe
