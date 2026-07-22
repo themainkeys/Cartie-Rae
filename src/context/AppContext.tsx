@@ -591,6 +591,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // only a minimal { role, exp } session is stored (see demoLogin / logoutAdmin);
   // in Supabase mode the session is owned by Supabase Auth.
 
+  // --- Sync catalog prices to Supabase (the checkout price authority) ---
+  // Whenever an admin is signed in (real auth), mirror the current catalog +
+  // discounts into Supabase so the serverless checkout function validates against
+  // trusted prices. RLS restricts these writes to logged-in admins.
+  // (Deletions aren't propagated here — a removed item stays until re-seeded;
+  // acceptable because it only means an old item keeps its correct price.)
+  useEffect(() => {
+    if (!isSupabaseConfigured || !isAdminLoggedIn) return;
+    const items = [
+      ...products.map(p => ({ id: p.id, kind: 'product', name: p.name, price: p.price, active: true })),
+      ...ebooks.map(e => ({ id: e.id, kind: 'ebook', name: e.name, price: e.price, active: true })),
+      ...services.map(s => ({ id: s.id, kind: 'service', name: s.name, price: s.price, active: true })),
+    ];
+    supabase.from('catalog_items').upsert(items, { onConflict: 'id' })
+      .then(({ error }) => { if (error) console.warn('catalog_items sync failed:', error.message); });
+
+    const codes = discountCodes.map(d => ({
+      code: d.code.toUpperCase(),
+      percent: Math.min(100, Math.max(0, d.discountPercent)),
+      active: d.isActive,
+      description: d.description,
+    }));
+    if (codes.length) {
+      supabase.from('discount_codes').upsert(codes, { onConflict: 'code' })
+        .then(({ error }) => { if (error) console.warn('discount_codes sync failed:', error.message); });
+    }
+  }, [isSupabaseConfigured, isAdminLoggedIn, products, ebooks, services, discountCodes]);
+
   // --- Contact Request Operations ---
   const addContactRequest = async (request: Omit<ContactRequest, 'id' | 'date' | 'status'>) => {
     // Collision-resistant id (the old CON-100..999 could clash with seeds/other new rows).

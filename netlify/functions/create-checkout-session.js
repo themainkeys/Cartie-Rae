@@ -10,6 +10,16 @@
  */
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const { createClient } = require('@supabase/supabase-js');
+
+// Server-side Supabase client (service role) — the trusted price source.
+// Env: SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (set in Netlify, server-only).
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const supabaseAdmin =
+  SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
+    ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } })
+    : null;
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -122,23 +132,69 @@ exports.handler = async (event) => {
     };
   }
 
-  // ── Build Stripe line items ────────────────────────────────────────────
-  const discountFactor = appliedDiscount && appliedDiscount.discountPercent > 0
-    ? 1 - appliedDiscount.discountPercent / 100
-    : 1;
+  // ── SECURITY: resolve authoritative prices/discount SERVER-SIDE ──────────
+  // Never trust the browser-sent `item.price` / `appliedDiscount.discountPercent`.
+  // We look everything up in Supabase (the trusted catalog) and ignore the client.
+  if (!supabaseAdmin) {
+    console.error('[create-checkout-session] SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not set — cannot verify prices.');
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Checkout price verification is not configured. Please contact support.' }),
+    };
+  }
 
+  const cartIds = [...new Set(cart.map((i) => i.id))];
+  const { data: catalogRows, error: catalogErr } = await supabaseAdmin
+    .from('catalog_items')
+    .select('id, name, price, active')
+    .in('id', cartIds);
+
+  if (catalogErr) {
+    console.error('[create-checkout-session] catalog lookup failed:', catalogErr.message);
+    return { statusCode: 500, body: JSON.stringify({ error: 'Could not verify item prices. Please try again.' }) };
+  }
+
+  const priceById = new Map((catalogRows || []).filter((r) => r.active).map((r) => [r.id, r]));
+
+  // Every cart item must exist in the trusted catalog.
+  for (const item of cart) {
+    if (!priceById.has(item.id)) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: `Item "${item.name}" is unavailable or its price could not be verified.` }),
+      };
+    }
+  }
+
+  // Resolve the discount server-side (ignore the client-sent percent entirely).
+  let serverDiscountPercent = 0;
+  let appliedPromoCode = '';
+  const requestedCode = appliedDiscount && appliedDiscount.code ? String(appliedDiscount.code).trim().toUpperCase() : '';
+  if (requestedCode) {
+    const { data: disc } = await supabaseAdmin
+      .from('discount_codes')
+      .select('code, percent, active')
+      .eq('code', requestedCode)
+      .maybeSingle();
+    if (disc && disc.active) {
+      serverDiscountPercent = Math.min(100, Math.max(0, disc.percent));
+      appliedPromoCode = disc.code;
+    }
+    // Invalid/inactive code → simply no discount (do not fail the checkout).
+  }
+  const discountFactor = 1 - serverDiscountPercent / 100;
+
+  // ── Build Stripe line items from SERVER prices ──────────────────────────
   const lineItems = cart.map((item) => {
-    const unitAmountCents = Math.round(item.price * discountFactor * 100);
+    const trusted = priceById.get(item.id);
+    const unitAmountCents = Math.round(Number(trusted.price) * discountFactor * 100);
     return {
       price_data: {
         currency: 'usd',
         product_data: {
-          name: item.name.trim(),
+          name: (trusted.name || item.name || 'Item').trim(),
           description: ITEM_DESCRIPTIONS[item.type] || '',
-          metadata: {
-            itemId: item.id,
-            itemType: item.type,
-          },
+          metadata: { itemId: item.id, itemType: item.type },
         },
         unit_amount: Math.max(unitAmountCents, 50), // Stripe minimum is $0.50
       },
@@ -161,11 +217,13 @@ exports.handler = async (event) => {
       customerEmail:          customerEmail.trim().toLowerCase(),
       customerPhone:          customerPhone  || '',
       shippingAddress:        shippingAddress || '',
-      appliedPromoCode:       appliedDiscount?.code || '',
-      appliedDiscountPercent: appliedDiscount?.discountPercent?.toString() || '0',
+      appliedPromoCode:       appliedPromoCode,
+      appliedDiscountPercent: serverDiscountPercent.toString(),
       containsDigital:        containsDigital.toString(),
       containsService:        containsService.toString(),
       containsPhysical:       containsPhysical.toString(),
+      // Compact item list (id×qty) so the webhook can record the order.
+      itemsSummary:           cart.map((i) => `${i.id}x${i.quantity}`).join(','),
     },
     payment_intent_data: {
       description: 'Cartiae Rae Hair Studio — Order',
