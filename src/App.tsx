@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { useApp } from './context/AppContext';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
@@ -8,13 +8,56 @@ import { VideoGallery } from './views/VideoGallery';
 import { PhotoGallery } from './views/PhotoGallery';
 import { AboutAndBlog } from './views/AboutAndBlog';
 import { ContactPage } from './views/ContactPage';
-import { AdminPortal } from './views/AdminPortal';
 import { ServicesPage } from './views/ServicesPage';
 import { CheckoutSuccess } from './views/CheckoutSuccess';
 import { CheckoutCancel } from './views/CheckoutCancel';
 import { CartDrawer } from './components/CartDrawer';
 import { motion, AnimatePresence, useInView } from 'motion/react';
 import { ArrowUp, BookOpen, Compass, ShoppingBag, Video } from 'lucide-react';
+
+// ── Lazy-loaded admin chunk ────────────────────────────────────────────────────
+// AdminPortal is ~278 KB of source and is only ever needed by authenticated
+// staff. Keeping it out of the public bundle cuts the initial JS payload by
+// roughly half. The named export is unwrapped via the .then() remapping so
+// React.lazy (which expects a default export) works correctly.
+const AdminPortal = lazy(() =>
+  import('./views/AdminPortal').then((m) => ({ default: m.AdminPortal }))
+);
+
+// Branded loading fallback shown while the admin chunk is downloading.
+// It matches the page background and occupies the same vertical space as the
+// main content area so there is no perceptible layout shift.
+const AdminLoadingFallback: React.FC = () => (
+  <div
+    className="flex flex-col items-center justify-center min-h-[60vh] bg-brand-cream"
+    aria-label="Loading admin console"
+    role="status"
+  >
+    <div className="flex flex-col items-center gap-4">
+      {/* Animated brand accent bar */}
+      <div className="flex gap-1.5">
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className="block w-1.5 h-6 rounded-full bg-brand-rose opacity-70"
+            style={{
+              animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite`,
+            }}
+          />
+        ))}
+      </div>
+      <p className="font-serif text-sm text-brand-dark/50 tracking-widest uppercase select-none">
+        Loading Admin Console
+      </p>
+    </div>
+    <style>{`
+      @keyframes pulse {
+        0%, 100% { transform: scaleY(0.4); opacity: 0.4; }
+        50%       { transform: scaleY(1);   opacity: 1;   }
+      }
+    `}</style>
+  </div>
+);
 
 const getRevealContainer = (prefersReducedMotion: boolean) => ({
   hidden: { opacity: 0 },
@@ -343,7 +386,9 @@ export const AppContent: React.FC = () => {
             )}
 
             {activePart === 'admin' && (
-              <AdminPortal />
+              <Suspense fallback={<AdminLoadingFallback />}>
+                <AdminPortal />
+              </Suspense>
             )}
 
             {activePart === 'checkout-success' && (
