@@ -11,7 +11,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../../context/AppContext';
-import { AdminRole } from '../../types';
 import { Plus, Book, Save, Edit, Trash2 } from 'lucide-react';
 
 const BLOG_CATEGORIES = [
@@ -24,11 +23,7 @@ const BLOG_CATEGORIES = [
   'Hair Science',
 ] as const;
 
-interface BlogManagerProps {
-  requirePermission: (allowedRoles: AdminRole[]) => boolean;
-}
-
-export const BlogManager: React.FC<BlogManagerProps> = ({ requirePermission }) => {
+export const BlogManager: React.FC = () => {
   const {
     blogs,
     addBlogPost,
@@ -63,7 +58,6 @@ export const BlogManager: React.FC<BlogManagerProps> = ({ requirePermission }) =
           <button
             id="admin-add-blog-btn"
             onClick={() => {
-              if (!requirePermission(['super_admin', 'content_manager'])) return;
               setBlogTitle('');
               setBlogExcerpt('');
               setBlogContent('');
@@ -224,11 +218,9 @@ export const BlogManager: React.FC<BlogManagerProps> = ({ requirePermission }) =
                           id={`delete-blog-${post.id}`}
                           onClick={() => {
                             if (confirm(`Remove blog post "${post.title}"?`)) {
-                              if (requirePermission(['super_admin', 'content_manager'])) {
-                                if (editingBlogId === post.id) setEditingBlogId(null);
-                                deleteBlogPost(post.id);
-                                triggerToast(`🗑 "${post.title}" removed from blog.`, 'success');
-                              }
+                              if (editingBlogId === post.id) setEditingBlogId(null);
+                              deleteBlogPost(post.id);
+                              triggerToast(`🗑 "${post.title}" removed from blog.`, 'success');
                             }
                           }}
                           className="px-2.5 py-1 bg-brand-pink-light hover:bg-brand-rose text-brand-rose hover:text-white text-[10.5px] rounded-md font-bold transition duration-150 focus:outline-none flex items-center gap-1"

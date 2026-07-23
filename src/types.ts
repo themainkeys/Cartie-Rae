@@ -163,13 +163,13 @@ export interface HomepageContent {
   promoAuthor: string;
 }
 
-export type AdminRole = 'super_admin' | 'store_manager' | 'content_manager';
-
+// Single-admin model: one authenticated administrator with full access.
+// No role column needed — presence of an active admin_users record grants full access.
+// Recommended Supabase schema: admin_users(id, email, is_active, created_at, updated_at)
 export interface AdminUser {
   id: string;
   name: string;
   email: string;
-  role: AdminRole;
 }
 export interface SecureDownloadToken {
   orderId: string;

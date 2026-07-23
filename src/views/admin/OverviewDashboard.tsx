@@ -16,17 +16,14 @@
 
 import React from 'react';
 import { useApp } from '../../context/AppContext';
-import { AdminRole } from '../../types';
 import { Phone, MapPin, CheckCircle2, Sparkles } from 'lucide-react';
 
 interface OverviewDashboardProps {
   overviewSub: 'metrics' | 'orders' | 'subscribers';
-  requirePermission: (allowedRoles: AdminRole[]) => boolean;
 }
 
 export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
   overviewSub,
-  requirePermission,
 }) => {
   const {
     orders,
@@ -184,11 +181,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
                     ) : (
                       <button
                         id={`fulfill-btn-${o.id}`}
-                        onClick={() => {
-                          if (requirePermission(['super_admin', 'store_manager'])) {
-                            fulfillOrder(o.id);
-                          }
-                        }}
+                        onClick={() => fulfillOrder(o.id)}
                         className="p-1 px-3 bg-brand-rose hover:bg-brand-berry text-white rounded-md text-[10px] font-bold uppercase tracking-wider transition-all"
                       >
                         Mark Dispatched

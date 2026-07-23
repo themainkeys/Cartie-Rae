@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { EBook, Product, TikTokVideo, PhotoGalleryItem, BlogPost, DiscountCode, CartItem, Order, NewsletterSignup, HomepageContent, WishlistItem, ContactRequest, AdminUser, AdminRole, Service } from '../types';
+import { EBook, Product, TikTokVideo, PhotoGalleryItem, BlogPost, DiscountCode, CartItem, Order, NewsletterSignup, HomepageContent, WishlistItem, ContactRequest, AdminUser, Service } from '../types';
 import { initialEBooks, initialProducts, initialVideos, initialGallery, initialBlogPosts, initialDiscountCodes, initialHomepageContent, initialServices } from '../data/initialData';
 import { supabase, isSupabaseConfigured, hasSupabaseCredentials } from '../services/supabaseClient';
 
@@ -53,44 +53,40 @@ function filterTombstoned<T extends { id: string }>(items: T[], tombstoneKey: st
 const DEMO_SESSION_KEY = 'cartiae_admin_session';
 const DEMO_SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
 
-const DEMO_ROLE_PROFILES: Record<AdminRole, AdminUser> = {
-  super_admin:     { id: 'demo-super',   name: 'Demo Super Admin',     email: 'demo-super@cartiaerae.local',   role: 'super_admin' },
-  store_manager:   { id: 'demo-store',   name: 'Demo Store Manager',   email: 'demo-store@cartiaerae.local',   role: 'store_manager' },
-  content_manager: { id: 'demo-content', name: 'Demo Content Manager', email: 'demo-content@cartiaerae.local', role: 'content_manager' },
+// Single demo admin profile — no roles, no multi-user.
+const DEMO_ADMIN_PROFILE: AdminUser = {
+  id: 'demo-admin',
+  name: 'Demo Admin',
+  email: 'demo@cartiaerae.local',
 };
 
 function clearDemoSession(): void {
   localStorage.removeItem(DEMO_SESSION_KEY);
-  // Clean up any legacy keys from the old hardcoded-credential implementation.
+  // Clean up legacy keys from the old multi-role implementation.
   localStorage.removeItem('cartiae_admin_auth');
   localStorage.removeItem('cartiae_admin_user');
 }
 
-// Reads and validates the stored demo session. Returns the trusted user profile
-// or null (clearing anything invalid/expired) — never trusts stored user fields.
+// Reads and validates the stored demo session.
+// Returns the admin profile if the session is valid and unexpired, otherwise null.
 function readValidDemoSession(): AdminUser | null {
   try {
     const raw = localStorage.getItem(DEMO_SESSION_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as { role?: string; exp?: number };
+    const parsed = JSON.parse(raw) as { exp?: number };
     if (!parsed || typeof parsed.exp !== 'number' || Date.now() > parsed.exp) {
       clearDemoSession();
       return null;
     }
-    const profile = parsed.role ? DEMO_ROLE_PROFILES[parsed.role as AdminRole] : undefined;
-    if (!profile) {
-      clearDemoSession();
-      return null;
-    }
-    return profile;
+    return DEMO_ADMIN_PROFILE;
   } catch {
     clearDemoSession();
     return null;
   }
 }
 
-function writeDemoSession(role: AdminRole): void {
-  localStorage.setItem(DEMO_SESSION_KEY, JSON.stringify({ role, exp: Date.now() + DEMO_SESSION_TTL_MS }));
+function writeDemoSession(): void {
+  localStorage.setItem(DEMO_SESSION_KEY, JSON.stringify({ exp: Date.now() + DEMO_SESSION_TTL_MS }));
 }
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -181,7 +177,7 @@ interface AppContextType {
   
   // Admin auth
   loginAdmin: (email: string, password: string) => Promise<boolean>; // Supabase (production) path
-  demoLogin: (role: AdminRole) => void; // demo mode only — no password, clearly labeled
+  demoLogin: () => void; // demo mode only — no password, clearly labeled
   logoutAdmin: () => void;
 
   // Cloud Sync (Push Computer State → Mobile & Visitors)
@@ -436,7 +432,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               id: adminProfile.id,
               name: adminProfile.name || 'Admin Staff',
               email: adminProfile.email || session.user.email,
-              role: adminProfile.role as any,
             };
             setIsAdminLoggedIn(true);
             setCurrentAdminUser(adminUser);
@@ -590,7 +585,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => { localStorage.setItem('cartiae_home', JSON.stringify(homepageContent)); }, [homepageContent]);
   useEffect(() => { localStorage.setItem('cartiae_cart', JSON.stringify(cart)); }, [cart]);
   useEffect(() => { localStorage.setItem('cartiae_orders', JSON.stringify(orders)); }, [orders]);
-  useEffect(() => { localStorage.setItem('cartiae_contacts', JSON.stringify(contactRequests)); }, [contactRequests]);
   useEffect(() => { localStorage.setItem('cartiae_applied_discount', JSON.stringify(appliedDiscount)); }, [appliedDiscount]);
   useEffect(() => { localStorage.setItem('cartiae_wishlist', JSON.stringify(wishlist)); }, [wishlist]);
   useEffect(() => { localStorage.setItem('cartiae_email_notifications_enabled', String(emailNotificationsEnabled)); }, [emailNotificationsEnabled]);
@@ -1119,17 +1113,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (data.user) {
         const { data: adminProfile, error: profileError } = await supabase
           .from('admin_users')
-          .select('*')
+          .select('id, email, is_active')
           .eq('id', data.user.id)
+          .eq('is_active', true)
           .single();
 
         if (profileError || !adminProfile) {
-          triggerToast('❌ Access denied: You are not authorized as administrator.', 'error');
+          triggerToast('❌ Access denied: No active admin account found.', 'error');
           await supabase.auth.signOut();
           return false;
         }
 
-        triggerToast(`✓ Welcome back, ${adminProfile.name}!`, 'success');
+        setCurrentAdminUser({
+          id: adminProfile.id,
+          name: data.user.user_metadata?.name || adminProfile.email,
+          email: adminProfile.email,
+        });
+        setIsAdminLoggedIn(true);
+        triggerToast(`✓ Welcome back!`, 'success');
         return true;
       }
       return false;
@@ -1140,15 +1141,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Demo-mode login: passwordless role preview. No secret, no real authorization.
-  const demoLogin = (role: AdminRole) => {
+  // Demo-mode login: passwordless admin preview. No secret, no real authorization.
+  const demoLogin = () => {
     if (isSupabaseConfigured) return; // never use demo login when real auth is available
-    const profile = DEMO_ROLE_PROFILES[role];
-    if (!profile) return;
-    writeDemoSession(role);
+    writeDemoSession();
     setIsAdminLoggedIn(true);
-    setCurrentAdminUser(profile);
-    triggerToast(`✓ Demo Mode — previewing as ${profile.name}.`, 'info');
+    setCurrentAdminUser(DEMO_ADMIN_PROFILE);
+    triggerToast('✓ Demo Mode — previewing admin console.', 'info');
   };
 
   const logoutAdmin = async () => {

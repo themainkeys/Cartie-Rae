@@ -10,7 +10,6 @@
 
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { AdminRole } from '../../types';
 import { Plus } from 'lucide-react';
 
 export const DiscountManager: React.FC = () => {
@@ -19,7 +18,6 @@ export const DiscountManager: React.FC = () => {
     addDiscountCode,
     updateDiscountCode,
     deleteDiscountCode,
-    currentAdminUser,
     triggerToast,
   } = useApp();
 
@@ -29,22 +27,8 @@ export const DiscountManager: React.FC = () => {
   const [discPercent, setDiscPercent] = useState('20');
   const [discDesc, setDiscDesc] = useState('');
 
-  // Client-side permission guard
-  const requirePermission = (allowedRoles: AdminRole[]): boolean => {
-    if (!currentAdminUser) return false;
-    const allowed = allowedRoles.includes(currentAdminUser.role);
-    if (!allowed) {
-      triggerToast(
-        `Your role (${currentAdminUser.role.replace('_', ' ')}) does not have permission for this action.`,
-        'error'
-      );
-    }
-    return allowed;
-  };
-
   const handleAddDiscountSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!requirePermission(['super_admin', 'store_manager'])) return;
     addDiscountCode({
       code: discName.toUpperCase().trim(),
       discountPercent: parseInt(discPercent) || 15,
@@ -161,10 +145,8 @@ export const DiscountManager: React.FC = () => {
                     <button
                       id={`toggle-discount-${c.id}`}
                       onClick={() => {
-                        if (requirePermission(['super_admin', 'store_manager'])) {
-                          updateDiscountCode(c.id, { isActive: !c.isActive });
-                          triggerToast(`"${c.code}" ${c.isActive ? 'deactivated' : 'activated'}.`, 'info');
-                        }
+                        updateDiscountCode(c.id, { isActive: !c.isActive });
+                        triggerToast(`"${c.code}" ${c.isActive ? 'deactivated' : 'activated'}.`, 'info');
                       }}
                       className={`p-1 px-2.5 rounded-md font-bold transition duration-150 text-[10.5px] ${
                         c.isActive
@@ -178,10 +160,8 @@ export const DiscountManager: React.FC = () => {
                       id={`delete-discount-${c.id}`}
                       onClick={() => {
                         if (confirm(`Remove promo Coupon "${c.code}" completely?`)) {
-                          if (requirePermission(['super_admin', 'store_manager'])) {
-                            deleteDiscountCode(c.id);
-                            triggerToast(`🗑 Discount code "${c.code}" deleted.`, 'success');
-                          }
+                          deleteDiscountCode(c.id);
+                          triggerToast(`🗑 Discount code "${c.code}" deleted.`, 'success');
                         }
                       }}
                       className="p-1 px-2.5 bg-brand-pink-light hover:bg-brand-rose text-brand-rose hover:text-white rounded-md font-bold transition duration-250 text-[10.5px]"
