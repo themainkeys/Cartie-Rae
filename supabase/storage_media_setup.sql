@@ -33,34 +33,31 @@ create policy "media public read"
   on storage.objects for select
   using ( bucket_id = 'media' );
 
--- 3) Anyone can UPLOAD to media (demo mode — no login). Tighten later (see below).
-drop policy if exists "media public insert" on storage.objects;
-create policy "media public insert"
-  on storage.objects for insert
+-- 3) Only LOGGED-IN admins (Supabase Auth session) can upload / replace / delete.
+--    This requires real auth (VITE_SUPABASE_BACKEND="true") — which is enabled.
+--    Anonymous visitors cannot write to or delete from the bucket.
+drop policy if exists "media public insert" on storage.objects;  -- remove any old permissive policy
+drop policy if exists "media public update" on storage.objects;
+drop policy if exists "media public delete" on storage.objects;
+
+drop policy if exists "media auth insert" on storage.objects;
+create policy "media auth insert"
+  on storage.objects for insert to authenticated
   with check ( bucket_id = 'media' );
 
--- 4) Anyone can REPLACE / DELETE media (so the admin can swap or remove files).
-drop policy if exists "media public update" on storage.objects;
-create policy "media public update"
-  on storage.objects for update
+drop policy if exists "media auth update" on storage.objects;
+create policy "media auth update"
+  on storage.objects for update to authenticated
   using ( bucket_id = 'media' );
 
-drop policy if exists "media public delete" on storage.objects;
-create policy "media public delete"
-  on storage.objects for delete
+drop policy if exists "media auth delete" on storage.objects;
+create policy "media auth delete"
+  on storage.objects for delete to authenticated
   using ( bucket_id = 'media' );
 
 -- ============================================================================
--- LOCK DOWN LATER (run this instead of 3/4 once real Supabase Auth is enabled):
---
---   drop policy if exists "media public insert" on storage.objects;
---   drop policy if exists "media public update" on storage.objects;
---   drop policy if exists "media public delete" on storage.objects;
---
---   create policy "media auth insert" on storage.objects
---     for insert to authenticated with check ( bucket_id = 'media' );
---   create policy "media auth update" on storage.objects
---     for update to authenticated using ( bucket_id = 'media' );
---   create policy "media auth delete" on storage.objects
---     for delete to authenticated using ( bucket_id = 'media' );
+-- NOTE: because uploads now require a login, the admin must be signed in via
+-- Supabase Auth for the dropzones to work. If you ever run a public/demo build
+-- (VITE_SUPABASE_BACKEND unset) and want uploads without login, you would need
+-- permissive anon policies instead — but that lets anyone write to the bucket.
 -- ============================================================================
