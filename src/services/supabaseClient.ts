@@ -11,13 +11,15 @@ export const hasSupabaseCredentials =
   supabaseAnonKey !== '' &&
   supabaseAnonKey !== 'eyJhbGciOi...';
 
-// FULL BACKEND MODE (Supabase Auth for admin login + DB for contacts) is opt-in.
-// It requires the `admin_users` / `contact_requests` tables AND staff accounts to
-// exist; otherwise the admin can't log in. So merely having credentials (which we
-// want for Storage uploads) must NOT flip the whole app into auth mode and lock
-// out the demo console. Enable it explicitly with VITE_SUPABASE_BACKEND="true".
+// FULL BACKEND MODE = real Supabase Auth admin login + DB persistence.
+// Default: ON whenever real credentials are present (so setting VITE_SUPABASE_URL +
+// VITE_SUPABASE_ANON_KEY is all that's needed — matching the login screen's own
+// instructions). This requires the `admin_users` / `contact_requests` tables and at
+// least one admin account to exist (see supabase/auth_full_setup.sql).
+// Escape hatch: set VITE_SUPABASE_BACKEND="false" to force the passwordless demo
+// console even when credentials are configured (e.g. for a public preview build).
 export const isSupabaseConfigured =
-  hasSupabaseCredentials && (import.meta.env.VITE_SUPABASE_BACKEND || '').trim() === 'true';
+  hasSupabaseCredentials && (import.meta.env.VITE_SUPABASE_BACKEND || '').trim().toLowerCase() !== 'false';
 
 // Media uploads (Supabase Storage) work whenever credentials exist, independently
 // of the auth mode above.
