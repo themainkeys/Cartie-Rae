@@ -30,7 +30,20 @@ export interface EBook {
   pages: number;
   fileSize: string;
   benefits: string[];
-  pdfUrl: string; // Simulated file name or download key
+  /**
+   * @legacy Storage compatibility field.
+   * After Phase 3A Step 2B this holds the Supabase Storage path of the active PDF
+   * (e.g. "ebook-123/v2/guide.pdf"). It is updated on every admin upload so the
+   * admin table can show which file is current without an ebook_assets query.
+   *
+   * This field MUST NOT be used as the authoritative source for download delivery.
+   * The canonical delivery path is:
+   *   EBook.id → ebook_assets (is_active = true) → Storage signed URL
+   *
+   * Once the secure download endpoint (Step 4) is live and all eBooks have been
+   * migrated, this field should be removed from the EBook model.
+   */
+  pdfUrl: string;
   isFeatured?: boolean;
   reviews: Review[];
 }

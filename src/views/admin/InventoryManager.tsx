@@ -160,7 +160,10 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ onDirtyChang
   // Returns storage_path on success. Throws on any failure, including rollback.
   // Invariants:
   //   - Previous active asset is NOT deactivated until object upload succeeds.
-  //   - On ebook_assets INSERT failure: old asset is re-activated, orphan deleted.
+  //   - Steps 4+5 (deactivate old + insert new) are wrapped in a single
+  //     Postgres function (activate_ebook_asset) that runs atomically.
+  //     If the insert fails, the deactivation is automatically rolled back.
+  //   - On RPC failure: orphan object is deleted from Storage.
   //   - After success: exactly one is_active = true row per ebook_id.
   //
   const uploadPdf = async (
@@ -176,16 +179,15 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ onDirtyChang
     // 2. Determine next version
     const { data: existing, error: vErr } = await supabase
       .from('ebook_assets')
-      .select('id, version, is_active')
+      .select('version')
       .eq('ebook_id', ebookId)
       .order('version', { ascending: false })
       .limit(1);
     if (vErr) throw new Error('Version query failed: ' + vErr.message);
 
-    const prevActiveId = existing?.find((r: { is_active: boolean }) => r.is_active)?.id ?? null;
     const nextVersion  = (existing?.[0]?.version ?? 0) + 1;
 
-    // 3. Upload object
+    // 3. Upload object to private Storage
     const safeFile    = safeName(file.name.replace(/\.pdf$/i, ''));
     const storagePath = ebookId + '/v' + nextVersion + '/' + safeFile + '.pdf';
 
@@ -196,41 +198,31 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ onDirtyChang
       .upload(storagePath, file, { contentType: PDF_MIME, cacheControl: '3600', upsert: false });
     if (upErr) throw new Error('Upload failed: ' + upErr.message);
 
-    // 4. Deactivate previous asset (AFTER upload succeeds)
+    // 4+5. Atomic deactivate old asset + insert new asset (single transaction).
+    //
+    // The Postgres function activate_ebook_asset wraps UPDATE + INSERT in one
+    // implicit transaction. If the INSERT fails (constraint, permission, etc.)
+    // the UPDATE is automatically rolled back — the previous version stays active.
+    // This eliminates the race window where two concurrent uploads could produce
+    // two active rows or an orphaned deactivation.
     setter(s => ({ ...s, phase: 'saving' as const }));
 
-    if (prevActiveId) {
-      const { error: deErr } = await supabase
-        .from('ebook_assets')
-        .update({ is_active: false })
-        .eq('id', prevActiveId);
-      if (deErr) {
-        await supabase.storage.from(EBOOKS_BUCKET).remove([storagePath]);
-        throw new Error('Failed to deactivate previous version: ' + deErr.message + '. Upload rolled back.');
-      }
-    }
+    const { error: rpcErr } = await supabase.rpc('activate_ebook_asset', {
+      p_ebook_id:        ebookId,
+      p_storage_bucket:  EBOOKS_BUCKET,
+      p_storage_path:    storagePath,
+      p_version:         nextVersion,
+      p_file_name:       file.name,
+      p_mime_type:       PDF_MIME,
+      p_size_bytes:      file.size,
+      p_checksum_sha256: checksum,
+    });
 
-    // 5. Insert new active asset row
-    const { error: insErr } = await supabase
-      .from('ebook_assets')
-      .insert({
-        ebook_id:        ebookId,
-        storage_bucket:  EBOOKS_BUCKET,
-        storage_path:    storagePath,
-        version:         nextVersion,
-        file_name:       file.name,
-        mime_type:       PDF_MIME,
-        size_bytes:      file.size,
-        checksum_sha256: checksum,
-        is_active:       true,
-      });
-
-    if (insErr) {
-      if (prevActiveId) {
-        await supabase.from('ebook_assets').update({ is_active: true }).eq('id', prevActiveId);
-      }
+    if (rpcErr) {
+      // RPC failed (both UPDATE and INSERT rolled back by Postgres).
+      // Delete the orphan object so Storage stays consistent.
       await supabase.storage.from(EBOOKS_BUCKET).remove([storagePath]);
-      throw new Error('Asset record save failed: ' + insErr.message + '. Upload rolled back.');
+      throw new Error('Asset activation failed: ' + rpcErr.message + '. Upload rolled back.');
     }
 
     return storagePath;
