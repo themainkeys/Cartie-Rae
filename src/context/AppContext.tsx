@@ -415,6 +415,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     if (!isSupabaseConfigured) return;
 
+    // Session restoration — enforces: valid session + matching admin_users record + is_active = true.
+    // Called on initial load and on every Supabase auth-state change (sign in, sign out, token refresh).
+    // Fixing only loginAdmin() is insufficient — an existing authenticated session would still restore
+    // an inactive admin into the portal via this path without this check.
     const handleAuthSession = async (session: any) => {
       if (session?.user) {
         try {
@@ -422,10 +426,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             .from('admin_users')
             .select('*')
             .eq('id', session.user.id)
+            .eq('is_active', true)  // ← required: inactive accounts must not gain portal access
             .single();
 
           if (error || !adminProfile) {
-            console.error('Access denied. No admin profile found.', error);
+            // No active admin record → revoke the session immediately.
+            console.error('Access denied. No active admin_users record found for this session.', error);
             await supabase.auth.signOut();
             setIsAdminLoggedIn(false);
             setCurrentAdminUser(null);
@@ -439,7 +445,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setCurrentAdminUser(adminUser);
           }
         } catch (err) {
-          console.error('Error fetching admin profile:', err);
+          console.error('Error fetching admin profile during session restoration:', err);
           setIsAdminLoggedIn(false);
           setCurrentAdminUser(null);
         }
@@ -1132,14 +1138,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       if (data.user) {
+        // Require both: matching admin_users row AND is_active = true.
+        // A valid Supabase Auth session alone is not sufficient for portal access.
         const { data: adminProfile, error: profileError } = await supabase
           .from('admin_users')
           .select('*')
           .eq('id', data.user.id)
+          .eq('is_active', true)  // ← required: inactive accounts are denied at login
           .single();
 
         if (profileError || !adminProfile) {
-          triggerToast('❌ Access denied: You are not authorized as administrator.', 'error');
+          triggerToast('❌ Access denied: No active administrator account found.', 'error');
           await supabase.auth.signOut();
           return false;
         }
