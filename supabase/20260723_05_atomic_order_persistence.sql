@@ -200,7 +200,7 @@ create or replace function public.persist_stripe_order(
 returns jsonb
 language plpgsql
 security definer
-set search_path = public, pg_catalog
+set search_path = pg_catalog
 as $$
 declare
   v_order_id         uuid;
@@ -412,12 +412,17 @@ begin
 
   -- DELETE stale rows: those present in DB but not in the current Stripe payload.
   -- Scoped to this order_id only — never touches other orders.
-  delete from public.order_items
-  where order_id = v_order_id
-    and stripe_line_item_id not in (
-      select item->>'stripe_line_item_id'
-      from   jsonb_array_elements(p_items) as item
-    );
+  --
+  -- Uses NOT EXISTS instead of NOT IN to avoid the SQL NULL trap:
+  -- NOT IN returns NULL (not TRUE) when the subquery contains any NULL value,
+  -- which would silently skip the delete. NOT EXISTS has no such issue.
+  delete from public.order_items oi_del
+  where  oi_del.order_id = v_order_id
+    and  not exists (
+           select 1
+           from   jsonb_array_elements(p_items) as item
+           where  item->>'stripe_line_item_id' = oi_del.stripe_line_item_id
+         );
 
   -- UPSERT authoritative item rows.
   -- ON CONFLICT DO UPDATE ensures existing rows receive current Stripe values.
@@ -482,13 +487,15 @@ begin
   where  order_id = v_order_id;
 
   -- Count of expected IDs that actually exist in DB.
+  -- Uses EXISTS (not IN) for NULL-safety and clarity.
   select count(*) into v_items_matched
   from   public.order_items oi
   where  oi.order_id = v_order_id
-    and  oi.stripe_line_item_id in (
-      select distinct item->>'stripe_line_item_id'
-      from   jsonb_array_elements(p_items) as item
-    );
+    and  exists (
+           select 1
+           from   jsonb_array_elements(p_items) as item
+           where  item->>'stripe_line_item_id' = oi.stripe_line_item_id
+         );
 
   -- Check 1: total count equality (detects stale rows or missing inserts).
   if v_items_persisted <> v_items_expected then
@@ -605,10 +612,16 @@ where proname      = 'persist_stripe_order'
   and pronamespace = 'public'::regnamespace;
 -- Expected: security_model=DEFINER, pronargs=24, return_type=jsonb
 
--- Access: only service_role should appear
-select grantee, privilege_type
-from   information_schema.role_routine_grants
-where  routine_schema = 'public'
-  and  routine_name   = 'persist_stripe_order';
--- Expected: grantee=service_role, privilege_type=EXECUTE only
--- public / anon / authenticated must NOT appear
+-- Access control: verify EXECUTE granted only to service_role
+-- (Use routine_privileges, which shows explicit grants.)
+select
+  routine_schema,
+  routine_name,
+  grantee,
+  privilege_type
+from information_schema.routine_privileges
+where routine_schema = 'public'
+  and routine_name   = 'persist_stripe_order';
+-- Expected: exactly one row — grantee=service_role, privilege_type=EXECUTE
+-- public / anon / authenticated must NOT appear.
+-- If public appears, the REVOKE statements did not execute successfully.
