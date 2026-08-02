@@ -201,14 +201,16 @@ create table if not exists public.orders (
 );
 
 -- Idempotency: one order per checkout session
-alter table public.orders
-  add constraint if not exists orders_stripe_session_unique
-    unique (stripe_checkout_session_id);
+-- Note: ADD CONSTRAINT IF NOT EXISTS is not valid PostgreSQL syntax.
+-- Use DROP IF EXISTS + ADD for idempotent constraint creation.
+alter table public.orders drop constraint if exists orders_stripe_session_unique;
+alter table public.orders add constraint orders_stripe_session_unique
+  unique (stripe_checkout_session_id);
 
 -- Unique among non-NULL payment_intent values (NULLs do not conflict)
-alter table public.orders
-  add constraint if not exists orders_stripe_pi_unique
-    unique (stripe_payment_intent_id);
+alter table public.orders drop constraint if exists orders_stripe_pi_unique;
+alter table public.orders add constraint orders_stripe_pi_unique
+  unique (stripe_payment_intent_id);
 
 -- Partial unique index: prevents reprocessing the same Stripe event delivery.
 -- NULL values excluded — different event types write different event IDs

@@ -343,15 +343,16 @@ create table if not exists public.ebook_assets (
 -- ── Uniqueness constraints ────────────────────────────────────────────────────
 
 -- Each ebook may have version 1, 2, 3… but not two rows with the same version.
-alter table public.ebook_assets
-  add constraint if not exists ebook_assets_version_unique
-    unique (ebook_id, version);
+-- Note: ADD CONSTRAINT IF NOT EXISTS is not valid PostgreSQL syntax.
+-- Use DROP IF EXISTS + ADD for idempotent constraint creation.
+alter table public.ebook_assets drop constraint if exists ebook_assets_version_unique;
+alter table public.ebook_assets add constraint ebook_assets_version_unique
+  unique (ebook_id, version);
 
 -- Each storage object may be referenced by at most one asset row.
--- Prevents accidental aliasing and aids orphan detection during cleanup.
-alter table public.ebook_assets
-  add constraint if not exists ebook_assets_storage_path_unique
-    unique (storage_path);
+alter table public.ebook_assets drop constraint if exists ebook_assets_storage_path_unique;
+alter table public.ebook_assets add constraint ebook_assets_storage_path_unique
+  unique (storage_path);
 
 -- At most one active asset per eBook at any given time.
 -- (Not "exactly one" — an eBook may temporarily have zero active assets
