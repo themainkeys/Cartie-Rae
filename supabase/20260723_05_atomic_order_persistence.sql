@@ -6,44 +6,44 @@
 -- Requires public.order_items (created by migration _02).
 --
 -- Creates:
---   • stripe_line_item_id column on order_items (item identity for idempotency)
+--   • stripe_line_item_id column on order_items (authoritative item identity)
 --   • UNIQUE (order_id, stripe_line_item_id) constraint
---   • public.persist_stripe_order() — atomic order + items upsert in one
---     PostgreSQL transaction
+--   • public.persist_stripe_order() — fully atomic order + items reconciliation
 --
--- Security:
---   EXECUTE revoked from PUBLIC, anon, and authenticated.
---   Granted only to service_role (used by stripe-webhook Netlify Function).
---   Anon and unauthenticated clients cannot call this function.
+-- SECURITY MODEL:
+--   SECURITY DEFINER — function runs as the function owner (postgres/superuser).
+--   SET search_path = public, pg_catalog — prevents schema injection.
+--   EXECUTE revoked from public, anon, authenticated.
+--   Granted only to service_role (Netlify stripe-webhook function).
 --
--- Idempotency:
---   Safe to re-run. Uses IF NOT EXISTS / DROP IF EXISTS / CREATE OR REPLACE.
+-- TRANSACTIONAL GUARANTEE:
+--   The function contains no EXCEPTION handler that swallows errors.
+--   Any failure — validation, write, or completeness — raises a PostgreSQL
+--   exception that rolls back the entire function transaction.
+--   Stripe receives non-2xx and retries on 5xx. 422 stays failed for manual fix.
 --
--- Design decisions:
+-- RECONCILIATION MODEL:
+--   For each retry, the function:
+--     1. Validates all inputs.
+--     2. Upserts the order row.
+--     3. DELETES stale item rows (order_id matches, stripe_line_item_id does not).
+--     4. UPSERTS all items with authoritative Stripe values (DO UPDATE — not DO NOTHING).
+--     5. Verifies COUNT equality: stored items = expected items.
+--     6. Verifies SET equality: every expected stripe_line_item_id is in the DB.
+--   Any previous incorrect row value is overwritten. No stale row survives a retry.
 --
---   Item identity: stripe_line_item_id (li_xxx) rather than (product_id, item_type)
---   ─────────────────────────────────────────────────────────────────────────────
---   Using (order_id, product_id, item_type) as the uniqueness key assumes one
---   Stripe line item per product per order. Stripe may produce multiple lines for
---   the same product when discounts, variants, or taxes create separate lines.
---   The Stripe line item ID (item.id = 'li_xxx') is the authoritative stable
---   identity for each line in a Checkout Session and is safe for idempotency.
+-- ITEM IDENTITY:
+--   Stripe line items are identified by (order_id, stripe_line_item_id) where
+--   stripe_line_item_id is item.id from listLineItems (li_xxx format).
+--   This is safer than (product_id, item_type) because Stripe may produce
+--   multiple lines for the same product (discounts, bundles, prorated charges).
 --
---   Retry recovery:
---   ─────────────────────────────────────────────────────────────────────────────
---   ON CONFLICT (order_id, stripe_line_item_id) DO NOTHING allows retries to
---   skip already-inserted items and complete any that are missing. After all
---   inserts, the function verifies completeness and raises an exception if the
---   count is lower than expected — causing a full rollback so Stripe receives
---   a non-2xx and retries.
---
---   Fulfillment status:
---   ─────────────────────────────────────────────────────────────────────────────
---   The caller (stripe-webhook.js) derives fulfillment_status before calling
---   this function. 'available' is set for digital-only orders; 'pending' for
---   all others. The download function does not rely on this status to gate
---   digital downloads — it checks payment_status = 'paid' and
---   fulfillment_status != 'revoked' instead.
+-- IDEMPOTENCY:
+--   Safe to re-run against the same Stripe event:
+--     • Order upsert ON CONFLICT updates only mutable fields.
+--     • Item upsert ON CONFLICT updates all fields to authoritative values.
+--     • DELETE of stale rows removes nothing if the payload is unchanged.
+--     • Count/set verification passes as long as DB reflects the current payload.
 --
 -- ============================================================================
 
@@ -68,19 +68,18 @@ end $$;
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 1. Add stripe_line_item_id to order_items
 --
---    Added nullable first so existing rows (if any) can be backfilled before
---    the NOT NULL constraint is applied. In normal development flow this table
---    is empty when this migration runs.
+--    Added nullable first so any pre-existing rows can be backfilled safely
+--    before the NOT NULL constraint is enforced.
+--    In normal development flow this table is empty when this migration runs.
 -- ─────────────────────────────────────────────────────────────────────────────
 alter table public.order_items
   add column if not exists stripe_line_item_id text;
 
--- Backfill any existing rows (should be none in dev; safety net for production).
+-- Backfill any rows that existed before this migration (should be zero in dev).
 update public.order_items
   set stripe_line_item_id = 'legacy-' || id::text
   where stripe_line_item_id is null;
 
--- Enforce NOT NULL now that all rows have a value.
 alter table public.order_items
   alter column stripe_line_item_id set not null;
 
@@ -88,9 +87,8 @@ alter table public.order_items
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 2. Unique constraint: (order_id, stripe_line_item_id)
 --
---    Each Stripe line item may appear in a given order at most once.
---    Enables ON CONFLICT DO NOTHING for idempotent retries in the RPC.
---    DROP + ADD pattern — IF NOT EXISTS is not valid for ADD CONSTRAINT.
+--    Each Stripe line item may appear in an order at most once.
+--    Enables ON CONFLICT DO UPDATE for authoritative field reconciliation.
 -- ─────────────────────────────────────────────────────────────────────────────
 alter table public.order_items
   drop constraint if exists order_items_stripe_line_item_unique;
@@ -100,25 +98,63 @@ alter table public.order_items
 
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- 3. persist_stripe_order — atomic order + items upsert
+-- 3. persist_stripe_order
 --
---    Called by the stripe-webhook Netlify Function via supabase.rpc().
---    The entire operation runs in one implicit PostgreSQL transaction:
---      1. Validate all inputs before any write.
---      2. Upsert the order row.
---      3. Insert missing item rows (ON CONFLICT DO NOTHING).
---      4. Verify completeness — raise exception if items_persisted < items_expected.
---         The exception rolls back everything: order upsert included.
---      5. Return audit summary.
+--    Fully atomic order + items reconciliation in one PostgreSQL transaction.
 --
---    Raises VALIDATION_ERROR (message prefix) for deterministic bad input.
---    Raises PERSISTENCE_ERROR for completeness failures.
---    Retries are safe: already-inserted items are skipped; order is re-upserted
---    with the new event ID and updated timestamps.
+--    PARAMETER MAPPING — verified against stripe-webhook.js:
 --
---    SECURITY INVOKER: runs as the caller's role.
---    The stripe-webhook function connects as service_role (bypasses RLS).
---    Anon and authenticated roles are explicitly denied below.
+--      Pos  SQL param                          JS source
+--      ---  ────────────────────────────────  ─────────────────────────────────────────
+--       1   p_stripe_checkout_session_id       session.id
+--       2   p_stripe_payment_intent_id         session.payment_intent || null
+--       3   p_stripe_customer_id               session.customer || null
+--       4   p_stripe_event_id                  stripeEvent.id
+--       5   p_customer_email                   session.customer_details?.email || meta.customerEmail
+--       6   p_customer_name                    session.customer_details?.name  || meta.customerName
+--       7   p_customer_phone                   session.customer_details?.phone || meta.customerPhone
+--       8   p_shipping_address                 JSON.stringify(address) || meta.shippingAddress || null
+--       9   p_payment_status                   'paid'  (hardcoded for checkout.session.completed)
+--      10   p_fulfillment_status               deriveFulfillmentStatus(itemRows): 'available'|'pending'
+--      11   p_currency                         session.currency || 'usd'
+--      12   p_subtotal                         session.amount_subtotal || 0  (integer cents)
+--      13   p_discount_total                   Math.max(0, subtotal - total)  (integer cents)
+--      14   p_shipping_total                   session.shipping_cost?.amount_total || 0
+--      15   p_tax_total                        session.total_details?.amount_tax   || 0
+--      16   p_total                            session.amount_total || 0  (integer cents)
+--      17   p_contains_digital                 itemRows.some(r => r.item_type === 'ebook')
+--      18   p_contains_physical                itemRows.some(r => r.item_type === 'product')
+--      19   p_contains_service                 itemRows.some(r => r.item_type === 'service')
+--      20   p_applied_promo_code               meta.promoCode || null
+--      21   p_applied_discount_percent         parseFloat(meta.discountPercent) || null → numeric
+--      22   p_metadata                         meta  (session.metadata, serialized to jsonb)
+--      23   p_paid_at                          new Date().toISOString() → timestamptz
+--      24   p_items                            itemRows[]  (array of validated item objects)
+--
+--    Each p_items element must contain:
+--      stripe_line_item_id   text    item.id  (li_xxx)
+--      product_id            text    price.product.metadata.itemId
+--      product_name          text    item.description || product.name
+--      item_type             text    'product' | 'ebook' | 'service'
+--      quantity              integer item.quantity
+--      unit_price            integer item.price.unit_amount  (cents)
+--      line_total            integer item.amount_total  (cents)
+--      currency              text    item.currency || session.currency
+--      stripe_price_id       text    item.price.id  (nullable)
+--      stripe_product_id     text    product.id  (nullable)
+--
+--    Returns:
+--      order_id        uuid     — the persisted order UUID
+--      was_created     boolean  — true if this was a new order; false on retry
+--      items_expected  integer  — unique stripe_line_item_ids received
+--      items_before    integer  — item count before this run (diagnostic)
+--      items_persisted integer  — item count after reconciliation
+--      is_complete     boolean  — always true on success; function raises on false
+--
+--    Failure modes:
+--      VALIDATION_ERROR prefix → caller should return 422 (no retry)
+--      PERSISTENCE_ERROR prefix → caller should return 500 (retry)
+--      Any other exception → caller should return 500 (retry)
 -- ─────────────────────────────────────────────────────────────────────────────
 create or replace function public.persist_stripe_order(
   -- ── Stripe session identifiers ─────────────────────────────────────────────
@@ -127,7 +163,7 @@ create or replace function public.persist_stripe_order(
   p_stripe_customer_id          text,
   p_stripe_event_id             text,
 
-  -- ── Customer fields (copied from session by webhook) ───────────────────────
+  -- ── Customer fields ────────────────────────────────────────────────────────
   p_customer_email              text,
   p_customer_name               text,
   p_customer_phone              text,
@@ -138,7 +174,7 @@ create or replace function public.persist_stripe_order(
   p_fulfillment_status          text,
   p_currency                    text,
 
-  -- ── Monetary values — integer cents throughout ─────────────────────────────
+  -- ── Monetary values — integer cents ───────────────────────────────────────
   p_subtotal                    integer,
   p_discount_total              integer,
   p_shipping_total              integer,
@@ -158,23 +194,12 @@ create or replace function public.persist_stripe_order(
   p_metadata                    jsonb,
   p_paid_at                     timestamptz,
 
-  -- ── Line items — JSONB array of item objects ───────────────────────────────
-  -- Each element must contain:
-  --   stripe_line_item_id  text   (li_xxx — the item's Stripe ID)
-  --   product_id           text   (from price.product.metadata.itemId)
-  --   product_name         text
-  --   item_type            text   ('product' | 'ebook' | 'service')
-  --   quantity             integer >= 1
-  --   unit_price           integer >= 0 (cents)
-  --   line_total           integer >= 0 (cents)
-  --   currency             text
-  --   stripe_price_id      text   (nullable)
-  --   stripe_product_id    text   (nullable)
+  -- ── Line items (see item schema in header comment above) ──────────────────
   p_items                       jsonb
 )
 returns jsonb
 language plpgsql
-security invoker
+security definer
 set search_path = public, pg_catalog
 as $$
 declare
@@ -184,7 +209,7 @@ declare
   v_items_expected   integer;
   v_items_before     integer;
   v_items_persisted  integer;
-  v_is_complete      boolean;
+  v_items_matched    integer;
 
   -- Validation loop variables
   v_item             jsonb;
@@ -193,106 +218,114 @@ declare
   v_item_type        text;
 begin
 
-  -- ── Input validation — abort before any write ───────────────────────────────
+  -- ═══════════════════════════════════════════════════════════════════════════
+  -- PHASE 1: VALIDATION — no writes until every check passes
+  -- ═══════════════════════════════════════════════════════════════════════════
 
-  -- Required session ID
+  -- Required: Stripe session ID
   if p_stripe_checkout_session_id is null or trim(p_stripe_checkout_session_id) = '' then
     raise exception 'VALIDATION_ERROR: p_stripe_checkout_session_id is required.';
   end if;
 
-  -- Required payment status value
+  -- Required: customer email (needed for download verification)
+  if p_customer_email is null or trim(p_customer_email) = '' then
+    raise exception 'VALIDATION_ERROR: p_customer_email is required.';
+  end if;
+
+  -- Valid payment status
   if p_payment_status not in (
     'unpaid','processing','paid','failed','refunded','partially_refunded','canceled'
   ) then
     raise exception 'VALIDATION_ERROR: Invalid payment_status: %.', p_payment_status;
   end if;
 
-  -- Required fulfillment status value
+  -- Valid fulfillment status
   if p_fulfillment_status not in ('pending','available','fulfilled','revoked') then
     raise exception 'VALIDATION_ERROR: Invalid fulfillment_status: %.', p_fulfillment_status;
   end if;
 
-  -- Required customer email
-  if p_customer_email is null or trim(p_customer_email) = '' then
-    raise exception 'VALIDATION_ERROR: p_customer_email is required.';
-  end if;
-
-  -- Items array must be present and non-empty
+  -- Items array: must be a non-empty JSON array
   if p_items is null or jsonb_typeof(p_items) <> 'array' then
     raise exception 'VALIDATION_ERROR: p_items must be a JSON array.';
   end if;
-
   if jsonb_array_length(p_items) = 0 then
     raise exception 'VALIDATION_ERROR: p_items must contain at least one item.';
   end if;
 
-  -- Validate each item before any write. Any invalid item aborts the whole event.
+  -- Validate every item before any write.
+  -- Any invalid item aborts the entire event — partial orders are never created.
   for v_item in select value from jsonb_array_elements(p_items) loop
 
     v_line_item_id := v_item->>'stripe_line_item_id';
     v_product_id   := v_item->>'product_id';
     v_item_type    := v_item->>'item_type';
 
-    -- stripe_line_item_id: required (idempotency key for this item)
+    -- stripe_line_item_id: required (idempotency + reconciliation key)
     if v_line_item_id is null or trim(v_line_item_id) = '' then
-      raise exception 'VALIDATION_ERROR: an item is missing stripe_line_item_id.';
+      raise exception 'VALIDATION_ERROR: An item in p_items is missing stripe_line_item_id.';
     end if;
 
-    -- product_id: required (entitlement key — must come from Stripe product metadata)
+    -- product_id: required (eBook entitlement key)
     if v_product_id is null or trim(v_product_id) = '' then
       raise exception
-        'VALIDATION_ERROR: item % has null or empty product_id. '
-        'Check that price.product.metadata.itemId is set on the Stripe Product.',
+        'VALIDATION_ERROR: Item % has null or empty product_id. '
+        'Ensure price.product.metadata.itemId is set on the Stripe Product.',
         v_line_item_id;
     end if;
 
-    -- item_type: must be a supported value
+    -- item_type: must match schema CHECK constraint
     if v_item_type not in ('product', 'ebook', 'service') then
       raise exception
-        'VALIDATION_ERROR: item % has unsupported item_type: %. '
-        'Supported values: product, ebook, service.',
+        'VALIDATION_ERROR: Item % has unsupported item_type "%". '
+        'Supported: product, ebook, service.',
         v_line_item_id, v_item_type;
     end if;
 
-    -- quantity: non-null integer >= 1
+    -- quantity: positive integer
     begin
       if (v_item->>'quantity')::integer < 1 then
         raise exception
-          'VALIDATION_ERROR: item % quantity must be >= 1.', v_line_item_id;
+          'VALIDATION_ERROR: Item % quantity must be >= 1.', v_line_item_id;
       end if;
     exception when invalid_text_representation or not_null_violation then
       raise exception
-        'VALIDATION_ERROR: item % has a non-integer or missing quantity.', v_line_item_id;
+        'VALIDATION_ERROR: Item % has a non-integer or missing quantity.', v_line_item_id;
     end;
 
-    -- unit_price and line_total: non-null integers >= 0
+    -- unit_price and line_total: non-negative integers (cents)
     begin
       if (v_item->>'unit_price')::integer < 0 then
         raise exception
-          'VALIDATION_ERROR: item % unit_price must be >= 0.', v_line_item_id;
+          'VALIDATION_ERROR: Item % unit_price must be >= 0.', v_line_item_id;
       end if;
       if (v_item->>'line_total')::integer < 0 then
         raise exception
-          'VALIDATION_ERROR: item % line_total must be >= 0.', v_line_item_id;
+          'VALIDATION_ERROR: Item % line_total must be >= 0.', v_line_item_id;
       end if;
     exception when invalid_text_representation or not_null_violation then
       raise exception
-        'VALIDATION_ERROR: item % has non-integer or missing unit_price/line_total.',
+        'VALIDATION_ERROR: Item % has non-integer or missing unit_price/line_total.',
         v_line_item_id;
     end;
 
   end loop;
 
-  -- ── Order upsert ────────────────────────────────────────────────────────────
+  -- Count expected unique line item IDs (deduplicate input; Stripe never duplicates,
+  -- but we handle it safely in case of unusual retry payloads).
+  select count(distinct (item->>'stripe_line_item_id'))
+  into   v_items_expected
+  from   jsonb_array_elements(p_items) as item;
+
+  -- ═══════════════════════════════════════════════════════════════════════════
+  -- PHASE 2: ORDER UPSERT
   --
-  -- ON CONFLICT on stripe_checkout_session_id (UNIQUE NOT NULL, set in _02).
-  -- If the order already exists (Stripe retry, partial failure, duplicate event):
-  --   - Update the event ID so we know which event last touched this row.
-  --   - Coalesce payment_intent_id: keep existing non-null value if new is null.
-  --   - Do NOT downgrade payment_status or fulfillment_status.
-  -- If the order is new: insert all fields.
-  --
-  -- was_created: detect insert vs update by checking for a pre-existing row.
+  -- ON CONFLICT on stripe_checkout_session_id (UNIQUE NOT NULL, _02 migration).
+  -- Retry scenario: order already exists → update tracking fields only.
+  -- New order: full insert.
+  -- DO NOT downgrade payment_status or fulfillment_status (merge conservatively).
+  -- ═══════════════════════════════════════════════════════════════════════════
+
+  -- Detect whether the order already exists (for the was_created return value).
   select id into v_pre_existing_id
   from   public.orders
   where  stripe_checkout_session_id = p_stripe_checkout_session_id;
@@ -351,28 +384,44 @@ begin
   )
   on conflict (stripe_checkout_session_id) do update
     set stripe_event_id          = excluded.stripe_event_id,
-        -- Preserve existing non-null payment_intent if new value is null
+        -- Preserve existing payment_intent_id if the new value is null
         stripe_payment_intent_id = coalesce(
           excluded.stripe_payment_intent_id,
           orders.stripe_payment_intent_id
         ),
-        -- Always update to latest payment/fulfillment status from Stripe
+        -- Always accept Stripe's authoritative lifecycle values
         payment_status           = excluded.payment_status,
         fulfillment_status       = excluded.fulfillment_status,
         updated_at               = now()
   returning id into v_order_id;
 
-  -- ── Count items before insert (for diagnostics in return value) ─────────────
+  -- ═══════════════════════════════════════════════════════════════════════════
+  -- PHASE 3: ITEM RECONCILIATION
+  --
+  -- Count items before reconciliation for diagnostics.
+  -- Delete stale rows: items in DB for this order that Stripe no longer reports.
+  --   Scoped strictly to this order_id. Checkout Session items are immutable
+  --   after completion, so stale rows indicate a buggy previous write.
+  -- Upsert authoritative rows: DO UPDATE overwrites every field with the
+  --   current Stripe-sourced values. Corrects any previously incorrect data.
+  -- ═══════════════════════════════════════════════════════════════════════════
+
   select count(*) into v_items_before
   from   public.order_items
   where  order_id = v_order_id;
 
-  -- ── Item inserts — idempotent via ON CONFLICT DO NOTHING ────────────────────
-  --
-  -- Uniqueness is on (order_id, stripe_line_item_id).
-  -- On first run: all items insert.
-  -- On retry: already-present items are skipped; any missing ones are inserted.
-  -- This recovers from partial writes without duplicating data.
+  -- DELETE stale rows: those present in DB but not in the current Stripe payload.
+  -- Scoped to this order_id only — never touches other orders.
+  delete from public.order_items
+  where order_id = v_order_id
+    and stripe_line_item_id not in (
+      select item->>'stripe_line_item_id'
+      from   jsonb_array_elements(p_items) as item
+    );
+
+  -- UPSERT authoritative item rows.
+  -- ON CONFLICT DO UPDATE ensures existing rows receive current Stripe values.
+  -- This corrects any field that was stored incorrectly by a previous run.
   insert into public.order_items (
     order_id,
     stripe_line_item_id,
@@ -401,42 +450,80 @@ begin
     nullif(item->>'stripe_product_id', ''),
     coalesce((item->'metadata')::jsonb, '{}'::jsonb)
   from jsonb_array_elements(p_items) as item
-  on conflict (order_id, stripe_line_item_id) do nothing;
+  on conflict (order_id, stripe_line_item_id) do update set
+    -- Authoritative Stripe values overwrite whatever was previously stored.
+    product_id        = excluded.product_id,
+    product_name      = excluded.product_name,
+    item_type         = excluded.item_type,
+    quantity          = excluded.quantity,
+    unit_price        = excluded.unit_price,
+    line_total        = excluded.line_total,
+    currency          = excluded.currency,
+    stripe_price_id   = excluded.stripe_price_id,
+    stripe_product_id = excluded.stripe_product_id,
+    metadata          = excluded.metadata;
 
-  -- ── Completeness verification ───────────────────────────────────────────────
+  -- ═══════════════════════════════════════════════════════════════════════════
+  -- PHASE 4: EXACT SET VERIFICATION
   --
-  -- items_expected: unique stripe_line_item_ids in the input array.
-  -- Duplicates in input (should never happen from Stripe) are deduplicated.
-  select count(distinct item->>'stripe_line_item_id')
-  into   v_items_expected
-  from   jsonb_array_elements(p_items) as item;
+  -- Count equality: stored rows must equal expected rows exactly.
+  --   Catches: stale row that DELETE somehow missed, or extra phantom row.
+  --
+  -- Set equality: every expected stripe_line_item_id must exist in DB.
+  --   Catches: an item that was supposed to insert but silently didn't.
+  --
+  -- Both checks must pass. Failure raises an exception, rolling back the
+  -- entire transaction. Stripe receives 500 and retries.
+  -- ═══════════════════════════════════════════════════════════════════════════
 
-  -- items_persisted: all items now in the DB for this order.
-  select count(*)
-  into   v_items_persisted
+  -- Total stored items for this order after reconciliation.
+  select count(*) into v_items_persisted
   from   public.order_items
   where  order_id = v_order_id;
 
-  v_is_complete := (v_items_persisted >= v_items_expected);
+  -- Count of expected IDs that actually exist in DB.
+  select count(*) into v_items_matched
+  from   public.order_items oi
+  where  oi.order_id = v_order_id
+    and  oi.stripe_line_item_id in (
+      select distinct item->>'stripe_line_item_id'
+      from   jsonb_array_elements(p_items) as item
+    );
 
-  -- If completeness check fails, raise an exception to roll back the entire
-  -- transaction. Stripe will receive a 500 and retry the event.
-  if not v_is_complete then
+  -- Check 1: total count equality (detects stale rows or missing inserts).
+  if v_items_persisted <> v_items_expected then
     raise exception
-      'PERSISTENCE_ERROR: Order % expected % item(s) but found % after insert. '
-      'Rolling back to allow Stripe retry.',
-      v_order_id, v_items_expected, v_items_persisted;
+      'PERSISTENCE_ERROR: Order % has % item row(s) after reconciliation but expected exactly %. '
+      'Possible stale row or failed upsert. Rolling back.',
+      v_order_id, v_items_persisted, v_items_expected;
   end if;
 
-  -- ── Return audit summary ────────────────────────────────────────────────────
+  -- Check 2: set membership (detects rows with wrong stripe_line_item_id values).
+  if v_items_matched <> v_items_expected then
+    raise exception
+      'PERSISTENCE_ERROR: Order % — only % of % expected stripe_line_item_id(s) found in DB. '
+      'Item set is incomplete. Rolling back.',
+      v_order_id, v_items_matched, v_items_expected;
+  end if;
+
+  -- ═══════════════════════════════════════════════════════════════════════════
+  -- PHASE 5: RETURN
+  -- ═══════════════════════════════════════════════════════════════════════════
+
   return jsonb_build_object(
     'order_id',        v_order_id,
     'was_created',     v_was_created,
     'items_expected',  v_items_expected,
     'items_before',    v_items_before,
     'items_persisted', v_items_persisted,
-    'is_complete',     v_is_complete
+    'is_complete',     true   -- always true here — RAISE fired before we reach this line otherwise
   );
+
+exception
+  when others then
+    -- Propagate all exceptions to the caller, triggering full transaction rollback.
+    -- This function never returns a result after a partial write.
+    raise;
 
 end;
 $$;
@@ -446,22 +533,22 @@ comment on function public.persist_stripe_order(
   integer,integer,integer,integer,integer,
   boolean,boolean,boolean,text,numeric,jsonb,timestamptz,jsonb
 ) is
-  'Atomically upserts an order and all its items from a Stripe checkout.session.completed event. '
-  'Validates all inputs before writing. Verifies completeness after insert. '
-  'Rolls back entirely if validation or completeness fails. '
-  'Safe to call repeatedly for retry recovery — idempotent on (order_id, stripe_line_item_id). '
-  'Callable only by service_role (used by the stripe-webhook Netlify Function).';
+  'Atomic reconciliation of one Stripe checkout.session.completed event. '
+  'Validates all inputs; upserts the order; deletes stale items; upserts authoritative '
+  'item rows; verifies exact count + set equality. Any failure rolls back entirely. '
+  'Security: DEFINER, search_path = public + pg_catalog, service_role only.';
 
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 4. Access control
 --
---    Revoke from public (which covers all roles including anon and authenticated).
---    Then explicitly revoke from anon and authenticated as belt-and-suspenders.
---    Grant only to service_role — the Postgres role used by the Netlify
---    server-side client (SUPABASE_SERVICE_ROLE_KEY).
+--    REVOKE from public first (covers all roles).
+--    Explicit REVOKE from anon and authenticated (belt-and-suspenders).
+--    GRANT only to service_role (the Netlify stripe-webhook function uses this
+--    role via SUPABASE_SERVICE_ROLE_KEY — never expose this key to the browser).
 --
---    Anon users and authenticated portal users cannot call this function.
+--    With SECURITY DEFINER, this is critical: a caller who can execute the
+--    function runs it with postgres/superuser privileges.
 -- ─────────────────────────────────────────────────────────────────────────────
 revoke all on function public.persist_stripe_order(
   text,text,text,text,text,text,text,text,text,text,text,
@@ -489,39 +576,39 @@ grant execute on function public.persist_stripe_order(
 
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- 5. Verification queries — run after applying to confirm structure
+-- 5. Verification queries — run after applying in Supabase SQL Editor
 -- ─────────────────────────────────────────────────────────────────────────────
 
--- New column on order_items
+-- stripe_line_item_id column exists and is NOT NULL
 select column_name, data_type, is_nullable
 from   information_schema.columns
 where  table_schema = 'public'
   and  table_name   = 'order_items'
   and  column_name  = 'stripe_line_item_id';
+-- Expected: 1 row, data_type=text, is_nullable=NO
 
--- New unique constraint
-select conname, contype, pg_get_constraintdef(oid) as definition
+-- Unique constraint exists
+select conname, pg_get_constraintdef(oid) as definition
 from   pg_constraint
 where  conrelid = 'public.order_items'::regclass
   and  conname  = 'order_items_stripe_line_item_unique';
+-- Expected: 1 row
 
--- Function exists with correct security model
+-- Function: SECURITY DEFINER, 24 params, returns jsonb
 select
-  proname                                                              as function_name,
-  case prosecdef when true then 'DEFINER' else 'INVOKER' end         as security_model,
-  pronargs                                                             as param_count,
-  pg_get_function_result(oid)                                         as return_type
+  proname,
+  case prosecdef when true then 'DEFINER' else 'INVOKER' end as security_model,
+  pronargs,
+  pg_get_function_result(oid) as return_type
 from pg_proc
 where proname      = 'persist_stripe_order'
   and pronamespace = 'public'::regnamespace;
+-- Expected: security_model=DEFINER, pronargs=24, return_type=jsonb
 
--- Access control: verify no public/anon/authenticated access
--- (Query pg_proc privileges — expect service_role only)
-select
-  p.proname,
-  pg_catalog.pg_get_function_arguments(p.oid) as args,
-  pg_catalog.pg_function_is_visible(p.oid)    as visible
-from pg_proc p
-join pg_namespace n on n.oid = p.pronamespace
-where n.nspname = 'public'
-  and p.proname = 'persist_stripe_order';
+-- Access: only service_role should appear
+select grantee, privilege_type
+from   information_schema.role_routine_grants
+where  routine_schema = 'public'
+  and  routine_name   = 'persist_stripe_order';
+-- Expected: grantee=service_role, privilege_type=EXECUTE only
+-- public / anon / authenticated must NOT appear

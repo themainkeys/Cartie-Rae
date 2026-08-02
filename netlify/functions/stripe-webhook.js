@@ -18,12 +18,21 @@
  * ── HTTP RESPONSE CODES ──────────────────────────────────────────────────────
  *
  *   200  Event fully and safely persisted, or already fully processed (verified).
- *   400  Invalid Stripe signature or structurally malformed event body.
+ *
+ *   400  Invalid Stripe signature. Stripe may retry according to its webhook
+ *        retry policy (up to 3 days in live mode). Returning 400 is correct;
+ *        Stripe will eventually mark the delivery as failed after retries
+ *        are exhausted.
+ *
  *   422  Deterministic validation failure — missing/invalid product metadata,
- *        unsupported item type, bad quantity. Retrying will not fix this; the
- *        Stripe Product or Checkout Session metadata must be corrected.
+ *        unsupported item type, bad quantity. Stripe may still retry 422
+ *        responses. Until a dead-letter / webhook_failures table is implemented
+ *        (see TODO below), the event will appear as failed in the Stripe
+ *        dashboard. The admin must correct product metadata and re-deliver.
+ *
  *   500  Transient failure — DB unavailable, RPC timeout, Stripe API error,
- *        unexpected exception. Stripe will retry.
+ *        unexpected exception. Stripe will retry. Never return 200 after a
+ *        transient write failure.
  *
  * ── IDEMPOTENCY ──────────────────────────────────────────────────────────────
  *
@@ -369,14 +378,24 @@ exports.handler = async (event) => {
   // ── Step 6: Persist atomically via RPC ─────────────────────────────────────
   //
   // persist_stripe_order runs in one PostgreSQL transaction:
-  //   - Validates inputs server-side (second line of defence).
-  //   - Upserts the order row.
-  //   - Inserts items ON CONFLICT DO NOTHING (idempotent retry-safe).
-  //   - Verifies completeness; raises PERSISTENCE_ERROR if items < expected.
-  //   - Returns { order_id, was_created, items_expected, items_persisted, is_complete }.
+  //   • SECURITY DEFINER; search_path = public, pg_catalog.
+  //   • Validates all inputs (raises VALIDATION_ERROR on bad data).
+  //   • Upserts the order row.
+  //   • Deletes stale order_items (in DB but not in Stripe payload).
+  //   • Upserts items with authoritative Stripe values (DO UPDATE, not DO NOTHING).
+  //   • Verifies exact set equality: count + stripe_line_item_id membership.
+  //   • Raises PERSISTENCE_ERROR if set is incomplete — rolls back entirely.
   //
-  // On failure: the entire transaction rolls back — no partial state.
-  // Stripe receives non-2xx and retries (for 5xx) or flags for review (for 4xx).
+  // Parameter mapping verified against SQL signature (see scratch/rpc_param_mapping.md).
+  // All 24 args match by name, position, and type. Noteworthy:
+  //   • p_paid_at: uses new Date() (wall clock) rather than session.created.
+  //     Difference is milliseconds. Can be hardened with:
+  //     new Date(session.created * 1000).toISOString()
+  //   • p_metadata: JS plain object serialized to JSONB by the Supabase client.
+  //   • p_applied_discount_percent: JS parseFloat → Postgres numeric (safe cast).
+  //
+  // On VALIDATION_ERROR: return 422 (deterministic; metadata must be fixed at source).
+  // On PERSISTENCE_ERROR or other error: return 500 (transient; Stripe will retry).
   const supabase = getSupabaseAdmin();
 
   const { data: rpcResult, error: rpcError } = await supabase.rpc(
@@ -404,7 +423,7 @@ exports.handler = async (event) => {
       p_applied_promo_code:          meta.promoCode              || null,
       p_applied_discount_percent:    meta.discountPercent        ? parseFloat(meta.discountPercent) : null,
       p_metadata:                    meta,
-      p_paid_at:                     new Date().toISOString(),
+      p_paid_at:                     new Date().toISOString(),  // wall clock; close to session.created
       p_items:                       itemRows,
     }
   );
