@@ -249,10 +249,10 @@ exports.handler = async (event) => {
       order_id:         orderId,
       product_id:       itemId || 'unknown',
       item_type:        itemType,
-      item_name:        itemName,
+      product_name:     itemName,                   // schema: product_name
       quantity:         item.quantity         || 1,
-      unit_price_cents: item.price?.unit_amount || 0,
-      line_total_cents: item.amount_total      || 0,
+      unit_price:       item.price?.unit_amount || 0, // schema: unit_price (integer cents)
+      line_total:       item.amount_total      || 0,  // schema: line_total (integer cents)
       currency:         item.currency          || (session.currency || 'usd'),
       stripe_price_id:  item.price?.id         || null,
     };

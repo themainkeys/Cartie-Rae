@@ -1,82 +1,194 @@
 /**
- * Netlify Serverless Function — get-ebook-download.js
+ * Netlify Function — get-ebook-download.js
  *
- * Verifies purchase entitlement and returns a short-lived signed URL
- * for downloading a purchased eBook PDF.
+ * Hardened eBook entitlement verification and signed URL delivery.
  *
- * Called by the frontend at POST /.netlify/functions/get-ebook-download
+ * ── TWO MODES ────────────────────────────────────────────────────────────────
  *
- * Request body (JSON):
- *   { sessionId: string, ebookId: string }
+ * LIST MODE   POST { sessionId, email? }
+ *   Returns ALL purchased eBooks for the verified Checkout Session.
+ *   Used by CheckoutSuccess.tsx on the post-purchase page.
+ *   The server derives the full entitlement list — the browser never
+ *   supplies product IDs, prices, order IDs, or entitlement claims.
  *
- *   sessionId — Stripe Checkout Session ID from the success URL
- *               (?session_id={CHECKOUT_SESSION_ID}). This is not a secret
- *               (it is visible in the browser URL) but it is cryptographically
- *               bound to a specific Stripe transaction. A valid session ID that
- *               maps to a paid order containing the requested eBook is
- *               sufficient to authorise a download.
+ * REFRESH MODE   POST { sessionId, email?, ebookId }
+ *   Returns a fresh signed URL for ONE specific purchased eBook.
+ *   Used when a previously issued link has expired.
+ *   Same response shape as list mode (single-item downloads array).
  *
- *   ebookId   — Internal EBook.id (e.g. "ebook-001"). Must match an
- *               order_items.product_id row in the verified order.
+ * ── SECURITY MODEL ───────────────────────────────────────────────────────────
  *
- * Response (JSON):
- *   200 { url: string, fileName: string, expiresInSeconds: number }
- *   400 Bad request (missing or malformed fields)
- *   403 Order exists but is unpaid or download not yet available
- *   404 No paid order found for this session, or eBook not in order
- *   500 / 503 Server or storage errors
+ * Identity anchor
+ *   Primary:   Stripe Checkout Session ID (visible in browser success URL)
+ *   Secondary: Customer email (optional, compared server-side to DB record)
+ *              If provided, it must match orders.customer_email exactly.
+ *              If absent, the session ID alone is the bearer credential.
  *
- * Authorisation sequence:
- *   1. Validate sessionId and ebookId format
- *   2. Verify a paid order exists for this sessionId
- *   3. Verify payment_status = 'paid'
- *   4. Verify fulfillment_status allows download
- *   5. Verify this order contains the requested ebookId as an 'ebook' item
- *   6. Resolve the active ebook_assets row
- *   7. Generate a short-lived Supabase Storage signed URL
- *   8. Return signed URL — never the storage path
+ * Entitlement source
+ *   Derived exclusively from: orders + order_items + ebook_assets
+ *   The browser never fetches Stripe line items or constructs entitlements.
  *
- * Security invariants:
- *   - The storage path (ebooks bucket object key) is NEVER returned to
- *     the client. Only the signed URL is returned.
- *   - Signed URLs expire after SIGNED_URL_EXPIRES_IN seconds (1 hour).
- *   - All database queries use the service-role client (SUPABASE_SERVICE_ROLE_KEY),
- *     which is a server-only credential that must never appear in any VITE_
- *     environment variable or frontend bundle.
- *   - Every authorisation failure is logged with IP for audit. The response
- *     deliberately does not distinguish between "order not found" and "wrong
- *     ebookId" to avoid leaking information about order structure.
+ * Digital download gate (intentionally differs from fulfillment_status)
+ *   Requires: payment_status = 'paid'
+ *   Requires: fulfillment_status != 'revoked'
+ *   Does NOT require: fulfillment_status = 'available'
+ *   Rationale: mixed-cart orders remain 'pending' until physical items ship.
+ *   Blocking eBook downloads on physical fulfillment state is wrong.
+ *   'revoked' is the explicit signal for refund/chargeback access removal.
  *
- * Environment variables required (Netlify — server only):
- *   SUPABASE_URL              — https://<project>.supabase.co
- *   SUPABASE_SERVICE_ROLE_KEY — service_role key; bypasses RLS; NEVER VITE_
+ * Storage path safety
+ *   storage_path is NEVER returned to the client.
+ *   Only the short-lived signed URL (SIGNED_URL_EXPIRES_IN seconds) is returned.
+ *   The bucket name is hardcoded server-side.
+ *
+ * ── BEARER CREDENTIAL WARNING ────────────────────────────────────────────────
+ *
+ * The Stripe Checkout Session ID appears in the browser success URL and is
+ * effectively a bearer token for downloads. Anyone who obtains the URL can
+ * request the purchased files for that session.
+ *
+ * Risk mitigations implemented here:
+ *   - Optional email verification (compare against DB record — not trusted blindly)
+ *   - POST-only endpoint (not bookmarkable/cacheable)
+ *   - Cache-Control: no-store on all responses
+ *   - CORS origin enforcement (production domain only)
+ *   - Per-session rate limiting (per-instance; see note below)
+ *
+ * ── PRODUCTION HARDENING — REQUIRED BEFORE HIGH-VOLUME LAUNCH ───────────────
+ *
+ *   [ ] Make email a REQUIRED field once CheckoutSuccess.tsx is wired.
+ *   [ ] Replace in-memory rate limiting with a distributed store
+ *       (Upstash Redis, Netlify Edge Functions, or a WAF rule).
+ *       In-memory limiting is per function instance — not reliable across
+ *       Netlify's distributed infrastructure.
+ *   [ ] Add a download_log table in Supabase (orderId, ebookId, assetVersion,
+ *       timestamp) for audit and abuse detection.
+ *   [ ] Consider a short-lived HMAC-signed post-purchase token generated by
+ *       the webhook and stored in the DB — eliminates the bearer URL risk.
+ *
+ * ── ENVIRONMENT VARIABLES (server-only — never VITE_) ────────────────────────
+ *
+ *   SUPABASE_URL              Project URL
+ *   SUPABASE_SERVICE_ROLE_KEY Service-role key (bypasses RLS; never expose to client)
+ *   CONTEXT                   Set by Netlify: 'production' | 'deploy-preview' | ...
+ *                             Used to gate allowed CORS origins.
  */
 
 'use strict';
 
 const { createClient } = require('@supabase/supabase-js');
 
-// ── Constants ─────────────────────────────────────────────────────────────────
+// ── Configuration ─────────────────────────────────────────────────────────────
 
-const SIGNED_URL_EXPIRES_IN = 3600; // 1 hour — customer has this long to download
-const EBOOKS_BUCKET         = 'ebooks';
-
-// Stripe Checkout Session IDs always begin with 'cs_'
+const EBOOKS_BUCKET         = 'ebooks';            // hardcoded — not from client
+const SIGNED_URL_EXPIRES_IN = 3600;                // 1 hour
 const SESSION_ID_PREFIX     = 'cs_';
-const MAX_FIELD_LENGTH      = 500;
+const SESSION_ID_MAX_LEN    = 255;
+const EMAIL_MAX_LEN         = 320;                 // RFC 5321 maximum
+const EBOOK_ID_MAX_LEN      = 100;
+const PRODUCTION_ORIGIN     = 'https://cartiaerae.com';
 
-// Fulfillment statuses that permit download
-const DOWNLOADABLE_STATUSES = new Set(['available', 'fulfilled']);
+// ── Rate limiting (in-memory, per-instance) ───────────────────────────────────
+// NOTE: Not reliable across Netlify's distributed fleet.
+// Replace with Upstash/Redis for distributed enforcement in production.
+const RATE_LIMIT_MAX        = 15;                  // max requests per window
+const RATE_LIMIT_WINDOW_MS  = 60_000;              // 1 minute
+const rateLimitStore        = new Map();           // key → { count, windowStart }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+function isRateLimited(key) {
+  const now  = Date.now();
+  const slot = rateLimitStore.get(key);
+  if (!slot || now - slot.windowStart > RATE_LIMIT_WINDOW_MS) {
+    rateLimitStore.set(key, { count: 1, windowStart: now });
+    return false;
+  }
+  slot.count++;
+  return slot.count > RATE_LIMIT_MAX;
+}
 
-function isValidString(val) {
+// ── CORS ──────────────────────────────────────────────────────────────────────
+
+function isAllowedOrigin(origin) {
+  if (!origin) return false;
+  if (origin === PRODUCTION_ORIGIN) return true;
+
+  // Netlify sets CONTEXT = 'production' on the main branch deploy.
+  // Allow localhost and deploy-preview origins only in non-production contexts.
+  const ctx = process.env.CONTEXT || '';
+  if (ctx !== 'production') {
+    if (origin === 'http://localhost:5173') return true;
+    if (origin === 'http://localhost:3000') return true;
+    // Netlify deploy preview: https://deploy-preview-N--sitename.netlify.app
+    if (/^https:\/\/deploy-preview-\d+--[a-z0-9-]+\.netlify\.app$/.test(origin)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function corsHeaders(origin) {
+  if (!isAllowedOrigin(origin)) return {};
+  return {
+    'Access-Control-Allow-Origin':  origin,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Max-Age':       '86400',
+    'Vary':                         'Origin',
+  };
+}
+
+// ── Response helpers ──────────────────────────────────────────────────────────
+
+const SECURE_HEADERS = {
+  'Content-Type':  'application/json',
+  'Cache-Control': 'no-store',            // never cache — contains signed URLs
+};
+
+function respond(statusCode, body, origin) {
+  return {
+    statusCode,
+    headers: { ...SECURE_HEADERS, ...corsHeaders(origin) },
+    body:    JSON.stringify(body),
+  };
+}
+
+// ── Validation ────────────────────────────────────────────────────────────────
+
+function isValidSessionId(v) {
   return (
-    typeof val === 'string' &&
-    val.trim().length > 0 &&
-    val.length <= MAX_FIELD_LENGTH
+    typeof v === 'string'         &&
+    v.startsWith(SESSION_ID_PREFIX) &&
+    v.length >= 10                &&
+    v.length <= SESSION_ID_MAX_LEN &&
+    /^[a-zA-Z0-9_]+$/.test(v)    // Stripe session IDs are alphanumeric + underscores
   );
 }
+
+function isValidEmail(v) {
+  return (
+    typeof v === 'string' &&
+    v.length >= 3         &&
+    v.length <= EMAIL_MAX_LEN &&
+    v.includes('@')       &&
+    v.includes('.')
+  );
+}
+
+function isValidEbookId(v) {
+  return (
+    typeof v === 'string'    &&
+    v.trim().length > 0      &&
+    v.length <= EBOOK_ID_MAX_LEN
+  );
+}
+
+// Redact all but the first 12 characters of a session ID for safe logging.
+function redactSession(id) {
+  return id.slice(0, 12) + '…';
+}
+
+// ── Supabase ──────────────────────────────────────────────────────────────────
 
 function getSupabaseAdmin() {
   return createClient(
@@ -86,190 +198,254 @@ function getSupabaseAdmin() {
   );
 }
 
-function clientIp(event) {
-  return (
-    event.headers['x-forwarded-for']?.split(',')[0].trim() ||
-    event.headers['client-ip'] ||
-    'unknown'
-  );
-}
+// ── Core: generate one signed download entry ──────────────────────────────────
 
-function jsonResponse(statusCode, body) {
+async function buildDownload(supabase, asset, productName) {
+  const { data, error } = await supabase.storage
+    .from(EBOOKS_BUCKET)                           // bucket hardcoded — not from client
+    .createSignedUrl(asset.storage_path, SIGNED_URL_EXPIRES_IN);
+
+  if (error || !data?.signedUrl) {
+    return { ok: false, message: error?.message || 'Signed URL generation failed.' };
+  }
+
   return {
-    statusCode,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    ok:       true,
+    download: {
+      ebookId:          asset.ebook_id,
+      name:             productName,
+      fileName:         asset.file_name,
+      url:              data.signedUrl,             // signed URL only — never storage_path
+      expiresInSeconds: SIGNED_URL_EXPIRES_IN,
+    },
   };
 }
 
 // ── Handler ───────────────────────────────────────────────────────────────────
 
 exports.handler = async (event) => {
+  const origin = event.headers['origin'] || '';
 
-  // ── Guard: POST only ────────────────────────────────────────────────────────
+  // ── CORS preflight ──────────────────────────────────────────────────────────
+  if (event.httpMethod === 'OPTIONS') {
+    return isAllowedOrigin(origin)
+      ? { statusCode: 204, headers: { ...corsHeaders(origin), 'Cache-Control': 'no-store' }, body: '' }
+      : { statusCode: 403, body: '' };
+  }
+
+  // ── POST only ───────────────────────────────────────────────────────────────
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
+    return respond(405, { error: 'Method Not Allowed.' }, origin);
   }
 
-  // ── Guard: required environment variables ───────────────────────────────────
+  // ── CORS: reject disallowed origins (blocks direct browser misuse) ──────────
+  if (origin && !isAllowedOrigin(origin)) {
+    return respond(403, { error: 'Origin not permitted.' }, origin);
+  }
+
+  // ── Content-Type guard ──────────────────────────────────────────────────────
+  const contentType = event.headers['content-type'] || '';
+  if (!contentType.includes('application/json')) {
+    return respond(415, { error: 'Content-Type must be application/json.' }, origin);
+  }
+
+  // ── Required env vars ───────────────────────────────────────────────────────
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    console.error('[get-ebook-download] Supabase service credentials not configured.');
-    return jsonResponse(500, { error: 'Server configuration error.' });
+    console.error('[ebook-download] Supabase service credentials not configured.');
+    return respond(500, { error: 'Server configuration error.' }, origin);
   }
 
-  // ── Parse and validate request body ────────────────────────────────────────
+  // ── Parse body ──────────────────────────────────────────────────────────────
   let body;
   try {
     body = JSON.parse(event.body || '{}');
   } catch {
-    return jsonResponse(400, { error: 'Invalid request body.' });
+    return respond(400, { error: 'Invalid JSON body.' }, origin);
   }
 
-  const { sessionId, ebookId } = body;
-  const ip = clientIp(event);
+  const { sessionId, email, ebookId } = body;
 
-  if (!isValidString(sessionId) || !sessionId.startsWith(SESSION_ID_PREFIX)) {
-    return jsonResponse(400, { error: 'Invalid or missing sessionId.' });
+  // ── Validate sessionId ──────────────────────────────────────────────────────
+  if (!isValidSessionId(sessionId)) {
+    return respond(400, { error: 'Invalid or missing sessionId.' }, origin);
   }
-  if (!isValidString(ebookId)) {
-    return jsonResponse(400, { error: 'Invalid or missing ebookId.' });
+
+  // ── Validate optional email ─────────────────────────────────────────────────
+  if (email !== undefined && !isValidEmail(email)) {
+    return respond(400, { error: 'Invalid email format.' }, origin);
+  }
+
+  // ── Validate optional ebookId (refresh mode only) ──────────────────────────
+  if (ebookId !== undefined && !isValidEbookId(ebookId)) {
+    return respond(400, { error: 'Invalid ebookId format.' }, origin);
+  }
+
+  // ── Rate limit: key on first 20 chars of session ID ────────────────────────
+  const rlKey = sessionId.slice(0, 20);
+  if (isRateLimited(rlKey)) {
+    console.warn('[ebook-download] Rate limit exceeded.', { session: redactSession(sessionId) });
+    return respond(429, { error: 'Too many requests. Please wait and try again.' }, origin);
   }
 
   const supabase = getSupabaseAdmin();
 
-  // ── Step 1 & 2: Verify a paid order exists for this Stripe session ──────────
+  // ── Step 1: Verify a paid, non-revoked order for this session ───────────────
   //
-  // We look up the order by stripe_checkout_session_id, which is the primary
-  // idempotency key written by the webhook. If no row exists, either the
-  // webhook has not yet processed, or this session ID is invalid.
+  // Gate for digital downloads:
+  //   payment_status = 'paid'           — Stripe confirmed payment
+  //   fulfillment_status != 'revoked'   — not refunded or chargebacked
   //
-  // We do NOT accept an order_id from the client — the session_id is the
-  // only client-provided identity anchor, and it is validated server-side.
+  // We do NOT require fulfillment_status = 'available'.
+  // Mixed-cart orders remain 'pending' until physical items ship; that must
+  // not block eBook downloads for the digital portion of the order.
+  // 'revoked' is set explicitly by the admin or refund webhook to remove access.
   const { data: order, error: orderError } = await supabase
     .from('orders')
-    .select('id, payment_status, fulfillment_status')
+    .select('id, payment_status, fulfillment_status, customer_email')
     .eq('stripe_checkout_session_id', sessionId)
     .single();
 
+  // Unified 404 for all order-not-eligible cases.
+  // Does NOT reveal whether the session exists, is unpaid, or belongs to
+  // a different email — this prevents probing.
   if (orderError || !order) {
-    console.warn('[get-ebook-download] Order not found.', {
-      sessionId: sessionId.slice(0, 24) + '…',
-      ebookId,
-      ip,
-    });
-    // 404 regardless of the reason — do not reveal whether the session exists.
-    return jsonResponse(404, { error: 'Order not found.' });
+    console.warn('[ebook-download] Order not found.', { session: redactSession(sessionId) });
+    return respond(404, { error: 'No eligible order found for this session.' }, origin);
   }
 
-  // ── Step 3: Verify payment_status = 'paid' ─────────────────────────────────
   if (order.payment_status !== 'paid') {
-    console.warn('[get-ebook-download] Order not paid.', {
-      orderId: order.id,
+    console.warn('[ebook-download] Order not paid.', {
+      orderId:       order.id,
       paymentStatus: order.payment_status,
-      ip,
     });
-    return jsonResponse(403, {
-      error: 'Payment has not been confirmed for this order.',
-    });
+    return respond(404, { error: 'No eligible order found for this session.' }, origin);
   }
 
-  // ── Step 4: Verify fulfillment_status allows download ──────────────────────
-  if (!DOWNLOADABLE_STATUSES.has(order.fulfillment_status)) {
-    console.warn('[get-ebook-download] Order fulfillment not ready.', {
-      orderId: order.id,
-      fulfillmentStatus: order.fulfillment_status,
-      ip,
-    });
-    return jsonResponse(403, {
-      error: 'This order is not yet available for download. Please contact support if this persists.',
-    });
+  if (order.fulfillment_status === 'revoked') {
+    console.warn('[ebook-download] Order access revoked.', { orderId: order.id });
+    return respond(404, { error: 'No eligible order found for this session.' }, origin);
   }
 
-  // ── Step 5: Verify the specific eBook was purchased in this order ──────────
+  // ── Step 2: Email verification (optional; recommended in production) ─────────
   //
-  // We query order_items with three conditions:
-  //   1. order_id must match the verified order (not client-provided)
-  //   2. product_id must match the requested ebookId
-  //   3. item_type must be 'ebook' — prevents a physical product ID being used
+  // If the caller provides an email, it must match orders.customer_email
+  // (case-insensitive, trimmed). Mismatch returns the same 404 as a missing
+  // order — does not confirm that the session is valid.
   //
-  // This is the entitlement check. If the customer purchased product A but
-  // requests product B, this query returns no row and the request is denied.
-  const { data: entitlement, error: entitlementError } = await supabase
+  // PRODUCTION HARDENING: require email once CheckoutSuccess.tsx is wired.
+  // See BEARER CREDENTIAL WARNING in file header.
+  if (email) {
+    const provided = email.trim().toLowerCase();
+    const recorded = (order.customer_email || '').trim().toLowerCase();
+    if (provided !== recorded) {
+      console.warn('[ebook-download] Email mismatch on order.', { orderId: order.id });
+      return respond(404, { error: 'No eligible order found for this session.' }, origin);
+    }
+  }
+
+  // ── Step 3: Server-derived entitlement — list eBook items from this order ───
+  //
+  // The browser supplies only sessionId (+ optional email).
+  // The server determines which eBooks were purchased.
+  // The browser never supplies product IDs, entitlement claims, or prices.
+  let itemsQuery = supabase
     .from('order_items')
-    .select('id')
+    .select('id, product_id, product_name')
     .eq('order_id', order.id)
-    .eq('product_id', ebookId)
-    .eq('item_type', 'ebook')
-    .single();
+    .eq('item_type', 'ebook');
 
-  if (entitlementError || !entitlement) {
-    console.warn('[get-ebook-download] eBook entitlement not found.', {
+  // Refresh mode: scope to the one requested eBook.
+  // Entitlement check: if product_id is not in this order, the query returns empty.
+  if (ebookId) {
+    itemsQuery = itemsQuery.eq('product_id', ebookId);
+  }
+
+  const { data: items, error: itemsError } = await itemsQuery;
+
+  if (itemsError) {
+    console.error('[ebook-download] order_items query failed.', {
       orderId: order.id,
-      ebookId,
-      ip,
+      error:   itemsError.message,
     });
-    // Still 404 — do not reveal that the order exists but lacks this item.
-    return jsonResponse(404, { error: 'eBook not found in this order.' });
+    return respond(500, { error: 'Could not retrieve order details.' }, origin);
   }
 
-  // ── Step 6: Resolve the active ebook_assets row ────────────────────────────
+  if (!items || items.length === 0) {
+    const msg = ebookId
+      ? 'eBook not found in this order.'
+      : 'No eBook purchases found in this order.';
+    return respond(404, { error: msg }, origin);
+  }
+
+  // ── Step 4: Resolve active asset and generate signed URL per eBook ──────────
   //
-  // The partial unique index (ebook_id WHERE is_active = true) guarantees
-  // at most one active row. If zero rows exist (e.g. upload in progress,
-  // or upload failed), we return 503 rather than 404 — the entitlement is
-  // valid, the file is temporarily unavailable.
-  const { data: asset, error: assetError } = await supabase
-    .from('ebook_assets')
-    .select('id, storage_path, file_name, version')
-    .eq('ebook_id', ebookId)
-    .eq('is_active', true)
-    .single();
-
-  if (assetError || !asset) {
-    console.error('[get-ebook-download] No active asset for eBook.', {
-      ebookId,
-      error: assetError?.message,
-    });
-    return jsonResponse(503, {
-      error: 'eBook file is temporarily unavailable. Please try again shortly or contact support.',
-    });
-  }
-
-  // ── Step 7: Generate short-lived signed URL ─────────────────────────────────
+  // Each eBook may have multiple asset versions; only the one with is_active = true
+  // is used. The partial unique index enforces at most one active row per ebook_id.
   //
-  // The storage path (asset.storage_path) is NEVER returned to the client.
-  // Only the signed URL is returned. The URL expires after SIGNED_URL_EXPIRES_IN
-  // seconds (1 hour). After expiry the customer must request a new URL — they
-  // will not need to re-purchase as entitlement is stored permanently in orders.
-  const { data: urlData, error: urlError } = await supabase.storage
-    .from(EBOOKS_BUCKET)
-    .createSignedUrl(asset.storage_path, SIGNED_URL_EXPIRES_IN);
+  // On partial failure (some assets unavailable), we return what we can and
+  // include an 'unavailable' list so the UI can inform the customer.
+  const downloads   = [];
+  const unavailable = [];
 
-  if (urlError || !urlData?.signedUrl) {
-    console.error('[get-ebook-download] Signed URL generation failed.', {
-      ebookId,
-      assetId: asset.id,
-      error: urlError?.message,
+  for (const item of items) {
+
+    // 4a: Resolve active asset
+    const { data: asset, error: assetError } = await supabase
+      .from('ebook_assets')
+      .select('id, ebook_id, storage_path, file_name, version')
+      .eq('ebook_id', item.product_id)
+      .eq('is_active', true)
+      .single();
+
+    if (assetError || !asset) {
+      console.error('[ebook-download] No active asset.', {
+        ebookId: item.product_id,
+        error:   assetError?.message,
+      });
+      unavailable.push({ ebookId: item.product_id, name: item.product_name });
+      continue;
+    }
+
+    // 4b: Generate signed URL (storage_path never leaves this function)
+    const result = await buildDownload(supabase, asset, item.product_name);
+
+    if (!result.ok) {
+      console.error('[ebook-download] Signed URL generation failed.', {
+        ebookId: item.product_id,
+        assetId: asset.id,
+        error:   result.message,
+      });
+      unavailable.push({ ebookId: item.product_id, name: item.product_name });
+      continue;
+    }
+
+    // Audit log — redacted: no email, no full session ID, no signed URL
+    console.log('[ebook-download] Download authorised.', {
+      orderId:          order.id,
+      ebookId:          item.product_id,
+      assetVersion:     asset.version,
+      expiresInSeconds: SIGNED_URL_EXPIRES_IN,
     });
-    return jsonResponse(500, {
-      error: 'Could not generate download link. Please try again.',
-    });
+
+    downloads.push(result.download);
   }
 
-  // ── Audit log ───────────────────────────────────────────────────────────────
-  console.log('[get-ebook-download] Download authorised.', {
-    orderId:          order.id,
-    ebookId,
-    assetId:          asset.id,
-    assetVersion:     asset.version,
-    ip,
-    expiresInSeconds: SIGNED_URL_EXPIRES_IN,
-  });
+  // ── All assets unavailable ──────────────────────────────────────────────────
+  if (downloads.length === 0) {
+    return respond(503, {
+      error:       'eBook files are temporarily unavailable. Please try again or contact support.',
+      unavailable: unavailable.map(u => ({ ebookId: u.ebookId, name: u.name })),
+    }, origin);
+  }
 
-  // ── Step 8: Return signed URL ───────────────────────────────────────────────
-  return jsonResponse(200, {
-    url:              urlData.signedUrl,
-    fileName:         asset.file_name,
-    expiresInSeconds: SIGNED_URL_EXPIRES_IN,
-  });
+  // ── Partial or full success ─────────────────────────────────────────────────
+  const responseBody = { downloads };
+  if (unavailable.length > 0) {
+    // Surface partial failures so the UI can display a "contact support" message
+    // for affected titles without blocking the successful downloads.
+    // Only ebookId and name — no internal IDs, paths, or Supabase details.
+    responseBody.unavailable = unavailable.map(u => ({ ebookId: u.ebookId, name: u.name }));
+  }
+
+  return respond(200, responseBody, origin);
 };
