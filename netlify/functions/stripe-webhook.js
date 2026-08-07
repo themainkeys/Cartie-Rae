@@ -21,6 +21,11 @@
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { createClient } = require('@supabase/supabase-js');
 
+// The project URL is NOT a secret — it is already compiled into the public
+// frontend bundle — so it defaults here. Only the two real secrets
+// (STRIPE_WEBHOOK_SECRET, SUPABASE_SERVICE_ROLE_KEY) must be set in Netlify.
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ljsbwaxoiidjjmvwchah.supabase.co';
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 /**
@@ -77,14 +82,15 @@ exports.handler = async (event) => {
   const missing = [
     'STRIPE_SECRET_KEY',
     'STRIPE_WEBHOOK_SECRET',
-    'SUPABASE_URL',
     'SUPABASE_SERVICE_ROLE_KEY',
   ].filter((k) => !process.env[k]);
 
   if (missing.length) {
     console.error('[stripe-webhook] Missing environment variables:', missing.join(', '));
+    // Name the missing keys in the response so misconfiguration is diagnosable
+    // without digging through function logs. These are variable NAMES, never values.
     // 500 makes Stripe retry, so nothing is lost once the variables are set.
-    return json(500, { error: 'Webhook is not configured.' });
+    return json(500, { error: 'Webhook is not configured.', missing });
   }
 
   // ── 1) Verify the signature ──────────────────────────────────────────────
@@ -122,7 +128,7 @@ exports.handler = async (event) => {
 
   // ── 3) Record the order ──────────────────────────────────────────────────
   const supabase = createClient(
-    process.env.SUPABASE_URL,
+    SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY,
     { auth: { persistSession: false, autoRefreshToken: false } }
   );
