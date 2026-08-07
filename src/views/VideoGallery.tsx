@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useApp } from '../context/AppContext';
 import { TikTokVideo } from '../types';
+import { isSupabaseConfigured } from '../services/supabaseClient';
 import {
   Heart, Bookmark, Share2, ShoppingBag,
   X, Send, Volume2, VolumeX,
@@ -507,6 +508,12 @@ export const VideoGallery: React.FC = () => {
   }, [filteredVideos.length]);
 
   useEffect(() => {
+    // Connected to a real backend: show real engagement only. Inventing likes
+    // and putting words in named people's mouths is fabricated social proof, so
+    // real installs start at zero and count up from actual visitors.
+    if (isSupabaseConfigured) return;
+
+    // DEMO MODE ONLY — placeholder engagement so the preview feed looks alive.
     const seedL: Record<string, number> = {};
     const seedC: Record<string, Array<{ id: string; author: string; text: string }>> = {};
     videos.forEach((v) => {

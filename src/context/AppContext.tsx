@@ -53,6 +53,17 @@ function filterTombstoned<T extends { id: string }>(items: T[], tombstoneKey: st
 const DEMO_SESSION_KEY = 'cartiae_admin_session';
 const DEMO_SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
 
+/**
+ * The seed catalog ships with invented customer testimonials so the demo has
+ * something to show. Those are fabricated endorsements attributed to named
+ * people, so a real install must never display them — the catalog items stay,
+ * their reviews start empty and fill up with genuine ones.
+ */
+function stripSeedReviews<T extends { reviews?: unknown[] }>(items: T[]): T[] {
+  if (!isSupabaseConfigured) return items;
+  return items.map((item) => ({ ...item, reviews: [] }));
+}
+
 const DEMO_ADMIN_PROFILE: AdminUser = {
   id: 'demo-admin',
   name: 'Cartiae Rae',
@@ -194,13 +205,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // --- States with LocalStorage Initialization ---
   const [ebooks, setEbooks] = useState<EBook[]>(() => {
     const local = localStorage.getItem('cartiae_ebooks');
-    const base: EBook[] = local ? JSON.parse(local) : initialEBooks;
+    const base: EBook[] = local ? JSON.parse(local) : stripSeedReviews(initialEBooks);
     return filterTombstoned(base, TOMBSTONE_KEYS.ebooks);
   });
 
   const [products, setProducts] = useState<Product[]>(() => {
     const local = localStorage.getItem('cartiae_products');
-    const base: Product[] = local ? JSON.parse(local) : initialProducts;
+    const base: Product[] = local ? JSON.parse(local) : stripSeedReviews(initialProducts);
     return filterTombstoned(base, TOMBSTONE_KEYS.products);
   });
 
@@ -311,6 +322,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [orders, setOrders] = useState<Order[]>(() => {
+    // Connected to a real backend: never show invented orders. Real orders are
+    // written by the Stripe webhook, so an empty ledger here is the truth.
+    // (Same guard as contactRequests below.)
+    if (isSupabaseConfigured) return [];
     const local = localStorage.getItem('cartiae_orders');
     return local ? JSON.parse(local) : [
       {
