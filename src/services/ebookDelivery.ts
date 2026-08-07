@@ -52,6 +52,9 @@ export interface EbookDeliveryBackend {
 /**
  * Not implemented in the frontend on purpose. Wire this to a serverless function
  * (Netlify/Supabase Edge Function) that holds the storage service-role key.
+ *
+ * The live implementation of this contract is the Netlify function
+ * `get-ebook-download` — call it through `fetchEbookDownloads` below.
  */
 export const productionDelivery: EbookDeliveryBackend = {
   async createSignedDownloadUrl() {
@@ -62,6 +65,102 @@ export const productionDelivery: EbookDeliveryBackend = {
     return false;
   },
 };
+
+// ── Production delivery client ─────────────────────────────────────────────
+
+export interface EbookDownloadLink {
+  ebookId: string;
+  title: string;
+  url: string;        // short-lived signed URL minted server-side
+  expiresAt: string;  // ISO string
+}
+
+export interface EbookDownloadResult {
+  /**
+   * ready   — signed links are available
+   * pending — order not recorded yet (Stripe webhook still in flight); retry
+   * none    — the order contained no eBooks, nothing to deliver
+   * error   — verification or signing failed; show `error` to the buyer
+   */
+  status: 'ready' | 'pending' | 'none' | 'error';
+  downloads: EbookDownloadLink[];
+  incomplete?: boolean;
+  error?: string;
+}
+
+const DOWNLOAD_ENDPOINT = '/.netlify/functions/get-ebook-download';
+
+const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Asks the backend for signed download links for a completed Stripe checkout.
+ *
+ * The buyer usually lands on the success page before Stripe has delivered the
+ * `checkout.session.completed` webhook, so a 404 here means "not yet", not
+ * "never" — we retry a few times with a growing delay before giving up.
+ *
+ * No token is generated or verified in the browser: the session id is merely
+ * passed through, and the server decides whether anything was actually paid for.
+ */
+export async function fetchEbookDownloads(
+  sessionId: string,
+  email?: string,
+  options: { retries?: number; retryDelayMs?: number } = {}
+): Promise<EbookDownloadResult> {
+  const retries = options.retries ?? 4;
+  const retryDelayMs = options.retryDelayMs ?? 2000;
+
+  if (!sessionId) {
+    return { status: 'error', downloads: [], error: 'Missing checkout session reference.' };
+  }
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const response = await fetch(DOWNLOAD_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(email ? { sessionId, email } : { sessionId }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        const downloads: EbookDownloadLink[] = Array.isArray(data.downloads) ? data.downloads : [];
+        return {
+          status: downloads.length > 0 ? 'ready' : 'none',
+          downloads,
+          incomplete: Boolean(data.incomplete),
+        };
+      }
+
+      // 404 + pending → the webhook has not landed yet. Wait and ask again.
+      if (response.status === 404 && data.pending && attempt < retries) {
+        await wait(retryDelayMs * (attempt + 1));
+        continue;
+      }
+
+      return {
+        status: response.status === 404 && data.pending ? 'pending' : 'error',
+        downloads: [],
+        error: data.error || `Server error (${response.status}).`,
+      };
+    } catch (err) {
+      if (attempt < retries) {
+        await wait(retryDelayMs * (attempt + 1));
+        continue;
+      }
+      const message = err instanceof Error ? err.message : 'Unknown network error.';
+      console.error('[ebookDelivery] fetchEbookDownloads error:', message);
+      return {
+        status: 'error',
+        downloads: [],
+        error: 'Could not reach the download service. Check your connection and try again.',
+      };
+    }
+  }
+
+  return { status: 'pending', downloads: [] };
+}
 
 export const ebookDeliveryService = {
   /**

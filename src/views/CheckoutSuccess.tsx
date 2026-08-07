@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCircle, Download, Clock, ShoppingBag, Sparkles } from 'lucide-react';
+import { CheckCircle, Download, Clock, ShoppingBag, Sparkles, Loader2, AlertCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useApp } from '../context/AppContext';
+import { fetchEbookDownloads, EbookDownloadResult } from '../services/ebookDelivery';
 
 /**
  * CheckoutSuccess — displayed at /checkout/success after a completed Stripe payment.
@@ -15,15 +16,23 @@ interface CheckoutSuccessProps {
 export const CheckoutSuccess: React.FC<CheckoutSuccessProps> = ({ openCart, setActivePart }) => {
   const { clearCart } = useApp();
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [delivery, setDelivery] = useState<EbookDownloadResult | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    setSessionId(params.get('session_id'));
+    const id = params.get('session_id');
+    setSessionId(id);
     // Payment succeeded → empty the cart so the paid items can't be re-purchased.
     // (Authoritative order recording happens server-side via the Stripe webhook.)
     clearCart();
     // Clean the URL without a page reload so the session_id doesn't persist on refresh
     window.history.replaceState({}, '', '/checkout/success');
+
+    // Ask the backend for signed eBook links. It verifies the purchase against
+    // the order the Stripe webhook recorded, and retries while that is in flight.
+    if (id) {
+      fetchEbookDownloads(id).then(setDelivery);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -70,15 +79,65 @@ export const CheckoutSuccess: React.FC<CheckoutSuccessProps> = ({ openCart, setA
               What happens next
             </p>
 
-            <div className="flex items-start gap-3 p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl">
-              <Download className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-[11px] font-bold text-emerald-800">eBooks</p>
-                <p className="text-[10.5px] text-emerald-700 mt-0.5 leading-relaxed">
-                  Secure download links will be delivered to your email inbox within a few minutes (valid 24 hours).
-                </p>
+            {/* eBooks — links are minted server-side once the Stripe webhook
+                has recorded the order, so this block reflects real delivery state. */}
+            {sessionId && delivery === null && (
+              <div className="flex items-start gap-3 p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl">
+                <Loader2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5 animate-spin" />
+                <div>
+                  <p className="text-[11px] font-bold text-emerald-800">eBooks</p>
+                  <p className="text-[10.5px] text-emerald-700 mt-0.5 leading-relaxed">
+                    Confirming your purchase and preparing your secure download links…
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
+
+            {delivery?.status === 'ready' && (
+              <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2.5">
+                <div className="flex items-start gap-3">
+                  <Download className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-[11px] font-bold text-emerald-800">Your eBooks</p>
+                    <p className="text-[10.5px] text-emerald-700 mt-0.5 leading-relaxed">
+                      These secure links are valid for 24 hours. A copy has also been sent to your email.
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  {delivery.downloads.map((d) => (
+                    <a
+                      key={d.ebookId}
+                      id={`ebook-download-${d.ebookId}`}
+                      href={d.url}
+                      className="flex items-center justify-between gap-2 bg-white border border-emerald-200 rounded-lg px-3 py-2 hover:border-emerald-400 transition-colors focus:outline-none"
+                    >
+                      <span className="text-[10.5px] font-semibold text-emerald-800 truncate">{d.title}</span>
+                      <Download className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    </a>
+                  ))}
+                </div>
+                {delivery.incomplete && (
+                  <p className="text-[10px] text-emerald-700 leading-relaxed">
+                    One or more files are still being prepared — contact orders@cartiaerae.com and we will send them straight over.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {(delivery?.status === 'pending' || delivery?.status === 'error') && (
+              <div className="flex items-start gap-3 p-3.5 bg-amber-50 border border-amber-200 rounded-xl">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-[11px] font-bold text-amber-800">eBooks</p>
+                  <p className="text-[10.5px] text-amber-700 mt-0.5 leading-relaxed">
+                    {delivery.status === 'pending'
+                      ? 'Your payment went through and we are still confirming it. Your download links will arrive by email within a few minutes.'
+                      : delivery.error}
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div className="flex items-start gap-3 p-3.5 bg-brand-beige border border-brand-warm-tan/40 rounded-xl">
               <Clock className="w-4 h-4 text-brand-rose shrink-0 mt-0.5" />
