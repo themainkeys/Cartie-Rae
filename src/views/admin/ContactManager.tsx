@@ -25,14 +25,14 @@ export const ContactManager: React.FC = () => {
   const [contactFilter, setContactFilter] = useState<'All' | 'Pending' | 'Responded' | 'Read' | 'Archived'>('All');
 
   return (
-    <div className="bg-white border border-[#E5D5C8]/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_4px_25px_-4px_rgba(74,43,32,0.02)]">
-      <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center border-b border-[#E5D5C8]/30 pb-4">
+    <div className="bg-white border border-[#D8D8D8]/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_4px_25px_-4px_rgba(50,50,50,0.02)]">
+      <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center border-b border-[#D8D8D8]/30 pb-4">
         <div>
           <h3 className="font-serif text-lg font-bold text-brand-dark flex items-center gap-2">
             <span className="w-1.5 h-6 bg-brand-rose rounded-full" />
             Received Porosity Advice Consultations
           </h3>
-          <p className="text-xs text-[#8C6D62] mt-0.5">Organize customer hair porosity and advice inquiries.</p>
+          <p className="text-xs text-[#737373] mt-0.5">Organize customer hair porosity and advice inquiries.</p>
         </div>
 
         {/* Status Selector Filters */}
@@ -48,7 +48,7 @@ export const ContactManager: React.FC = () => {
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setContactFilter(filterOpt)}
                 className={`relative px-3 py-1.5 text-[10.5px] font-extrabold uppercase rounded-lg transition-all focus:outline-none ${
-                  contactFilter === filterOpt ? 'text-white' : 'text-[#8C6D62] hover:bg-brand-cream/60'
+                  contactFilter === filterOpt ? 'text-white' : 'text-[#737373] hover:bg-brand-cream/60'
                 }`}
               >
                 {contactFilter === filterOpt && !prefersReducedMotion && (
@@ -65,11 +65,11 @@ export const ContactManager: React.FC = () => {
       </div>
 
       {contactRequests.length === 0 ? (
-        <div className="p-10 text-center text-[#A67E6B] font-medium italic">
+        <div className="p-10 text-center text-[#878787] font-medium italic">
           No porosity requests received so far.
         </div>
       ) : contactRequests.filter((c) => contactFilter === 'All' || c.status === contactFilter).length === 0 ? (
-        <div className="p-10 text-center text-[#A67E6B] font-medium italic bg-white/40 border border-dashed border-brand-warm-tan/20 rounded-2xl">
+        <div className="p-10 text-center text-[#878787] font-medium italic bg-white/40 border border-dashed border-brand-warm-tan/20 rounded-2xl">
           No inquiries with status &quot;{contactFilter}&quot; currently list.
         </div>
       ) : (
@@ -81,7 +81,7 @@ export const ContactManager: React.FC = () => {
                 <div className="space-y-3">
                   <div className="flex justify-between items-start gap-2">
                     <div>
-                      <span className="font-mono text-[9px] font-bold bg-[#FAF6F0] p-1 rounded text-brand-rose border border-brand-warm-tan/10">{req.id}</span>
+                      <span className="font-mono text-[9px] font-bold bg-[#FFFFFF] p-1 rounded text-brand-rose border border-brand-warm-tan/10">{req.id}</span>
                       <h4 className="font-serif text-sm font-bold text-brand-dark mt-1.5">{req.name}</h4>
                       <p className="font-mono text-[10px] text-brand-dark/50">{req.email}</p>
                     </div>
@@ -89,11 +89,11 @@ export const ContactManager: React.FC = () => {
                       <span className="font-sans text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">
                         {req.porosity}
                       </span>
-                      <p className="text-[9.5px] font-mono text-[#A67E6B] mt-1.5">{req.date}</p>
+                      <p className="text-[9.5px] font-mono text-[#878787] mt-1.5">{req.date}</p>
                     </div>
                   </div>
 
-                  <div className="bg-[#FAF6F0] p-3 rounded-xl border border-brand-warm-tan/15 text-xs text-brand-dark/80 italic leading-relaxed">
+                  <div className="bg-[#FFFFFF] p-3 rounded-xl border border-brand-warm-tan/15 text-xs text-brand-dark/80 italic leading-relaxed">
                     &quot;{req.message}&quot;
                   </div>
 
@@ -141,7 +141,7 @@ export const ContactManager: React.FC = () => {
                     {req.status === 'Pending' && (
                       <button
                         onClick={() => updateContactRequestStatus(req.id, 'Read')}
-                        className="p-1 px-2.5 bg-[#FAF6F0] hover:bg-white text-brand-chocolate hover:text-brand-rose border border-brand-warm-tan/30 rounded-lg text-[10px] font-extrabold uppercase transition duration-150 flex items-center gap-1 focus:outline-none"
+                        className="p-1 px-2.5 bg-[#FFFFFF] hover:bg-white text-brand-chocolate hover:text-brand-rose border border-brand-warm-tan/30 rounded-lg text-[10px] font-extrabold uppercase transition duration-150 flex items-center gap-1 focus:outline-none"
                         title="Mark read"
                       >
                         <Eye className="w-3.5 h-3.5" />
@@ -187,7 +187,7 @@ export const ContactManager: React.FC = () => {
                           triggerToast('🗑 Contact inquiry deleted.', 'success');
                         }
                       }}
-                      className="p-1 px-2.5 bg-white hover:bg-red-50 text-brand-rose hover:text-red-700 border border-[#E9D9D3] rounded-lg text-[10px] font-extrabold uppercase transition duration-150 focus:outline-none"
+                      className="p-1 px-2.5 bg-white hover:bg-red-50 text-brand-rose hover:text-red-700 border border-[#DDDDDD] rounded-lg text-[10px] font-extrabold uppercase transition duration-150 focus:outline-none"
                       title="Trash"
                     >
                       Delete

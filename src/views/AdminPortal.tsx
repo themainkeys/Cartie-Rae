@@ -99,7 +99,7 @@ export const AdminPortal: React.FC = () => {
       {/* ≡ƒöÆ ADMIN LOGIN PANEL                    */}
       {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
       {!isAdminLoggedIn ? (
-        <div className="max-w-md mx-auto bg-gradient-to-b from-white to-[#FDFBF9] border border-[#E5D5C8]/75 rounded-3xl p-6 sm:p-10 shadow-[0_12px_40px_rgba(74,43,32,0.06)] text-center mt-12 relative overflow-hidden">
+        <div className="max-w-md mx-auto bg-gradient-to-b from-white to-[#FFFFFF] border border-[#D8D8D8]/75 rounded-3xl p-6 sm:p-10 shadow-[0_12px_40px_rgba(50,50,50,0.06)] text-center mt-12 relative overflow-hidden">
           {/* Accent line */}
           <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-brand-rose via-brand-pink to-brand-chocolate" />
 
@@ -111,14 +111,14 @@ export const AdminPortal: React.FC = () => {
             /* ΓöÇΓöÇ PRODUCTION: Supabase Auth ΓöÇΓöÇ */
             <>
               <h1 className="font-serif text-2xl font-extrabold text-brand-dark tracking-tight mb-2">Cartiae Rae Admin Login</h1>
-              <p className="font-sans text-xs text-[#8C6D62] leading-relaxed max-w-xs mx-auto mb-8">
+              <p className="font-sans text-xs text-[#737373] leading-relaxed max-w-xs mx-auto mb-8">
                 Sign in with your administrator credentials to manage the storefront.
               </p>
 
               <form onSubmit={handleLogin} className="space-y-5">
                 <div className="text-left space-y-4">
                   <div>
-                    <label className="block text-[10px] tracking-wider uppercase font-extrabold text-[#8C6D62] mb-1.5 pl-1">Email Address</label>
+                    <label className="block text-[10px] tracking-wider uppercase font-extrabold text-[#737373] mb-1.5 pl-1">Email Address</label>
                     <input
                       id="admin-email-input"
                       type="email"
@@ -127,11 +127,11 @@ export const AdminPortal: React.FC = () => {
                       placeholder="admin@cartiaerae.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full px-4 py-3 bg-white border border-[#E5D5C8] text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-center font-sans transition-all duration-150 shadow-xs disabled:opacity-75 disabled:cursor-not-allowed"
+                      className="w-full px-4 py-3 bg-white border border-[#D8D8D8] text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-center font-sans transition-all duration-150 shadow-xs disabled:opacity-75 disabled:cursor-not-allowed"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] tracking-wider uppercase font-extrabold text-[#8C6D62] mb-1.5 pl-1">Password</label>
+                    <label className="block text-[10px] tracking-wider uppercase font-extrabold text-[#737373] mb-1.5 pl-1">Password</label>
                     <input
                       id="admin-password-input"
                       type="password"
@@ -140,7 +140,7 @@ export const AdminPortal: React.FC = () => {
                       placeholder="Your password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full px-4 py-3 bg-white border border-[#E5D5C8] text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-center font-mono transition-all duration-150 shadow-xs disabled:opacity-75 disabled:cursor-not-allowed"
+                      className="w-full px-4 py-3 bg-white border border-[#D8D8D8] text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-center font-mono transition-all duration-150 shadow-xs disabled:opacity-75 disabled:cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -167,7 +167,7 @@ export const AdminPortal: React.FC = () => {
 
               {authError && <p className="text-brand-rose text-xs mt-4 font-bold bg-[#FDF1F2] border border-brand-rose/10 p-2.5 rounded-xl">{authError}</p>}
 
-              <div className="mt-8 pt-6 border-t border-[#E5D5C8]/50 text-[10.5px] text-[#A67E6B] font-medium leading-relaxed">
+              <div className="mt-8 pt-6 border-t border-[#D8D8D8]/50 text-[10.5px] text-[#878787] font-medium leading-relaxed">
                 ≡ƒöÆ Single-admin authentication via Supabase Auth.<br />
                 Access is granted by verifying your <span className="font-mono">admin_users</span> record.
               </div>
@@ -195,7 +195,7 @@ export const AdminPortal: React.FC = () => {
                 Enter Demo Mode
               </button>
 
-              <div className="mt-8 pt-6 border-t border-[#E5D5C8]/50 text-[10.5px] text-[#A67E6B] font-medium leading-relaxed">
+              <div className="mt-8 pt-6 border-t border-[#D8D8D8]/50 text-[10.5px] text-[#878787] font-medium leading-relaxed">
                 To enable real authentication, set <span className="font-mono">VITE_SUPABASE_URL</span> and{' '}
                 <span className="font-mono">VITE_SUPABASE_ANON_KEY</span> and add your account to Supabase Auth.
               </div>
@@ -211,7 +211,7 @@ export const AdminPortal: React.FC = () => {
         <div className="space-y-8 animate-fade-in">
 
           {/* ΓöÇΓöÇ Header ΓöÇΓöÇ */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#E5D5C8]/40 pb-5 gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#D8D8D8]/40 pb-5 gap-4">
             <div>
               <div className="flex items-center flex-wrap gap-1.5 text-brand-rose text-xs font-extrabold uppercase tracking-widest pl-0.5">
                 <ShieldCheck className="w-4 h-4 text-emerald-600 animate-pulse" />
@@ -265,7 +265,7 @@ export const AdminPortal: React.FC = () => {
               <button
                 id="admin-logout-btn"
                 onClick={logoutAdmin}
-                className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-bold text-[#4A2B20] hover:text-white bg-brand-cream hover:bg-brand-rose border border-[#E5D5C8] rounded-xl transition-all duration-200 focus:outline-none shadow-xs hover:border-transparent"
+                className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-bold text-[#323232] hover:text-white bg-brand-cream hover:bg-brand-rose border border-[#D8D8D8] rounded-xl transition-all duration-200 focus:outline-none shadow-xs hover:border-transparent"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span>Exit Console</span>
@@ -281,7 +281,7 @@ export const AdminPortal: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -12 }}
                 transition={{ duration: 0.25, ease: 'easeOut' }}
-                className="flex items-center justify-between gap-4 bg-[#1C1410] border border-brand-chocolate/60 px-5 py-3 rounded-2xl shadow-xl"
+                className="flex items-center justify-between gap-4 bg-[#151515] border border-brand-chocolate/60 px-5 py-3 rounded-2xl shadow-xl"
               >
                 <span className="text-[11px] text-white font-semibold">
                   You have unsaved changes.
@@ -304,12 +304,12 @@ export const AdminPortal: React.FC = () => {
               { label: 'Discount Codes', value: discountCodes.filter(d => d.isActive).length, decimals: 0, note: 'Active vouchers' },
               { label: 'Newsletter Subs', value: newsletterSignups.length, decimals: 0, note: 'Growth list hits' },
             ].map(({ label, value, prefix, decimals, note }) => (
-              <div key={label} className="bg-white border border-[#E5D5C8]/60 rounded-2xl p-4 shadow-xs">
-                <p className="text-[10px] uppercase font-extrabold text-[#8C6D62] tracking-wider mb-1">{label}</p>
+              <div key={label} className="bg-white border border-[#D8D8D8]/60 rounded-2xl p-4 shadow-xs">
+                <p className="text-[10px] uppercase font-extrabold text-[#737373] tracking-wider mb-1">{label}</p>
                 <p className="text-lg font-bold font-mono text-brand-dark">
                   {prefix}{<AnimatedAdminCounter value={value} decimals={decimals} prefersReducedMotion={prefersReducedMotion} />}
                 </p>
-                <span className="text-[9px] text-[#A67E6B] font-medium">{note}</span>
+                <span className="text-[9px] text-[#878787] font-medium">{note}</span>
               </div>
             ))}
           </div>
@@ -347,7 +347,7 @@ export const AdminPortal: React.FC = () => {
           {/* TAB 1: OVERVIEW ΓÇö sub-tab pill bar         */}
           {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
           {activeTab === 'overview' && (
-            <div className="flex flex-wrap gap-1.5 p-1 bg-[#E5D5C8]/25 border border-[#E5D5C8]/45 rounded-xl w-fit">
+            <div className="flex flex-wrap gap-1.5 p-1 bg-[#D8D8D8]/25 border border-[#D8D8D8]/45 rounded-xl w-fit">
               {([
                 { id: 'metrics',     label: 'Conversion Metrics' },
                 { id: 'orders',      label: `Orders Tracker${pendingOrdersCount > 0 ? ` (${pendingOrdersCount})` : ''}` },
@@ -382,7 +382,7 @@ export const AdminPortal: React.FC = () => {
           {/* TAB 2: CATALOG ΓÇö sub-tab pill bar          */}
           {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
           {activeTab === 'catalog' && (
-            <div className="flex flex-wrap gap-1.5 p-1 bg-[#E5D5C8]/25 border border-[#E5D5C8]/45 rounded-xl w-fit">
+            <div className="flex flex-wrap gap-1.5 p-1 bg-[#D8D8D8]/25 border border-[#D8D8D8]/45 rounded-xl w-fit">
               {([
                 { id: 'inventory', label: 'Shop Inventories', Icon: Package },
                 { id: 'discounts', label: 'Voucher Coupons',  Icon: BadgePercent },
@@ -431,7 +431,7 @@ export const AdminPortal: React.FC = () => {
           {/* TAB 4: STORE EDITOR ΓÇö sub-tab pill bar     */}
           {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
           {activeTab === 'design' && (
-            <div className="flex flex-wrap gap-1.5 p-1 bg-[#E5D5C8]/25 border border-[#E5D5C8]/45 rounded-xl w-fit">
+            <div className="flex flex-wrap gap-1.5 p-1 bg-[#D8D8D8]/25 border border-[#D8D8D8]/45 rounded-xl w-fit">
               {([
                 { id: 'cms',      label: 'Homepage Copywriting',    Icon: Mail },
                 { id: 'assets',   label: 'Videos & Photo Galleries', Icon: Image },

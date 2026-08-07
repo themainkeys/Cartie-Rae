@@ -106,7 +106,7 @@ export const ImageDropzone: React.FC<ImageDropzoneProps> = ({
       className={`border-2 border-dashed rounded-xl p-3.5 flex flex-col items-center justify-center cursor-pointer transition-all duration-200 min-h-[90px] ${
         isDragActive
           ? 'border-brand-rose bg-brand-pink-light/35 scale-[1.01]'
-          : 'border-brand-warm-tan/30 bg-[#FAF6F0] hover:border-brand-rose/40 hover:bg-[#FAF6F0]/85'
+          : 'border-brand-warm-tan/30 bg-[#FFFFFF] hover:border-brand-rose/40 hover:bg-[#FFFFFF]/85'
       }`}
     >
       <input ref={fileInputRef} type="file" accept="image/*" onChange={handleChange} className="hidden" />
@@ -120,7 +120,7 @@ export const ImageDropzone: React.FC<ImageDropzoneProps> = ({
           <img src={imageValue} alt="Uploaded Preview" className="w-12 h-12 object-cover rounded-lg border border-brand-warm-tan/20 shadow-xs" />
           <div className="text-left flex-1 min-w-0">
             <p className="text-[10px] font-bold text-brand-chocolate truncate">{label} Uploaded</p>
-            <p className="text-[9px] text-[#A67E6B] font-medium">Click anywhere to replace file</p>
+            <p className="text-[9px] text-[#878787] font-medium">Click anywhere to replace file</p>
             {uploadError && <p className="text-[9px] text-red-600 font-medium truncate">Saved locally (upload failed: {uploadError})</p>}
           </div>
           <span className="text-[9px] text-brand-rose font-bold bg-brand-pink-light/50 px-2 py-1 rounded hover:bg-brand-rose hover:text-white transition-colors whitespace-nowrap">Replace</span>
@@ -129,7 +129,7 @@ export const ImageDropzone: React.FC<ImageDropzoneProps> = ({
         <div className="flex flex-col items-center text-center">
           <Camera className="w-5 h-5 text-brand-rose mb-1" />
           <span className="text-[10px] font-bold text-brand-chocolate">{label} Graphic</span>
-          <span className="text-[9px] text-[#8C6D62] mt-0.5">Drag &amp; drop here or click to browse</span>
+          <span className="text-[9px] text-[#737373] mt-0.5">Drag &amp; drop here or click to browse</span>
           {uploadError && <span className="text-[9px] text-red-600 font-medium mt-1">Upload failed: {uploadError}</span>}
         </div>
       )}
@@ -232,7 +232,7 @@ export const VideoDropzone: React.FC<VideoDropzoneProps> = ({
       className={`border-2 border-dashed rounded-xl p-3.5 flex flex-col items-center justify-center cursor-pointer transition-all duration-200 min-h-[90px] ${
         isDragActive
           ? 'border-brand-rose bg-brand-pink-light/35 scale-[1.01]'
-          : 'border-brand-warm-tan/30 bg-[#FAF6F0] hover:border-brand-rose/40 hover:bg-[#FAF6F0]/85'
+          : 'border-brand-warm-tan/30 bg-[#FFFFFF] hover:border-brand-rose/40 hover:bg-[#FFFFFF]/85'
       }`}
       onClick={() => fileInputRef.current?.click()}
     >
@@ -254,7 +254,7 @@ export const VideoDropzone: React.FC<VideoDropzoneProps> = ({
           </div>
           <div className="text-left flex-1 min-w-0">
             <p className="text-[10px] font-bold text-brand-chocolate truncate">{label} Loaded</p>
-            <p className="text-[9px] text-[#A67E6B] font-medium">Click anywhere to replace file</p>
+            <p className="text-[9px] text-[#878787] font-medium">Click anywhere to replace file</p>
             {uploadError
               ? <p className="text-[9px] text-red-600 font-medium leading-tight mt-0.5">⚠ {uploadError}</p>
               : videoValue.startsWith('blob:') && <p className="text-[9px] text-amber-600 font-medium">Temporary — configure storage to persist</p>}
@@ -270,7 +270,7 @@ export const VideoDropzone: React.FC<VideoDropzoneProps> = ({
           </div>
           <div className="text-left flex-1 min-w-0">
             <p className="text-[10px] font-bold text-brand-chocolate truncate">Linked Video URL active</p>
-            <p className="text-[9px] text-[#8C6D62] truncate">Click anywhere to upload file</p>
+            <p className="text-[9px] text-[#737373] truncate">Click anywhere to upload file</p>
           </div>
           <span className="text-[9px] text-brand-rose font-bold bg-brand-pink-light/50 px-2 py-1 rounded hover:bg-brand-rose hover:text-white transition-colors whitespace-nowrap">Upload file</span>
         </div>
@@ -278,7 +278,7 @@ export const VideoDropzone: React.FC<VideoDropzoneProps> = ({
         <div className="flex flex-col items-center text-center">
           <Video className="w-5 h-5 text-brand-rose mb-1" />
           <span className="text-[10px] font-bold text-brand-chocolate">{label}</span>
-          <span className="text-[9px] text-[#8C6D62] mt-0.5">Drag &amp; drop MP4/WebM here or click to browse</span>
+          <span className="text-[9px] text-[#737373] mt-0.5">Drag &amp; drop MP4/WebM here or click to browse</span>
         </div>
       )}
     </div>

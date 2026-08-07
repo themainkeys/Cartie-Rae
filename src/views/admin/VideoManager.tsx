@@ -290,8 +290,8 @@ export const VideoManager: React.FC<VideoManagerProps> = ({ onDirtyChange }) => 
 
   return (
     <>
-      <div className="bg-white border border-[#E5D5C8]/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_4px_25px_-4px_rgba(74,43,32,0.02)]">
-        <div className="flex justify-between items-center border-b border-[#E5D5C8]/30 pb-3">
+      <div className="bg-white border border-[#D8D8D8]/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_4px_25px_-4px_rgba(50,50,50,0.02)]">
+        <div className="flex justify-between items-center border-b border-[#D8D8D8]/30 pb-3">
           <h3 className="font-serif text-base sm:text-lg font-bold text-brand-dark flex items-center gap-2">
             <span className="w-1.5 h-6 bg-brand-rose rounded-full"></span>
             TikTok & Video Feeds
@@ -616,7 +616,7 @@ export const VideoManager: React.FC<VideoManagerProps> = ({ onDirtyChange }) => 
                             onChange={(evt) => { if (evt.target.checked) setVidRelatedIds(prev => [...prev, p.id]); else setVidRelatedIds(prev => prev.filter(id => id !== p.id)); }}
                             className="rounded text-brand-rose focus:ring-brand-rose"
                           />
-                          <span className="truncate flex-1 font-medium font-sans text-[#543F35]">[Product] {p.name} — ${p.price.toFixed(2)}</span>
+                          <span className="truncate flex-1 font-medium font-sans text-[#434343]">[Product] {p.name} — ${p.price.toFixed(2)}</span>
                         </label>
                       ))}
                       {ebooks.map(eb => (
@@ -637,12 +637,12 @@ export const VideoManager: React.FC<VideoManagerProps> = ({ onDirtyChange }) => 
               </details>
 
               {vidUrl && (
-                <div className="border border-brand-warm-tan/25 p-4 rounded-3xl bg-[#FAF6F0] space-y-3.5 flex flex-col items-center select-none w-full max-w-[270px] mx-auto">
-                  <span className="text-[10px] uppercase font-bold text-[#8C6D62] tracking-[0.15em] text-center block">Live Mobile Preview</span>
+                <div className="border border-brand-warm-tan/25 p-4 rounded-3xl bg-[#FFFFFF] space-y-3.5 flex flex-col items-center select-none w-full max-w-[270px] mx-auto">
+                  <span className="text-[10px] uppercase font-bold text-[#737373] tracking-[0.15em] text-center block">Live Mobile Preview</span>
                   
-                  <div className="w-[200px] h-[356px] rounded-[36px] border-[6px] border-[#2C221E] bg-black relative shadow-xl overflow-hidden flex flex-col group transition-transform duration-300 hover:scale-[1.02]">
+                  <div className="w-[200px] h-[356px] rounded-[36px] border-[6px] border-[#242424] bg-black relative shadow-xl overflow-hidden flex flex-col group transition-transform duration-300 hover:scale-[1.02]">
                     
-                    <div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-16 h-3.5 bg-[#2C221E] rounded-full z-40 flex items-center justify-between px-2">
+                    <div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-16 h-3.5 bg-[#242424] rounded-full z-40 flex items-center justify-between px-2">
                       <span className="w-1 h-1 bg-[#1a1a1a] rounded-full" />
                       <span className="w-1.5 h-1.5 bg-[#0d0d0d] rounded-full" />
                     </div>
@@ -722,7 +722,7 @@ export const VideoManager: React.FC<VideoManagerProps> = ({ onDirtyChange }) => 
                           {vidTitle || "Untitled Video Masterclass"}
                         </p>
                         <div className="pt-0.5">
-                          <span className="inline-block bg-[#FAF6F0]/25 text-white border border-white/10 text-[5.5px] uppercase tracking-widest font-extrabold px-1 rounded-sm">
+                          <span className="inline-block bg-[#FFFFFF]/25 text-white border border-white/10 text-[5.5px] uppercase tracking-widest font-extrabold px-1 rounded-sm">
                             {vidCategory}
                           </span>
                         </div>
@@ -755,7 +755,7 @@ export const VideoManager: React.FC<VideoManagerProps> = ({ onDirtyChange }) => 
         <div className="overflow-x-auto border border-brand-warm-tan/20 rounded-xl bg-white">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-brand-beige/50 border-b border-brand-warm-tan/20 text-[#8C6D62] font-semibold">
+              <tr className="bg-brand-beige/50 border-b border-brand-warm-tan/20 text-[#737373] font-semibold">
                 <th className="p-3">Poster</th>
                 <th className="p-3">Video Title / Category / Status</th>
                 <th className="p-3">Views</th>
@@ -810,10 +810,10 @@ export const VideoManager: React.FC<VideoManagerProps> = ({ onDirtyChange }) => 
                         })()}
                       </div>
                       {vid.description && (
-                        <p className="text-[10px] text-[#8C6D62]/80 line-clamp-1 mt-0.5">{vid.description}</p>
+                        <p className="text-[10px] text-[#737373]/80 line-clamp-1 mt-0.5">{vid.description}</p>
                       )}
                       {vid.relatedIds && vid.relatedIds.length > 0 && (
-                        <span className="text-[8.5px] text-[#A67E6B] font-semibold mt-0.5 block">
+                        <span className="text-[8.5px] text-[#878787] font-semibold mt-0.5 block">
                           Linked Items: {vid.relatedIds.length}
                         </span>
                       )}
@@ -830,7 +830,7 @@ export const VideoManager: React.FC<VideoManagerProps> = ({ onDirtyChange }) => 
                     <div className="flex justify-center gap-1.5 flex-wrap">
                       <button
                         onClick={() => setViewingAnalyticsVideo(vid)}
-                        className="p-1 px-2.5 bg-[#FAF6F0] hover:bg-brand-pink-light text-[#8C6D62] font-bold rounded-md text-[10px] transition duration-200 border border-brand-warm-tan/30 whitespace-nowrap cursor-pointer"
+                        className="p-1 px-2.5 bg-[#FFFFFF] hover:bg-brand-pink-light text-[#737373] font-bold rounded-md text-[10px] transition duration-200 border border-brand-warm-tan/30 whitespace-nowrap cursor-pointer"
                       >
                         Analytics
                       </button>
@@ -853,7 +853,7 @@ export const VideoManager: React.FC<VideoManagerProps> = ({ onDirtyChange }) => 
                           setEditingVideoId(vid.id);
                           setIsAddingVideo(true);
                         }}
-                        className="p-1 px-2.5 bg-brand-cream hover:bg-brand-beige text-[#543F35] font-bold rounded-md text-[10px] transition duration-200 border border-brand-warm-tan/25 whitespace-nowrap cursor-pointer"
+                        className="p-1 px-2.5 bg-brand-cream hover:bg-brand-beige text-[#434343] font-bold rounded-md text-[10px] transition duration-200 border border-brand-warm-tan/25 whitespace-nowrap cursor-pointer"
                       >
                         Edit
                       </button>
@@ -877,12 +877,12 @@ export const VideoManager: React.FC<VideoManagerProps> = ({ onDirtyChange }) => 
         </div>
 
         {videos.filter(v => v.isFeatured).length > 0 && (
-          <div className="bg-[#FAF6F0] border border-brand-warm-tan/30 p-5 rounded-2xl space-y-3 mt-6">
+          <div className="bg-[#FFFFFF] border border-brand-warm-tan/30 p-5 rounded-2xl space-y-3 mt-6">
             <p className="font-serif font-bold text-brand-chocolate text-xs flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-brand-rose animate-pulse" />
               Featured Video Custom Ordering
             </p>
-            <p className="text-[10px] text-[#8C6D62] leading-tight">
+            <p className="text-[10px] text-[#737373] leading-tight">
               Adjust the layout order of featured video masterclasses on the public Watch Tutorials page.
             </p>
             <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
@@ -892,7 +892,7 @@ export const VideoManager: React.FC<VideoManagerProps> = ({ onDirtyChange }) => 
                 .map((vid, idx, arr) => (
                   <div
                     key={vid.id}
-                    className="bg-white border border-[#E5D5C8]/60 p-2.5 rounded-xl flex items-center justify-between text-xs hover:border-brand-rose/30 transition-all shadow-2xs"
+                    className="bg-white border border-[#D8D8D8]/60 p-2.5 rounded-xl flex items-center justify-between text-xs hover:border-brand-rose/30 transition-all shadow-2xs"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
                       <span className="font-mono font-extrabold text-[10px] bg-brand-rose/10 text-brand-rose px-2 py-0.5 rounded-full shrink-0">
@@ -906,7 +906,7 @@ export const VideoManager: React.FC<VideoManagerProps> = ({ onDirtyChange }) => 
                         type="button"
                         onClick={() => moveFeaturedVideo(vid.id, 'up')}
                         disabled={idx === 0}
-                        className="text-[#8C6D62] hover:text-brand-rose disabled:opacity-30 p-0.5"
+                        className="text-[#737373] hover:text-brand-rose disabled:opacity-30 p-0.5"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>
                       </button>
@@ -914,7 +914,7 @@ export const VideoManager: React.FC<VideoManagerProps> = ({ onDirtyChange }) => 
                         type="button"
                         onClick={() => moveFeaturedVideo(vid.id, 'down')}
                         disabled={idx === arr.length - 1}
-                        className="text-[#8C6D62] hover:text-brand-rose disabled:opacity-30 p-0.5"
+                        className="text-[#737373] hover:text-brand-rose disabled:opacity-30 p-0.5"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                       </button>
@@ -934,7 +934,7 @@ export const VideoManager: React.FC<VideoManagerProps> = ({ onDirtyChange }) => 
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.2 }}
-              className="bg-brand-cream border border-[#E5D5C8]/80 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-[0_12px_40px_rgba(74,43,32,0.1)] relative overflow-hidden"
+              className="bg-brand-cream border border-[#D8D8D8]/80 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-[0_12px_40px_rgba(50,50,50,0.1)] relative overflow-hidden"
             >
               <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-brand-rose via-brand-pink to-brand-chocolate"></div>
 
@@ -959,37 +959,37 @@ export const VideoManager: React.FC<VideoManagerProps> = ({ onDirtyChange }) => 
               </div>
 
               <div className="grid grid-cols-3 gap-3 mb-6">
-                <div className="bg-white border border-[#E5D5C8]/40 p-3 rounded-2xl text-center shadow-2xs">
+                <div className="bg-white border border-[#D8D8D8]/40 p-3 rounded-2xl text-center shadow-2xs">
                   <span className="text-[9px] uppercase tracking-wider text-zinc-400 font-bold">Views</span>
                   <p className="font-serif text-base font-bold text-brand-chocolate mt-1">
                     {viewingAnalyticsVideo.viewsCount?.toLocaleString() || viewingAnalyticsVideo.views || '0'}
                   </p>
                 </div>
-                <div className="bg-white border border-[#E5D5C8]/40 p-3 rounded-2xl text-center shadow-2xs">
+                <div className="bg-white border border-[#D8D8D8]/40 p-3 rounded-2xl text-center shadow-2xs">
                   <span className="text-[9px] uppercase tracking-wider text-zinc-400 font-bold">Likes</span>
                   <p className="font-serif text-base font-bold text-brand-chocolate mt-1">
                     {viewingAnalyticsVideo.likesCount?.toLocaleString() || '0'}
                   </p>
                 </div>
-                <div className="bg-white border border-[#E5D5C8]/40 p-3 rounded-2xl text-center shadow-2xs">
+                <div className="bg-white border border-[#D8D8D8]/40 p-3 rounded-2xl text-center shadow-2xs">
                   <span className="text-[9px] uppercase tracking-wider text-zinc-400 font-bold">Comments</span>
                   <p className="font-serif text-base font-bold text-brand-chocolate mt-1">
                     {viewingAnalyticsVideo.commentsCount?.toLocaleString() || '0'}
                   </p>
                 </div>
-                <div className="bg-white border border-[#E5D5C8]/40 p-3 rounded-2xl text-center shadow-2xs">
+                <div className="bg-white border border-[#D8D8D8]/40 p-3 rounded-2xl text-center shadow-2xs">
                   <span className="text-[9px] uppercase tracking-wider text-zinc-400 font-bold">Saves</span>
                   <p className="font-serif text-base font-bold text-brand-chocolate mt-1">
                     {viewingAnalyticsVideo.savesCount?.toLocaleString() || '0'}
                   </p>
                 </div>
-                <div className="bg-white border border-[#E5D5C8]/40 p-3 rounded-2xl text-center shadow-2xs">
+                <div className="bg-white border border-[#D8D8D8]/40 p-3 rounded-2xl text-center shadow-2xs">
                   <span className="text-[9px] uppercase tracking-wider text-zinc-400 font-bold">Shares</span>
                   <p className="font-serif text-base font-bold text-brand-chocolate mt-1">
                     {viewingAnalyticsVideo.sharesCount?.toLocaleString() || '0'}
                   </p>
                 </div>
-                <div className="bg-white border border-[#E5D5C8]/40 p-3 rounded-2xl text-center shadow-2xs">
+                <div className="bg-white border border-[#D8D8D8]/40 p-3 rounded-2xl text-center shadow-2xs">
                   <span className="text-[9px] uppercase tracking-wider text-zinc-400 font-bold">Conversions</span>
                   <p className="font-serif text-base font-bold text-brand-chocolate mt-1">
                     {viewingAnalyticsVideo.conversionCount?.toLocaleString() || '0'}
@@ -997,7 +997,7 @@ export const VideoManager: React.FC<VideoManagerProps> = ({ onDirtyChange }) => 
                 </div>
               </div>
 
-              <div className="bg-white border border-[#E5D5C8]/40 p-4 rounded-2xl mb-6 space-y-3 shadow-2xs">
+              <div className="bg-white border border-[#D8D8D8]/40 p-4 rounded-2xl mb-6 space-y-3 shadow-2xs">
                 <h4 className="font-serif text-xs font-bold text-brand-chocolate border-b border-zinc-100 pb-1.5">
                   eCommerce Click Funnel
                 </h4>

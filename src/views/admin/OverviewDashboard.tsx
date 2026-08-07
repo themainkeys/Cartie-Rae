@@ -40,33 +40,33 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
   // ── Conversion Metrics ────────────────────────────────────────────────────
   if (overviewSub === 'metrics') {
     return (
-      <div className="bg-white border border-[#E5D5C8]/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_4px_25px_-4px_rgba(74,43,32,0.02)]">
-        <h2 className="font-serif text-lg font-bold text-brand-dark border-b border-[#E5D5C8]/30 pb-3 flex items-center gap-2">
+      <div className="bg-white border border-[#D8D8D8]/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_4px_25px_-4px_rgba(50,50,50,0.02)]">
+        <h2 className="font-serif text-lg font-bold text-brand-dark border-b border-[#D8D8D8]/30 pb-3 flex items-center gap-2">
           <span className="w-1.5 h-6 bg-brand-rose rounded-full" />
           Business Health Overview
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Store Activity */}
-          <div className="bg-[#FAF7F2] p-5.5 rounded-2xl border border-[#E5D5C8]/30 space-y-4">
+          <div className="bg-[#FFFFFF] p-5.5 rounded-2xl border border-[#D8D8D8]/30 space-y-4">
             <h3 className="font-serif text-sm font-bold text-brand-chocolate tracking-tight flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 bg-brand-rose rounded-full" />
               Store Activity
             </h3>
             <div className="space-y-3.5 text-xs">
-              <div className="flex justify-between border-b border-[#E5D5C8]/35 pb-2 text-[#8C6D62]">
+              <div className="flex justify-between border-b border-[#D8D8D8]/35 pb-2 text-[#737373]">
                 <span className="font-medium">Total Orders</span>
                 <span className="font-mono font-bold text-brand-dark">{orders.length}</span>
               </div>
-              <div className="flex justify-between border-b border-[#E5D5C8]/35 pb-2 text-[#8C6D62]">
+              <div className="flex justify-between border-b border-[#D8D8D8]/35 pb-2 text-[#737373]">
                 <span className="font-medium">Awaiting Shipment</span>
                 <span className="font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded">{pendingOrdersCount}</span>
               </div>
-              <div className="flex justify-between border-b border-[#E5D5C8]/35 pb-2 text-[#8C6D62]">
+              <div className="flex justify-between border-b border-[#D8D8D8]/35 pb-2 text-[#737373]">
                 <span className="font-medium">Newsletter Subscribers</span>
                 <span className="font-mono font-bold text-brand-dark">{newsletterSignups.length}</span>
               </div>
-              <div className="flex justify-between text-[#8C6D62] pt-0.5">
+              <div className="flex justify-between text-[#737373] pt-0.5">
                 <span className="font-medium">Active Discount Codes</span>
                 <span className="font-mono font-black text-brand-rose bg-brand-pink-light px-2 py-0.5 rounded">{discountCodes.filter((c) => c.isActive).length}</span>
               </div>
@@ -86,7 +86,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
               </p>
             </div>
             <div className="flex justify-between items-center mt-5 pt-3 border-t border-white/5">
-              <span className="text-[10px] text-[#C5A880] font-mono uppercase tracking-wider">Store Status</span>
+              <span className="text-[10px] text-[#ADADAD] font-mono uppercase tracking-wider">Store Status</span>
               <span className="text-[10px] text-emerald-400 font-mono font-bold flex items-center gap-1 bg-white/5 px-2.5 py-0.5 rounded">
                 <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping" />
                 LIVE
@@ -103,9 +103,9 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
             { label: 'eBooks Published', value: String(ebooks.length), color: 'text-brand-chocolate' },
             { label: 'Signups', value: String(newsletterSignups.length), color: 'text-brand-rose' },
           ].map(({ label, value, color }) => (
-            <div key={label} className="bg-[#FAF7F2] border border-[#E5D5C8]/30 rounded-xl p-4 text-center">
+            <div key={label} className="bg-[#FFFFFF] border border-[#D8D8D8]/30 rounded-xl p-4 text-center">
               <p className={`text-lg font-bold font-mono ${color}`}>{value}</p>
-              <p className="text-[10px] text-[#8C6D62] font-semibold uppercase tracking-wider mt-1">{label}</p>
+              <p className="text-[10px] text-[#737373] font-semibold uppercase tracking-wider mt-1">{label}</p>
             </div>
           ))}
         </div>
@@ -116,8 +116,8 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
   // ── Orders Tracker ────────────────────────────────────────────────────────
   if (overviewSub === 'orders') {
     return (
-      <div className="bg-white border border-[#E5D5C8]/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_4px_25px_-4px_rgba(74,43,32,0.02)]">
-        <h3 className="font-serif text-lg font-bold text-brand-dark border-b border-[#E5D5C8]/30 pb-3 flex items-center gap-2">
+      <div className="bg-white border border-[#D8D8D8]/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_4px_25px_-4px_rgba(50,50,50,0.02)]">
+        <h3 className="font-serif text-lg font-bold text-brand-dark border-b border-[#D8D8D8]/30 pb-3 flex items-center gap-2">
           <span className="w-1.5 h-6 bg-emerald-600 rounded-full animate-pulse" />
           Authorized Customer Orders Ledger
         </h3>
@@ -125,7 +125,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
         <div className="overflow-x-auto border border-brand-warm-tan/20 rounded-xl bg-white">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-brand-beige/50 border-b border-brand-warm-tan/20 text-[#8C6D62] font-semibold">
+              <tr className="bg-brand-beige/50 border-b border-brand-warm-tan/20 text-[#737373] font-semibold">
                 <th className="p-3">Order ID</th>
                 <th className="p-3">Customer Profile</th>
                 <th className="p-3">Items Purchased</th>
@@ -142,7 +142,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
                     <p className="font-semibold text-brand-chocolate">{o.customerName}</p>
                     <p className="text-[10px] text-brand-dark/50 font-mono mt-0.5">{o.customerEmail}</p>
                     {o.customerPhone && (
-                      <p className="text-[10px] text-[#8C6D62] font-mono mt-0.5 flex items-center gap-1">
+                      <p className="text-[10px] text-[#737373] font-mono mt-0.5 flex items-center gap-1">
                         <Phone className="w-3 h-3 text-brand-rose" />
                         <span>{o.customerPhone}</span>
                       </p>
@@ -199,8 +199,8 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
 
   // ── Subscriber Logs ───────────────────────────────────────────────────────
   return (
-    <div className="bg-white border border-[#E5D5C8]/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_4px_25px_-4px_rgba(74,43,32,0.02)]">
-      <h3 className="font-serif text-lg font-bold text-brand-dark border-b border-[#E5D5C8]/30 pb-3 flex items-center gap-2">
+    <div className="bg-white border border-[#D8D8D8]/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_4px_25px_-4px_rgba(50,50,50,0.02)]">
+      <h3 className="font-serif text-lg font-bold text-brand-dark border-b border-[#D8D8D8]/30 pb-3 flex items-center gap-2">
         <span className="w-1.5 h-6 bg-brand-rose rounded-full animate-pulse" />
         &apos;The Growth List&apos; Subscribers logs
       </h3>
@@ -208,7 +208,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
       <div className="overflow-x-auto border border-brand-warm-tan/20 rounded-xl bg-white">
         <table className="w-full text-left border-collapse text-xs">
           <thead>
-            <tr className="bg-brand-beige/50 border-b border-brand-warm-tan/20 text-[#8C6D62] font-semibold">
+            <tr className="bg-brand-beige/50 border-b border-brand-warm-tan/20 text-[#737373] font-semibold">
               <th className="p-3">Reference Index</th>
               <th className="p-3">Subscriber Email Address</th>
               <th className="p-3">Join Date Status</th>
@@ -218,7 +218,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
           <tbody className="divide-y divide-brand-warm-tan/10 text-brand-dark/80 font-mono">
             {/* Demo seeded rows */}
             <tr className="hover:bg-brand-cream/30">
-              <td className="p-3 text-[#A67E6B]">1</td>
+              <td className="p-3 text-[#878787]">1</td>
               <td className="p-3 text-brand-chocolate font-bold">charnelle.davis@gmail.com</td>
               <td className="p-3">2026-06-03</td>
               <td className="p-3 text-center font-sans">
@@ -226,7 +226,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
               </td>
             </tr>
             <tr className="hover:bg-brand-cream/30">
-              <td className="p-3 text-[#A67E6B]">2</td>
+              <td className="p-3 text-[#878787]">2</td>
               <td className="p-3 text-brand-chocolate font-bold">sasha.styles@yahoo.com</td>
               <td className="p-3">2026-06-04</td>
               <td className="p-3 text-center font-sans">
@@ -235,7 +235,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
             </tr>
             {newsletterSignups.map((sub, sIdx) => (
               <tr key={sub.id} className="hover:bg-brand-cream/30">
-                <td className="p-3 text-[#A67E6B]">{sIdx + 3}</td>
+                <td className="p-3 text-[#878787]">{sIdx + 3}</td>
                 <td className="p-3 text-brand-chocolate font-bold">{sub.email}</td>
                 <td className="p-3">{sub.date}</td>
                 <td className="p-3 text-center font-sans">

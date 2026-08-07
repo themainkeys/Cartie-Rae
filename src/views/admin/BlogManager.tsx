@@ -44,15 +44,15 @@ export const BlogManager: React.FC = () => {
   const [blogStatus, setBlogStatus] = useState<'published' | 'draft'>('published');
 
   return (
-    <div className="bg-white border border-[#E5D5C8]/80 rounded-3xl p-6 sm:p-8 space-y-4 shadow-[0_4px_25px_-4px_rgba(74,43,32,0.02)] animate-fade-in">
+    <div className="bg-white border border-[#D8D8D8]/80 rounded-3xl p-6 sm:p-8 space-y-4 shadow-[0_4px_25px_-4px_rgba(50,50,50,0.02)] animate-fade-in">
       {/* Header */}
-      <div className="flex justify-between items-center border-b border-[#E5D5C8]/30 pb-3">
+      <div className="flex justify-between items-center border-b border-[#D8D8D8]/30 pb-3">
         <h3 className="font-serif text-base sm:text-lg font-bold text-brand-dark flex items-center gap-2">
           <span className="w-1.5 h-6 bg-brand-rose rounded-full" />
           Blog Articles Management
         </h3>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-[#A67E6B] bg-brand-cream border border-[#E5D5C8]/60 px-3 py-1 rounded-full font-bold">
+          <span className="text-[10px] text-[#878787] bg-brand-cream border border-[#D8D8D8]/60 px-3 py-1 rounded-full font-bold">
             {blogs.length} Post{blogs.length !== 1 ? 's' : ''}
           </span>
           <button
@@ -85,7 +85,7 @@ export const BlogManager: React.FC = () => {
             transition={{ duration: 0.25 }}
             className="overflow-hidden"
           >
-            <div className="bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-2xl p-5 space-y-4">
+            <div className="bg-[#FFFFFF] border border-brand-warm-tan/30 rounded-2xl p-5 space-y-4">
               <p className="text-[10.5px] font-extrabold uppercase tracking-widest text-brand-rose flex items-center gap-1.5">
                 <Book className="w-3.5 h-3.5" /> New Blog Post
               </p>
@@ -134,7 +134,7 @@ export const BlogManager: React.FC = () => {
                 </div>
               </div>
               <div className="flex justify-end gap-2 pt-2">
-                <button onClick={() => setIsAddingBlog(false)} className="px-4 py-2 text-[10.5px] font-bold text-brand-chocolate bg-brand-cream border border-[#E5D5C8] rounded-xl hover:bg-brand-beige transition-all">Cancel</button>
+                <button onClick={() => setIsAddingBlog(false)} className="px-4 py-2 text-[10.5px] font-bold text-brand-chocolate bg-brand-cream border border-[#D8D8D8] rounded-xl hover:bg-brand-beige transition-all">Cancel</button>
                 <button
                   onClick={() => {
                     if (!blogTitle.trim() || !blogContent.trim()) { triggerToast('Title and content are required.', 'error'); return; }
@@ -163,12 +163,12 @@ export const BlogManager: React.FC = () => {
 
       {/* Blog Table */}
       {blogs.length === 0 ? (
-        <p className="text-[11px] text-[#A67E6B] text-center py-8">No blog posts yet. Click &quot;New Post&quot; to create one.</p>
+        <p className="text-[11px] text-[#878787] text-center py-8">No blog posts yet. Click &quot;New Post&quot; to create one.</p>
       ) : (
         <div className="overflow-x-auto border border-brand-warm-tan/20 rounded-xl bg-white">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-brand-beige/50 border-b border-brand-warm-tan/20 text-[#8C6D62] font-semibold">
+              <tr className="bg-brand-beige/50 border-b border-brand-warm-tan/20 text-[#737373] font-semibold">
                 <th className="p-3">Cover</th>
                 <th className="p-3">Title</th>
                 <th className="p-3">Category</th>
@@ -187,12 +187,12 @@ export const BlogManager: React.FC = () => {
                     <td className="p-3 font-semibold max-w-[200px]">
                       <p className="line-clamp-2 leading-snug">{post.title}</p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <p className="text-[10px] text-[#A67E6B] font-normal">{post.readTime}</p>
+                        <p className="text-[10px] text-[#878787] font-normal">{post.readTime}</p>
                         <span className={`text-[9px] px-1.5 py-0.5 rounded ${post.status === 'draft' ? 'bg-zinc-100 text-zinc-500' : 'bg-emerald-50 text-emerald-700'}`}>{post.status || 'published'}</span>
                       </div>
                     </td>
                     <td className="p-3 font-mono">{post.category}</td>
-                    <td className="p-3 text-[#A67E6B]">{post.date}</td>
+                    <td className="p-3 text-[#878787]">{post.date}</td>
                     <td className="p-3">
                       <div className="flex items-center justify-center gap-1.5">
                         <button
@@ -241,7 +241,7 @@ export const BlogManager: React.FC = () => {
                           animate={{ opacity: 1, height: 'auto' }}
                           exit={{ opacity: 0, height: 0 }}
                           transition={{ duration: 0.2 }}
-                          className="bg-[#FAF6F0] border-t border-brand-warm-tan/20 p-5 space-y-4"
+                          className="bg-[#FFFFFF] border-t border-brand-warm-tan/20 p-5 space-y-4"
                         >
                           <p className="text-[10px] font-extrabold uppercase tracking-widest text-brand-rose flex items-center gap-1.5">
                             <Edit className="w-3 h-3" /> Editing: {post.title}
@@ -294,7 +294,7 @@ export const BlogManager: React.FC = () => {
                             </div>
                           </div>
                           <div className="flex justify-end gap-2 pt-2">
-                            <button onClick={() => setEditingBlogId(null)} className="px-4 py-2 text-[10.5px] font-bold text-brand-chocolate bg-brand-cream border border-[#E5D5C8] rounded-xl hover:bg-brand-beige transition-all">Cancel</button>
+                            <button onClick={() => setEditingBlogId(null)} className="px-4 py-2 text-[10.5px] font-bold text-brand-chocolate bg-brand-cream border border-[#D8D8D8] rounded-xl hover:bg-brand-beige transition-all">Cancel</button>
                             <button
                               onClick={() => {
                                 if (!blogTitle.trim() || !blogContent.trim()) { triggerToast('Title and content are required.', 'error'); return; }

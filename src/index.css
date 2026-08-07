@@ -5,12 +5,12 @@
   --font-sans: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", monospace;
   
-  /* ─── Neutral / Base Palette (warm cream tones) ─── */
-  --color-brand-cream:     #FDFAF4;   /* warm ivory — main page background */
-  --color-brand-beige:     #F5EFE3;   /* warm sand — card/hover background */
-  --color-brand-warm-tan:  #C4A882;   /* warm tan — borders and dividers */
-  --color-brand-chocolate: #52382B;   /* deep warm brown — headings/labels */
-  --color-brand-dark:      #2C1810;   /* richest brown — body text/icons */
+  /* ─── Neutral / Base Palette (grey tones) ─── */
+  --color-brand-cream:     #FFFFFF;   /* white — main page background */
+  --color-brand-beige:     #F0F0F0;   /* light grey — card/hover background */
+  --color-brand-warm-tan:  #ADADAD;   /* mid grey — borders and dividers */
+  --color-brand-chocolate: #3D3D3D;   /* dark grey — headings/labels */
+  --color-brand-dark:      #1C1C1C;   /* near black — body text/icons */
 
   /* ─── Pink Accent Palette (unchanged) ─── */
   --color-brand-pink-light: #FFF0F3;  /* soft blush */
@@ -30,8 +30,8 @@ html {
 }
 
 body {
-  background-color: #FDFAF4;
-  color: #2C1810;
+  background-color: #FFFFFF;
+  color: #1C1C1C;
 }
 
 /* ─── Custom scrollbar ─── */
@@ -40,10 +40,10 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #FDFAF4;
+  background: #FFFFFF;
 }
 ::-webkit-scrollbar-thumb {
-  background: #C4A882;
+  background: #ADADAD;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {

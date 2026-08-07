@@ -42,8 +42,8 @@ export const DiscountManager: React.FC = () => {
   };
 
   return (
-    <div className="bg-white border border-[#E5D5C8]/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_4px_25px_-4px_rgba(74,43,32,0.02)]">
-      <div className="flex justify-between items-center border-b border-[#E5D5C8]/30 pb-3">
+    <div className="bg-white border border-[#D8D8D8]/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_4px_25px_-4px_rgba(50,50,50,0.02)]">
+      <div className="flex justify-between items-center border-b border-[#D8D8D8]/30 pb-3">
         <h3 className="font-serif text-lg font-bold text-brand-dark flex items-center gap-2">
           <span className="w-1.5 h-6 bg-brand-rose rounded-full" />
           Voucher Promo Discounts List
@@ -119,7 +119,7 @@ export const DiscountManager: React.FC = () => {
       <div className="overflow-x-auto border border-brand-warm-tan/20 rounded-xl bg-white">
         <table className="w-full text-left border-collapse text-xs">
           <thead>
-            <tr className="bg-brand-beige/50 border-b border-brand-warm-tan/20 text-[#8C6D62] font-semibold">
+            <tr className="bg-brand-beige/50 border-b border-brand-warm-tan/20 text-[#737373] font-semibold">
               <th className="p-3">Coupon Code</th>
               <th className="p-3">Reduction Percent</th>
               <th className="p-3">Trigger Description</th>

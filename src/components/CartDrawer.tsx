@@ -197,7 +197,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
               <button
                 id="close-cart-slideover-btn"
                 onClick={handleCloseCheckout}
-                className="p-1.5 rounded-full bg-brand-cream text-brand-dark hover:bg-brand-rose hover:text-[#FAF6F0] transition-all focus:outline-none cursor-pointer"
+                className="p-1.5 rounded-full bg-brand-cream text-brand-dark hover:bg-brand-rose hover:text-[#FFFFFF] transition-all focus:outline-none cursor-pointer"
                 title="Close"
               >
                 <X className="w-4 h-4" />
@@ -285,7 +285,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                                 <button
                                   id={`save-cart-item-drawer-${item.id}`}
                                   onClick={() => moveToWishlist(item.id)}
-                                  className="p-1 text-[#A67E6B] hover:text-brand-rose hover:bg-brand-rose/5 rounded transition-all focus:outline-none shrink-0 ml-1 cursor-pointer"
+                                  className="p-1 text-[#878787] hover:text-brand-rose hover:bg-brand-rose/5 rounded transition-all focus:outline-none shrink-0 ml-1 cursor-pointer"
                                   title="Save for Later"
                                   aria-label="Save for Later"
                                 >
@@ -321,7 +321,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                       </div>
 
                       {wishlist.length === 0 ? (
-                        <div className="bg-[#FAF6F0] border border-dashed border-brand-warm-tan/20 rounded-2xl p-5 text-center text-xs text-brand-dark/50 select-none">
+                        <div className="bg-[#FFFFFF] border border-dashed border-brand-warm-tan/20 rounded-2xl p-5 text-center text-xs text-brand-dark/50 select-none">
                           <p className="font-serif font-medium">No items saved yet.</p>
                           <p className="mt-1 text-[10px] leading-relaxed">
                             Save essentials from your bag to hold them for later review!
@@ -363,7 +363,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                                     onClick={() => moveToCart(item)}
                                     whileHover={{ scale: prefersReducedMotion ? 1 : 1.02 }}
                                     whileTap={{ scale: prefersReducedMotion ? 1 : 0.98 }}
-                                    className="px-2.5 py-1.5 bg-brand-dark hover:bg-brand-rose text-[#FAF6F0] text-[10px] uppercase font-bold tracking-wider rounded-lg transition-colors focus:outline-none cursor-pointer"
+                                    className="px-2.5 py-1.5 bg-brand-dark hover:bg-brand-rose text-[#FFFFFF] text-[10px] uppercase font-bold tracking-wider rounded-lg transition-colors focus:outline-none cursor-pointer"
                                   >
                                     Add to Bag
                                   </motion.button>
@@ -396,7 +396,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                           placeholder="ENTER COUPON... (GROW4C)"
                           value={promoInput}
                           onChange={(e) => setPromoInput(e.target.value)}
-                          className="flex-1 px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/40 text-[10.5px] uppercase placeholder-brand-dark/30 rounded-xl text-xs font-mono focus:outline-none focus:ring-1 focus:ring-brand-rose focus:border-brand-rose"
+                          className="flex-1 px-3 py-2 bg-[#FFFFFF] border border-brand-warm-tan/40 text-[10.5px] uppercase placeholder-brand-dark/30 rounded-xl text-xs font-mono focus:outline-none focus:ring-1 focus:ring-brand-rose focus:border-brand-rose"
                         />
                         <button
                           id="apply-promo-btn-drawer"
@@ -436,7 +436,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                         onClick={handleInitCheckout}
                         whileHover={{ scale: prefersReducedMotion ? 1 : 1.01 }}
                         whileTap={{ scale: prefersReducedMotion ? 1 : 0.99 }}
-                        className="w-full bg-brand-rose hover:bg-brand-berry text-[#FAF6F0] py-3.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-1.5 focus:outline-none mt-2 shadow-sm cursor-pointer"
+                        className="w-full bg-brand-rose hover:bg-brand-berry text-[#FFFFFF] py-3.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-1.5 focus:outline-none mt-2 shadow-sm cursor-pointer"
                       >
                         <span>Proceed to Secure Checkout</span>
                         <ChevronRight className="w-4 h-4" />
@@ -491,7 +491,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                             value={customerName}
                             onChange={(e) => setCustomerName(e.target.value)}
                             placeholder="Maya Jenkins"
-                            className="w-full px-4 py-3 bg-[#FAF6F0] border border-brand-warm-tan/40 text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose transition-all text-brand-dark"
+                            className="w-full px-4 py-3 bg-[#FFFFFF] border border-brand-warm-tan/40 text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose transition-all text-brand-dark"
                           />
                         </div>
                         <div>
@@ -503,9 +503,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                             value={customerEmail}
                             onChange={(e) => setCustomerEmail(e.target.value)}
                             placeholder="maya.jenk@gmail.com"
-                            className="w-full px-4 py-3 bg-[#FAF6F0] border border-brand-warm-tan/40 text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose transition-all text-brand-dark"
+                            className="w-full px-4 py-3 bg-[#FFFFFF] border border-brand-warm-tan/40 text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose transition-all text-brand-dark"
                           />
-                          <span className="text-[9px] text-[#A67E6B] block mt-1 font-mono select-none">We will send confirmation and receipt logs here.</span>
+                          <span className="text-[9px] text-[#878787] block mt-1 font-mono select-none">We will send confirmation and receipt logs here.</span>
                         </div>
                         <div>
                           <label className="block text-[10px] uppercase font-bold text-brand-chocolate mb-1">Phone Number (Optional)</label>
@@ -515,7 +515,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                             value={customerPhone}
                             onChange={(e) => setCustomerPhone(e.target.value)}
                             placeholder="+1 (555) 0192-384"
-                            className="w-full px-4 py-3 bg-[#FAF6F0] border border-brand-warm-tan/40 text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose transition-all text-brand-dark"
+                            className="w-full px-4 py-3 bg-[#FFFFFF] border border-brand-warm-tan/40 text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose transition-all text-brand-dark"
                           />
                         </div>
                       </div>
@@ -535,7 +535,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                               value={shippingAddress}
                               onChange={(e) => setShippingAddress(e.target.value)}
                               placeholder="742 Evergreen Terrace, Apt 101"
-                              className="w-full px-4 py-3 bg-[#FAF6F0] border border-brand-warm-tan/40 text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose transition-all text-brand-dark"
+                              className="w-full px-4 py-3 bg-[#FFFFFF] border border-brand-warm-tan/40 text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose transition-all text-brand-dark"
                             />
                           </div>
                         </div>
@@ -592,7 +592,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                         disabled={isSubmitting}
                         whileHover={{ scale: isSubmitting || prefersReducedMotion ? 1 : 1.01 }}
                         whileTap={{ scale: isSubmitting || prefersReducedMotion ? 1 : 0.99 }}
-                        className="w-full bg-brand-berry hover:bg-brand-dark text-[#FAF6F0] py-3.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-1.5 focus:outline-none cursor-pointer disabled:bg-zinc-400 disabled:cursor-not-allowed"
+                        className="w-full bg-brand-berry hover:bg-brand-dark text-[#FFFFFF] py-3.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-1.5 focus:outline-none cursor-pointer disabled:bg-zinc-400 disabled:cursor-not-allowed"
                       >
                         {isSubmitting ? (
                           <>

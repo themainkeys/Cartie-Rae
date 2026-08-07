@@ -174,8 +174,8 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ onDirtyChang
       {/* ══════════════════════════════════════════════════════════ */}
       {/* PHYSICAL PRODUCTS CATALOG                                 */}
       {/* ══════════════════════════════════════════════════════════ */}
-      <div className="bg-white border border-[#E5D5C8]/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_4px_25px_-4px_rgba(74,43,32,0.02)]">
-        <div className="flex justify-between items-center border-b border-[#E5D5C8]/30 pb-3">
+      <div className="bg-white border border-[#D8D8D8]/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_4px_25px_-4px_rgba(50,50,50,0.02)]">
+        <div className="flex justify-between items-center border-b border-[#D8D8D8]/30 pb-3">
           <h3 className="font-serif text-base sm:text-lg font-bold text-brand-dark flex items-center gap-2">
             <span className="w-1.5 h-6 bg-brand-rose rounded-full" />
             Physical Products Catalog
@@ -237,7 +237,7 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ onDirtyChang
         <div className="overflow-x-auto border border-brand-warm-tan/20 rounded-xl bg-white">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-brand-beige/50 border-b border-brand-warm-tan/20 text-[#8C6D62] font-semibold">
+              <tr className="bg-brand-beige/50 border-b border-brand-warm-tan/20 text-[#737373] font-semibold">
                 <th className="p-3">Reference Photo</th>
                 <th className="p-3">Product Name</th>
                 <th className="p-3">Category</th>
@@ -274,19 +274,19 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ onDirtyChang
                     </td>
                     <td className="p-3">
                       {isEditing
-                        ? <input type="text" value={editProdName} onChange={(e) => setEditProdName(e.target.value)} className="w-full px-2 py-1 bg-[#FAF6F0] border border-brand-warm-tan/35 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-xs font-semibold" />
+                        ? <input type="text" value={editProdName} onChange={(e) => setEditProdName(e.target.value)} className="w-full px-2 py-1 bg-[#FFFFFF] border border-brand-warm-tan/35 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-xs font-semibold" />
                         : <span className="font-semibold">{p.name}</span>}
                     </td>
                     <td className="p-3">
                       {isEditing ? (
-                        <select value={editProdCategory} onChange={(e) => setEditProdCategory(e.target.value)} className="w-full px-2 py-1 bg-[#FAF6F0] border border-brand-warm-tan/35 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-xs">
+                        <select value={editProdCategory} onChange={(e) => setEditProdCategory(e.target.value)} className="w-full px-2 py-1 bg-[#FFFFFF] border border-brand-warm-tan/35 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-xs">
                           <option>Hair Oils</option><option>Accessories</option><option>Treatments</option>
                         </select>
                       ) : <span>{p.category}</span>}
                     </td>
                     <td className="p-3 font-mono">
                       {isEditing
-                        ? <input type="number" value={editProdStock} onChange={(e) => setEditProdStock(e.target.value)} className="w-20 px-2 py-1 bg-[#FAF6F0] border border-brand-warm-tan/35 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-xs" />
+                        ? <input type="number" value={editProdStock} onChange={(e) => setEditProdStock(e.target.value)} className="w-20 px-2 py-1 bg-[#FFFFFF] border border-brand-warm-tan/35 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-xs" />
                         : (
                           <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-bold ${p.stockCount === 0 ? 'bg-red-50 text-red-700' : p.stockCount <= 15 ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-800'}`}>
                             {p.stockCount} ({p.stockStatus})
@@ -297,7 +297,7 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ onDirtyChang
                       {isEditing ? (
                         <div className="flex items-center gap-0.5">
                           <span>$</span>
-                          <input type="number" step="0.01" value={editProdPrice} onChange={(e) => setEditProdPrice(e.target.value)} className="w-20 px-2 py-1 bg-[#FAF6F0] border border-brand-warm-tan/35 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-xs font-bold" />
+                          <input type="number" step="0.01" value={editProdPrice} onChange={(e) => setEditProdPrice(e.target.value)} className="w-20 px-2 py-1 bg-[#FFFFFF] border border-brand-warm-tan/35 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-xs font-bold" />
                         </div>
                       ) : <span>${p.price.toFixed(2)}</span>}
                     </td>
@@ -305,7 +305,7 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ onDirtyChang
                       {isEditing ? (
                         <div className="flex justify-center gap-1.5">
                           <button onClick={() => handleSaveProduct(p.id)} className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-bold cursor-pointer">Save</button>
-                          <button onClick={() => setEditingProductId(null)} className="px-2.5 py-1 bg-brand-cream border border-[#E5D5C8] text-brand-chocolate rounded text-[11px] font-bold cursor-pointer">Cancel</button>
+                          <button onClick={() => setEditingProductId(null)} className="px-2.5 py-1 bg-brand-cream border border-[#D8D8D8] text-brand-chocolate rounded text-[11px] font-bold cursor-pointer">Cancel</button>
                         </div>
                       ) : (
                         <div className="flex justify-center gap-1.5">
@@ -334,8 +334,8 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ onDirtyChang
       {/* ══════════════════════════════════════════════════════════ */}
       {/* DIGITAL EBOOKS CATALOG                                    */}
       {/* ══════════════════════════════════════════════════════════ */}
-      <div className="bg-white border border-[#E5D5C8]/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_4px_25px_-4px_rgba(74,43,32,0.02)]">
-        <div className="flex justify-between items-center border-b border-[#E5D5C8]/30 pb-3">
+      <div className="bg-white border border-[#D8D8D8]/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_4px_25px_-4px_rgba(50,50,50,0.02)]">
+        <div className="flex justify-between items-center border-b border-[#D8D8D8]/30 pb-3">
           <h3 className="font-serif text-base sm:text-lg font-bold text-brand-dark flex items-center gap-2">
             <span className="w-1.5 h-6 bg-brand-rose rounded-full" />
             Digital eBooks Catalog
@@ -383,7 +383,7 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ onDirtyChang
               <ImageDropzone imageValue={ebImage} onImageChange={setEbImage} label="eBook Cover" prefersReducedMotion={prefersReducedMotion} />
             </div>
             <div className="flex justify-end gap-2 text-[10.5px]">
-              <button type="button" onClick={() => setIsAddingEBook(false)} className="px-4 py-2 border border-[#E5D5C8] hover:bg-brand-cream rounded">Cancel</button>
+              <button type="button" onClick={() => setIsAddingEBook(false)} className="px-4 py-2 border border-[#D8D8D8] hover:bg-brand-cream rounded">Cancel</button>
               <button type="submit" className="px-4 py-2 bg-brand-chocolate hover:bg-brand-dark text-white rounded font-bold uppercase transition">Commit eBook</button>
             </div>
           </form>
@@ -393,7 +393,7 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ onDirtyChang
         <div className="overflow-x-auto border border-brand-warm-tan/20 rounded-xl bg-white">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-brand-beige/50 border-b border-brand-warm-tan/20 text-[#8C6D62] font-semibold">
+              <tr className="bg-brand-beige/50 border-b border-brand-warm-tan/20 text-[#737373] font-semibold">
                 <th className="p-3">Cover Graphic</th>
                 <th className="p-3">EBook Title</th>
                 <th className="p-3">Pages Count</th>
@@ -430,24 +430,24 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ onDirtyChang
                     </td>
                     <td className="p-3">
                       {isEditing
-                        ? <input type="text" value={editEbName} onChange={(ev) => setEditEbName(ev.target.value)} className="w-full px-2 py-1 bg-[#FAF6F0] border border-brand-warm-tan/35 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-xs font-semibold" />
+                        ? <input type="text" value={editEbName} onChange={(ev) => setEditEbName(ev.target.value)} className="w-full px-2 py-1 bg-[#FFFFFF] border border-brand-warm-tan/35 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-xs font-semibold" />
                         : <span className="font-semibold">{e.name}</span>}
                     </td>
                     <td className="p-3 font-mono">
                       {isEditing
-                        ? <input type="number" value={editEbPages} onChange={(ev) => setEditEbPages(ev.target.value)} className="w-20 px-2 py-1 bg-[#FAF6F0] border border-brand-warm-tan/35 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-xs" />
+                        ? <input type="number" value={editEbPages} onChange={(ev) => setEditEbPages(ev.target.value)} className="w-20 px-2 py-1 bg-[#FFFFFF] border border-brand-warm-tan/35 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-xs" />
                         : <span>{e.pages} pages</span>}
                     </td>
                     <td className="p-3 font-mono">
                       {isEditing
-                        ? <input type="text" value={editEbSize} onChange={(ev) => setEditEbSize(ev.target.value)} className="w-24 px-2 py-1 bg-[#FAF6F0] border border-brand-warm-tan/35 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-xs" />
+                        ? <input type="text" value={editEbSize} onChange={(ev) => setEditEbSize(ev.target.value)} className="w-24 px-2 py-1 bg-[#FFFFFF] border border-brand-warm-tan/35 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-xs" />
                         : <span>{e.fileSize}</span>}
                     </td>
                     <td className="p-3 font-mono font-bold">
                       {isEditing ? (
                         <div className="flex items-center gap-0.5">
                           <span>$</span>
-                          <input type="number" step="0.01" value={editEbPrice} onChange={(ev) => setEditEbPrice(ev.target.value)} className="w-20 px-2 py-1 bg-[#FAF6F0] border border-brand-warm-tan/35 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-xs font-bold" />
+                          <input type="number" step="0.01" value={editEbPrice} onChange={(ev) => setEditEbPrice(ev.target.value)} className="w-20 px-2 py-1 bg-[#FFFFFF] border border-brand-warm-tan/35 rounded focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-xs font-bold" />
                         </div>
                       ) : <span>${e.price.toFixed(2)}</span>}
                     </td>
@@ -455,7 +455,7 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ onDirtyChang
                       {isEditing ? (
                         <div className="flex justify-center gap-1.5">
                           <button onClick={() => handleSaveEBook(e.id)} className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-bold cursor-pointer">Save</button>
-                          <button onClick={() => setEditingEBookId(null)} className="px-2.5 py-1 bg-brand-cream border border-[#E5D5C8] text-brand-chocolate rounded text-[11px] font-bold cursor-pointer">Cancel</button>
+                          <button onClick={() => setEditingEBookId(null)} className="px-2.5 py-1 bg-brand-cream border border-[#D8D8D8] text-brand-chocolate rounded text-[11px] font-bold cursor-pointer">Cancel</button>
                         </div>
                       ) : (
                         <div className="flex justify-center gap-1.5">

@@ -685,23 +685,23 @@ export const VideoGallery: React.FC = () => {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="w-full relative bg-[#FDFAF4] text-[#2C1810] min-h-screen">
+    <div className="w-full relative bg-[#FFFFFF] text-[#1C1C1C] min-h-screen">
 
       {/* ── Page Header (desktop only) ── */}
       <div className="hidden sm:block text-center pt-7 pb-5 px-4 select-none">
         <span className="font-sans text-[10px] uppercase tracking-[0.35em] text-[#B11B41] font-bold block">
           Short-Form Masterclass
         </span>
-        <h1 className="font-serif text-3xl sm:text-4xl text-[#2C1810] font-normal mt-1">
+        <h1 className="font-serif text-3xl sm:text-4xl text-[#1C1C1C] font-normal mt-1">
           Visuals
         </h1>
-        <p className="font-sans text-[11px] text-[#543F35]/60 max-w-xs mx-auto leading-relaxed mt-1.5">
+        <p className="font-sans text-[11px] text-[#434343]/60 max-w-xs mx-auto leading-relaxed mt-1.5">
           Coily care, styling &amp; growth routines — scroll to explore.
         </p>
       </div>
 
       {/* ── Category Filter (sticky) ── */}
-      <div className="sticky top-14 z-30 bg-[#FDFAF4]/95 backdrop-blur-md border-b border-[#C4A882]/30">
+      <div className="sticky top-14 z-30 bg-[#FFFFFF]/95 backdrop-blur-md border-b border-[#ADADAD]/30">
         <div className="max-w-[420px] mx-auto flex overflow-x-auto feed-no-bar px-4 gap-5 py-2.5 select-none">
           {CATEGORIES.map((cat) => (
             <button
@@ -709,7 +709,7 @@ export const VideoGallery: React.FC = () => {
               id={`vid-cat-${cat.toLowerCase().replace(/\s+/g, '-')}`}
               onClick={() => setActiveCategory(cat)}
               className={`text-[10px] uppercase tracking-wider font-bold whitespace-nowrap pb-0.5 relative transition-colors flex-shrink-0 focus:outline-none ${
-                activeCategory === cat ? 'text-[#2C1810] font-bold' : 'text-[#543F35]/40 hover:text-[#543F35]/70'
+                activeCategory === cat ? 'text-[#1C1C1C] font-bold' : 'text-[#434343]/40 hover:text-[#434343]/70'
               }`}
             >
               {cat}
@@ -733,7 +733,7 @@ export const VideoGallery: React.FC = () => {
           onClick={() => goToIndex(activeIndex - 1)}
           disabled={activeIndex === 0}
           aria-label="Previous video"
-          className="hidden lg:flex absolute z-20 w-10 h-10 rounded-full bg-[#2C1810]/10 hover:bg-[#2C1810]/20 text-[#2C1810] items-center justify-center border border-[#C4A882]/40 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+          className="hidden lg:flex absolute z-20 w-10 h-10 rounded-full bg-[#1C1C1C]/10 hover:bg-[#1C1C1C]/20 text-[#1C1C1C] items-center justify-center border border-[#ADADAD]/40 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
           style={{ left: 'calc(50% + 218px)', top: '28%' }}
         >
           <ChevronUp className="w-5 h-5" />
@@ -742,7 +742,7 @@ export const VideoGallery: React.FC = () => {
         {/* Scroll feed */}
         <div
           ref={feedRef}
-          className="w-full sm:max-w-[400px] overflow-y-scroll snap-y snap-mandatory feed-no-bar rounded-none sm:rounded-3xl border-0 sm:border border-[#C4A882]/25 shadow-2xl bg-black"
+          className="w-full sm:max-w-[400px] overflow-y-scroll snap-y snap-mandatory feed-no-bar rounded-none sm:rounded-3xl border-0 sm:border border-[#ADADAD]/25 shadow-2xl bg-black"
           style={{ height: CARD_H }}
         >
           {filteredVideos.length > 0 ? (
@@ -770,9 +770,9 @@ export const VideoGallery: React.FC = () => {
           ) : (
             <div className="flex items-center justify-center" style={{ height: CARD_H }}>
               <div className="text-center">
-                <Play className="w-8 h-8 text-[#543F35]/20 mx-auto mb-3 animate-pulse" />
-                <p className="font-serif text-sm text-[#543F35]/50">No videos in this category.</p>
-                <p className="text-[10px] text-[#543F35]/30 mt-1 font-sans">Try a different filter.</p>
+                <Play className="w-8 h-8 text-[#434343]/20 mx-auto mb-3 animate-pulse" />
+                <p className="font-serif text-sm text-[#434343]/50">No videos in this category.</p>
+                <p className="text-[10px] text-[#434343]/30 mt-1 font-sans">Try a different filter.</p>
               </div>
             </div>
           )}
@@ -783,7 +783,7 @@ export const VideoGallery: React.FC = () => {
           onClick={() => goToIndex(activeIndex + 1)}
           disabled={activeIndex >= filteredVideos.length - 1}
           aria-label="Next video"
-          className="hidden lg:flex absolute z-20 w-10 h-10 rounded-full bg-[#2C1810]/10 hover:bg-[#2C1810]/20 text-[#2C1810] items-center justify-center border border-[#C4A882]/40 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+          className="hidden lg:flex absolute z-20 w-10 h-10 rounded-full bg-[#1C1C1C]/10 hover:bg-[#1C1C1C]/20 text-[#1C1C1C] items-center justify-center border border-[#ADADAD]/40 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
           style={{ left: 'calc(50% + 218px)', top: '68%' }}
         >
           <ChevronDown className="w-5 h-5" />
@@ -801,7 +801,7 @@ export const VideoGallery: React.FC = () => {
                 onClick={() => goToIndex(idx)}
                 aria-label={`Go to video ${idx + 1}`}
                 className={`rounded-full transition-all duration-300 ${
-                  idx === activeIndex ? 'w-1.5 h-6 bg-[#B11B41]' : 'w-1.5 h-1.5 bg-[#543F35]/25 hover:bg-[#543F35]/50'
+                  idx === activeIndex ? 'w-1.5 h-6 bg-[#B11B41]' : 'w-1.5 h-1.5 bg-[#434343]/25 hover:bg-[#434343]/50'
                 }`}
               />
             ))}
@@ -810,7 +810,7 @@ export const VideoGallery: React.FC = () => {
       </div>
 
       {/* ── Keyboard hint (desktop, first load) ── */}
-      <div className="hidden lg:block text-center py-3 text-[9px] text-[#543F35]/30 uppercase tracking-widest select-none">
+      <div className="hidden lg:block text-center py-3 text-[9px] text-[#434343]/30 uppercase tracking-widest select-none">
         ↑ ↓ arrows · J K keys · scroll to navigate · M to mute
       </div>
 
@@ -870,7 +870,7 @@ export const VideoGallery: React.FC = () => {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 18 }}
               transition={{ type: 'spring', damping: 26, stiffness: 210 }}
-              className="w-full max-w-4xl max-h-[90vh] md:h-[620px] bg-[#FDFAF4] rounded-3xl overflow-hidden flex flex-col md:flex-row shadow-2xl border border-[#C4A882]/30"
+              className="w-full max-w-4xl max-h-[90vh] md:h-[620px] bg-[#FFFFFF] rounded-3xl overflow-hidden flex flex-col md:flex-row shadow-2xl border border-[#ADADAD]/30"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Left: Video player */}
@@ -945,7 +945,7 @@ export const VideoGallery: React.FC = () => {
 
 
               {/* Right: content pane */}
-              <div className="flex-1 flex flex-col h-[58%] md:h-full bg-[#FDFAF4] overflow-hidden text-black">
+              <div className="flex-1 flex flex-col h-[58%] md:h-full bg-[#FFFFFF] overflow-hidden text-black">
 
                 {/* Creator header */}
                 <div className="px-5 py-4 border-b border-black/[0.07] flex items-center justify-between flex-shrink-0 bg-white/50">

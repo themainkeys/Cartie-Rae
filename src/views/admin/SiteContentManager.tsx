@@ -120,8 +120,8 @@ export const SiteContentManager: React.FC<SiteContentManagerProps> = ({ onDirtyC
   return (
     <>
       {/* BLOCK 1: Front-Page CMS */}
-            <div className="bg-white border border-[#E5D5C8]/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_4px_25px_-4px_rgba(74,43,32,0.02)]">
-              <div className="flex justify-between items-center border-b border-[#E5D5C8]/30 pb-3 mb-4 flex-wrap gap-2">
+            <div className="bg-white border border-[#D8D8D8]/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_4px_25px_-4px_rgba(50,50,50,0.02)]">
+              <div className="flex justify-between items-center border-b border-[#D8D8D8]/30 pb-3 mb-4 flex-wrap gap-2">
                 <h3 className="font-serif text-base sm:text-lg font-bold text-brand-dark flex items-center gap-2">
                   <span className="w-1.5 h-6 bg-brand-rose rounded-full"></span>
                   Front-Page Content Management Block
@@ -133,7 +133,7 @@ export const SiteContentManager: React.FC<SiteContentManagerProps> = ({ onDirtyC
                   className={`flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-extrabold px-3 py-1.5 rounded-full transition-all duration-200 focus:outline-none ${
                     showLivePreview 
                       ? 'bg-brand-rose text-white shadow-[0_2px_8px_rgba(194,57,90,0.18)]' 
-                      : 'bg-brand-cream text-[#4A2B20] border border-[#E5D5C8] hover:bg-brand-beige'
+                      : 'bg-brand-cream text-[#323232] border border-[#D8D8D8] hover:bg-brand-beige'
                   }`}
                 >
                   <Eye className="w-3.5 h-3.5" />
@@ -150,7 +150,7 @@ export const SiteContentManager: React.FC<SiteContentManagerProps> = ({ onDirtyC
                         rows={2}
                         value={cmsHeroHead}
                         onChange={(e) => { setCmsHeroHead(e.target.value); autoSaveCms({ heroHeadline: e.target.value }); }}
-                        className="w-full px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark font-semibold leading-normal transition-all duration-150"
+                        className="w-full px-3 py-2 bg-[#FFFFFF] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark font-semibold leading-normal transition-all duration-150"
                       />
                     </div>
                     <div>
@@ -159,7 +159,7 @@ export const SiteContentManager: React.FC<SiteContentManagerProps> = ({ onDirtyC
                         rows={2}
                         value={cmsHeroSub}
                         onChange={(e) => { setCmsHeroSub(e.target.value); autoSaveCms({ heroSubheadline: e.target.value }); }}
-                        className="w-full px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark transition-all duration-150"
+                        className="w-full px-3 py-2 bg-[#FFFFFF] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark transition-all duration-150"
                       />
                     </div>
                   </div>
@@ -201,13 +201,13 @@ export const SiteContentManager: React.FC<SiteContentManagerProps> = ({ onDirtyC
 
                     {/* Or paste URL */}
                     <div>
-                      <label className="block text-[10px] text-[#A67E6B] mb-1">Or paste an image URL:</label>
+                      <label className="block text-[10px] text-[#878787] mb-1">Or paste an image URL:</label>
                       <input
                         type="text"
                         value={cmsHeroImage}
                         placeholder="/hero-portrait.jpg or https://..."
                         onChange={(e) => { setCmsHeroImage(e.target.value); autoSaveCms({ heroImageUrl: e.target.value }); }}
-                        className="w-full px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark transition-all duration-150 text-xs"
+                        className="w-full px-3 py-2 bg-[#FFFFFF] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark transition-all duration-150 text-xs"
                       />
                     </div>
                   </div>
@@ -219,7 +219,7 @@ export const SiteContentManager: React.FC<SiteContentManagerProps> = ({ onDirtyC
                         type="text"
                         value={cmsAboutHead}
                         onChange={(e) => { setCmsAboutHead(e.target.value); autoSaveCms({ aboutHeadline: e.target.value }); }}
-                        className="w-full px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark font-medium transition-all duration-150"
+                        className="w-full px-3 py-2 bg-[#FFFFFF] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark font-medium transition-all duration-150"
                       />
                     </div>
                     <div>
@@ -228,7 +228,7 @@ export const SiteContentManager: React.FC<SiteContentManagerProps> = ({ onDirtyC
                         type="text"
                         value={cmsPromoQuote}
                         onChange={(e) => { setCmsPromoQuote(e.target.value); autoSaveCms({ promoQuote: e.target.value }); }}
-                        className="w-full px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark transition-all duration-150"
+                        className="w-full px-3 py-2 bg-[#FFFFFF] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark transition-all duration-150"
                       />
                     </div>
                   </div>
@@ -270,13 +270,13 @@ export const SiteContentManager: React.FC<SiteContentManagerProps> = ({ onDirtyC
 
                     {/* Or paste URL */}
                     <div>
-                      <label className="block text-[10px] text-[#A67E6B] mb-1">Or paste an image URL:</label>
+                      <label className="block text-[10px] text-[#878787] mb-1">Or paste an image URL:</label>
                       <input
                         type="text"
                         value={cmsAboutImage}
                         placeholder="/about-portrait.jpg or https://..."
                         onChange={(e) => { setCmsAboutImage(e.target.value); autoSaveCms({ aboutImageUrl: e.target.value }); }}
-                        className="w-full px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark transition-all duration-150 text-xs"
+                        className="w-full px-3 py-2 bg-[#FFFFFF] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark transition-all duration-150 text-xs"
                       />
                     </div>
                   </div>
@@ -288,7 +288,7 @@ export const SiteContentManager: React.FC<SiteContentManagerProps> = ({ onDirtyC
                         type="text"
                         value={cmsPromoAuthor}
                         onChange={(e) => { setCmsPromoAuthor(e.target.value); autoSaveCms({ promoAuthor: e.target.value }); }}
-                        className="w-full px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark transition-all duration-150"
+                        className="w-full px-3 py-2 bg-[#FFFFFF] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark transition-all duration-150"
                       />
                     </div>
                   </div>
@@ -299,12 +299,12 @@ export const SiteContentManager: React.FC<SiteContentManagerProps> = ({ onDirtyC
                       rows={6}
                       value={cmsAboutStory}
                       onChange={(e) => { setCmsAboutStory(e.target.value); autoSaveCms({ aboutStory: e.target.value }); }}
-                      className="w-full px-3 py-2 bg-[#FAF6F0] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark leading-relaxed transition-all duration-150"
+                      className="w-full px-3 py-2 bg-[#FFFFFF] border border-brand-warm-tan/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-rose/20 focus:border-brand-rose text-brand-dark leading-relaxed transition-all duration-150"
                     />
                   </div>
 
                   <div className="flex items-center justify-between pt-3 border-t border-brand-warm-tan/20">
-                    <span className="text-[10px] text-[#A67E6B] flex items-center gap-1.5">
+                    <span className="text-[10px] text-[#878787] flex items-center gap-1.5">
                       <span className="relative flex h-1.5 w-1.5">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                         <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" />
@@ -325,30 +325,30 @@ export const SiteContentManager: React.FC<SiteContentManagerProps> = ({ onDirtyC
 
                 {/* Live Preview Column */}
                 {showLivePreview && (
-                  <div className="border border-[#E5D5C8]/80 bg-[#FAF7F2] rounded-3xl p-6 shadow-inner space-y-6 max-h-[550px] overflow-y-auto font-sans relative text-left">
+                  <div className="border border-[#D8D8D8]/80 bg-[#FFFFFF] rounded-3xl p-6 shadow-inner space-y-6 max-h-[550px] overflow-y-auto font-sans relative text-left">
                     <div className="absolute top-3 right-3 bg-brand-rose text-white text-[8px] uppercase font-bold px-2 py-0.5 rounded-full z-10 tracking-widest pointer-events-none">
                       Live Storefront Viewport Preview
                     </div>
                     
                     {/* Hero Preview */}
-                    <div className="border border-[#E5D5C8]/40 rounded-2xl p-5 bg-white shadow-xs space-y-3">
+                    <div className="border border-[#D8D8D8]/40 rounded-2xl p-5 bg-white shadow-xs space-y-3">
                       <span className="text-[8.5px] uppercase font-extrabold tracking-widest text-brand-rose block">Hero Section Preview</span>
                       <h1 className="font-serif text-xl font-bold text-brand-dark leading-tight whitespace-pre-wrap">{cmsHeroHead || 'No Headline'}</h1>
-                      <p className="text-[#8C6D62] text-xs leading-relaxed whitespace-pre-wrap">{cmsHeroSub || 'No Sub-headline'}</p>
+                      <p className="text-[#737373] text-xs leading-relaxed whitespace-pre-wrap">{cmsHeroSub || 'No Sub-headline'}</p>
                       <button className="bg-brand-rose text-white px-4 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider pointer-events-none opacity-90 mt-1">
                         Browse Botanical Store
                       </button>
                     </div>
 
                     {/* About Bio Preview */}
-                    <div className="border border-[#E5D5C8]/40 rounded-2xl p-5 bg-white shadow-xs space-y-3">
-                      <span className="text-[8.5px] uppercase font-extrabold tracking-widest text-[#4A2B20] block">Biography Narrative Preview</span>
+                    <div className="border border-[#D8D8D8]/40 rounded-2xl p-5 bg-white shadow-xs space-y-3">
+                      <span className="text-[8.5px] uppercase font-extrabold tracking-widest text-[#323232] block">Biography Narrative Preview</span>
                       <h2 className="font-serif text-base font-bold text-brand-dark leading-tight">{cmsAboutHead || 'No About Headline'}</h2>
-                      <p className="text-[#8C6D62] text-xs leading-relaxed whitespace-pre-wrap">{cmsAboutStory || 'No story bio text'}</p>
+                      <p className="text-[#737373] text-xs leading-relaxed whitespace-pre-wrap">{cmsAboutStory || 'No story bio text'}</p>
                     </div>
 
                     {/* Customer Showcase Quote Preview */}
-                    <div className="border border-[#E5D5C8]/30 rounded-2xl p-5 bg-[#4A2B20] text-white shadow-xs space-y-2 text-center">
+                    <div className="border border-[#D8D8D8]/30 rounded-2xl p-5 bg-[#323232] text-white shadow-xs space-y-2 text-center">
                       <span className="text-[8.5px] uppercase font-extrabold tracking-widest text-brand-pink block">Showcase Quote Preview</span>
                       <p className="font-serif italic text-xs text-brand-beige">“{cmsPromoQuote || 'No Quote text'}”</p>
                       <p className="text-[9px] font-bold text-brand-pink uppercase tracking-widest">— {cmsPromoAuthor || 'Anonymous'}</p>
@@ -368,13 +368,13 @@ export const SiteContentManager: React.FC<SiteContentManagerProps> = ({ onDirtyC
             <div className="space-y-8">
 
               {/* ┌── Cover Images ── */}
-              <div className="bg-white border border-[#E5D5C8]/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_4px_25px_-4px_rgba(74,43,32,0.02)] animate-fade-in">
-                <div className="flex justify-between items-center border-b border-[#E5D5C8]/30 pb-3">
+              <div className="bg-white border border-[#D8D8D8]/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_4px_25px_-4px_rgba(50,50,50,0.02)] animate-fade-in">
+                <div className="flex justify-between items-center border-b border-[#D8D8D8]/30 pb-3">
                   <h3 className="font-serif text-base sm:text-lg font-bold text-brand-dark flex items-center gap-2">
                     <span className="w-1.5 h-6 bg-brand-rose rounded-full"></span>
                     Services Cover Images
                   </h3>
-                  <span className="text-[10px] text-[#A67E6B] bg-brand-cream border border-[#E5D5C8]/60 px-3 py-1 rounded-full font-bold">
+                  <span className="text-[10px] text-[#878787] bg-brand-cream border border-[#D8D8D8]/60 px-3 py-1 rounded-full font-bold">
                     {services.length} Services
                   </span>
                 </div>
@@ -385,7 +385,7 @@ export const SiteContentManager: React.FC<SiteContentManagerProps> = ({ onDirtyC
                     if (!edits) return null;
                     const previewUrl = edits.imageUrl || svc.image;
                     return (
-                      <div key={svc.id} className="bg-[#FAF6F0] border border-brand-warm-tan/20 rounded-2xl p-4 space-y-4">
+                      <div key={svc.id} className="bg-[#FFFFFF] border border-brand-warm-tan/20 rounded-2xl p-4 space-y-4">
                         {/* Live cover preview */}
                         <div className="relative aspect-[16/9] overflow-hidden rounded-xl border border-brand-warm-tan/20 bg-brand-beige">
                           {previewUrl ? (
@@ -398,7 +398,7 @@ export const SiteContentManager: React.FC<SiteContentManagerProps> = ({ onDirtyC
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-brand-beige to-brand-warm-tan/40">
-                              <span className="font-serif text-[10px] text-[#8C6D62] uppercase tracking-wider">{svc.name}</span>
+                              <span className="font-serif text-[10px] text-[#737373] uppercase tracking-wider">{svc.name}</span>
                             </div>
                           )}
                           <div className="absolute inset-0 bg-gradient-to-t from-brand-dark/60 via-transparent to-transparent flex items-end p-3">
@@ -471,8 +471,8 @@ export const SiteContentManager: React.FC<SiteContentManagerProps> = ({ onDirtyC
               </div>
 
               {/* ┌── Text Editor ── */}
-              <div className="bg-white border border-[#E5D5C8]/80 rounded-3xl p-6 sm:p-8 space-y-8 shadow-[0_4px_25px_-4px_rgba(74,43,32,0.02)] animate-fade-in">
-                <div className="flex items-center justify-between gap-3 border-b border-[#E5D5C8]/30 pb-3">
+              <div className="bg-white border border-[#D8D8D8]/80 rounded-3xl p-6 sm:p-8 space-y-8 shadow-[0_4px_25px_-4px_rgba(50,50,50,0.02)] animate-fade-in">
+                <div className="flex items-center justify-between gap-3 border-b border-[#D8D8D8]/30 pb-3">
                   <div>
                     <h3 className="font-serif text-base sm:text-lg font-bold text-brand-dark">Services Text Editor</h3>
                     <p className="font-sans text-[10px] text-zinc-400 mt-0.5">Edit name, price, description, bullet points, and disclaimer. Changes go live on Save.</p>
@@ -511,7 +511,7 @@ export const SiteContentManager: React.FC<SiteContentManagerProps> = ({ onDirtyC
                         <span className="text-[9px] font-bold text-brand-rose uppercase tracking-widest">Service {svcIdx + 1}</span>
                       </div>
 
-                      <div className="p-5 space-y-5 bg-[#FAF6F0]">
+                      <div className="p-5 space-y-5 bg-[#FFFFFF]">
 
                         {/* Name + Price */}
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

@@ -247,8 +247,8 @@ export const PhotoGallery: React.FC = () => {
                       {item.caption}
                     </p>
                     
-                    <div className="flex items-center justify-between text-[9px] text-[#A67E6B]">
-                      <span className="font-mono text-[8px] uppercase tracking-widest font-bold bg-[#FAF6F0] border border-brand-warm-tan/20 text-[#A67E6B] px-2 py-0.5 rounded-full">
+                    <div className="flex items-center justify-between text-[9px] text-[#878787]">
+                      <span className="font-mono text-[8px] uppercase tracking-widest font-bold bg-[#FFFFFF] border border-brand-warm-tan/20 text-[#878787] px-2 py-0.5 rounded-full">
                         {item.category}
                       </span>
                       
@@ -277,7 +277,7 @@ export const PhotoGallery: React.FC = () => {
               onClick={() => setVisibleCount(prev => prev + 12)}
               whileHover={{ scale: prefersReducedMotion ? 1 : 1.02 }}
               whileTap={{ scale: prefersReducedMotion ? 1 : 0.98 }}
-              className="px-8 py-3 bg-brand-dark hover:bg-brand-rose text-[#FAF6F0] text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer rounded-xl shadow-sm"
+              className="px-8 py-3 bg-brand-dark hover:bg-brand-rose text-[#FFFFFF] text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer rounded-xl shadow-sm"
             >
               Load More Photos
             </motion.button>
@@ -336,7 +336,7 @@ export const PhotoGallery: React.FC = () => {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ type: "spring", duration: 0.35 }}
-                className="relative bg-[#FAF6F0] w-full max-w-xl overflow-hidden shadow-2xl rounded-2xl z-10"
+                className="relative bg-[#FFFFFF] w-full max-w-xl overflow-hidden shadow-2xl rounded-2xl z-10"
               >
                 
                 {/* Top Banner Bar with Close and Photo Index Status Indicator */}
@@ -354,7 +354,7 @@ export const PhotoGallery: React.FC = () => {
                 </div>
 
                 {/* Exp Image Stage with overlays and sliding direction */}
-                <div className="relative w-full bg-stone-900 flex items-center justify-center overflow-hidden min-h-[350px]">
+                <div className="relative w-full bg-zinc-900 flex items-center justify-center overflow-hidden min-h-[350px]">
                   
                   <AnimatePresence initial={false} mode="wait">
                     <motion.img
@@ -413,10 +413,10 @@ export const PhotoGallery: React.FC = () => {
                         {selectedPhoto.category}
                       </span>
                       <span className="text-zinc-300">•</span>
-                      <span className="text-[10px] text-[#A67E6B] font-mono">ID: {selectedPhoto.id}</span>
+                      <span className="text-[10px] text-[#878787] font-mono">ID: {selectedPhoto.id}</span>
                     </div>
                     
-                    <span className="hidden sm:inline font-mono text-[8px] uppercase tracking-widest text-[#6C5347]/45">
+                    <span className="hidden sm:inline font-mono text-[8px] uppercase tracking-widest text-[#585858]/45">
                       🖮 Use Left / Right Keys
                     </span>
                   </div>

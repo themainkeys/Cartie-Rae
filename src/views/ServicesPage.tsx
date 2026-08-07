@@ -43,7 +43,7 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({ openCart }) => {
         <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-normal text-brand-dark tracking-tight">
           Private Consultations
         </h1>
-        <p className="font-sans text-xs sm:text-sm text-[#6C5347]/80 max-w-xl mx-auto leading-relaxed">
+        <p className="font-sans text-xs sm:text-sm text-[#585858]/80 max-w-xl mx-auto leading-relaxed">
           Book a private, virtual strategy call with Cartiae Rae to calibrate your personal coily hair routine or build a growth strategy for your brand.
         </p>
       </div>
@@ -72,14 +72,14 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({ openCart }) => {
                     if (parent && !parent.querySelector('.img-fallback')) {
                       const fb = document.createElement('div');
                       fb.className = 'img-fallback w-full h-full flex items-center justify-center bg-gradient-to-br from-brand-beige to-brand-warm-tan/40';
-                      fb.innerHTML = `<span style="font-size:10px;color:#8C6D62;font-family:serif;letter-spacing:0.05em;text-transform:uppercase">${service.name}</span>`;
+                      fb.innerHTML = `<span style="font-size:10px;color:#737373;font-family:serif;letter-spacing:0.05em;text-transform:uppercase">${service.name}</span>`;
                       parent.appendChild(fb);
                     }
                   }}
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-brand-beige to-brand-warm-tan/40">
-                  <span className="font-serif text-[10px] text-[#8C6D62] uppercase tracking-wider">{service.name}</span>
+                  <span className="font-serif text-[10px] text-[#737373] uppercase tracking-wider">{service.name}</span>
                 </div>
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-brand-dark/65 via-brand-dark/15 to-transparent flex items-end p-6 sm:p-8">
@@ -87,7 +87,7 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({ openCart }) => {
                   <span className="text-[10px] uppercase tracking-widest text-brand-pink font-bold font-mono">
                     Virtual Call • Zoom
                   </span>
-                  <h2 className="font-serif text-lg sm:text-2xl text-[#FAF6F0] font-normal leading-tight">
+                  <h2 className="font-serif text-lg sm:text-2xl text-[#FFFFFF] font-normal leading-tight">
                     {service.name}
                   </h2>
                 </div>
@@ -100,7 +100,7 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({ openCart }) => {
               <div className="space-y-6">
                 {/* Description & Price */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-brand-warm-tan/20 pb-4">
-                  <p className="font-sans text-xs text-[#5C453C]/90 leading-relaxed sm:max-w-[70%]">
+                  <p className="font-sans text-xs text-[#4A4A4A]/90 leading-relaxed sm:max-w-[70%]">
                     {service.description}
                   </p>
                   <div className="text-right shrink-0">
@@ -119,7 +119,7 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({ openCart }) => {
                     </h4>
                     <ul className="space-y-2">
                       {service.included.map((item, i) => (
-                        <li key={i} className="font-sans text-[11px] text-[#5C453C]/80 flex items-start gap-2">
+                        <li key={i} className="font-sans text-[11px] text-[#4A4A4A]/80 flex items-start gap-2">
                           <CheckCircle2 className="w-3.5 h-3.5 text-brand-rose shrink-0 mt-0.5" />
                           <span>{item}</span>
                         </li>
@@ -135,7 +135,7 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({ openCart }) => {
                     </h4>
                     <ul className="space-y-2">
                       {service.benefits.map((item, i) => (
-                        <li key={i} className="font-sans text-[11px] text-[#5C453C]/80 flex items-start gap-2">
+                        <li key={i} className="font-sans text-[11px] text-[#4A4A4A]/80 flex items-start gap-2">
                           <CheckCircle2 className="w-3.5 h-3.5 text-brand-rose/65 shrink-0 mt-0.5" />
                           <span>{item}</span>
                         </li>
@@ -152,7 +152,7 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({ openCart }) => {
                   </h4>
                   <ul className="space-y-1.5 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
                     {service.notice.map((item, i) => (
-                      <li key={i} className="font-sans text-[10.5px] text-[#6D5448] leading-normal flex items-start gap-1">
+                      <li key={i} className="font-sans text-[10.5px] text-[#595959] leading-normal flex items-start gap-1">
                         <span className="text-brand-rose select-none">•</span>
                         <span>{item}</span>
                       </li>
@@ -165,15 +165,15 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({ openCart }) => {
               <div className="space-y-4 pt-4 border-t border-brand-warm-tan/15">
                 <button
                   onClick={() => handleBookSession(service)}
-                  className="w-full bg-brand-dark hover:bg-brand-rose text-[#FAF6F0] py-3.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer shadow-[0_4px_14px_rgba(74,43,32,0.12)] hover:shadow-lg focus:outline-none"
+                  className="w-full bg-brand-dark hover:bg-brand-rose text-[#FFFFFF] py-3.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer shadow-[0_4px_14px_rgba(50,50,50,0.12)] hover:shadow-lg focus:outline-none"
                 >
                   <Video className="w-4 h-4" />
                   <span>Book Coaching Session (${service.price.toFixed(2)})</span>
                 </button>
                 
                 {/* Disclaimer */}
-                <div className="flex items-start gap-1.5 text-[9.5px] text-[#6D5448]/75 leading-normal">
-                  <ShieldAlert className="w-3.5 h-3.5 text-[#A67E6B] shrink-0 mt-0.5" />
+                <div className="flex items-start gap-1.5 text-[9.5px] text-[#595959]/75 leading-normal">
+                  <ShieldAlert className="w-3.5 h-3.5 text-[#878787] shrink-0 mt-0.5" />
                   <p className="italic font-sans">
                     <strong>Disclaimer:</strong> {service.disclaimer}
                   </p>

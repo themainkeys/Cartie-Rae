@@ -240,7 +240,7 @@ export const MainStore: React.FC<MainStoreProps> = ({ initialFilter = 'All', isC
               className={`inline-flex items-center gap-1.5 px-4 py-2.5 text-[10px] uppercase tracking-wider font-semibold rounded-full border relative transition-colors duration-300 cursor-pointer focus:outline-none ${
                 isActive
                   ? 'text-white border-brand-rose font-bold z-10 bg-transparent'
-                  : 'bg-white text-brand-dark/70 border-brand-warm-tan/30 hover:bg-[#FAF6F0]'
+                  : 'bg-white text-brand-dark/70 border-brand-warm-tan/30 hover:bg-[#FFFFFF]'
               }`}
             >
               {isActive && (
@@ -265,7 +265,7 @@ export const MainStore: React.FC<MainStoreProps> = ({ initialFilter = 'All', isC
           placeholder="Search apothecary products & digital guides..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-9 pr-8 py-3 bg-[#FAF6F0] border border-brand-warm-tan/25 rounded-xl text-xs text-brand-dark placeholder-brand-dark/40 focus:outline-none focus:ring-1 focus:ring-brand-rose focus:border-brand-rose transition-all"
+          className="w-full pl-9 pr-8 py-3 bg-[#FFFFFF] border border-brand-warm-tan/25 rounded-xl text-xs text-brand-dark placeholder-brand-dark/40 focus:outline-none focus:ring-1 focus:ring-brand-rose focus:border-brand-rose transition-all"
         />
         <Search className="absolute left-3.5 top-3.5 w-3.5 h-3.5 text-brand-dark/30" />
         {searchQuery && (
@@ -282,7 +282,7 @@ export const MainStore: React.FC<MainStoreProps> = ({ initialFilter = 'All', isC
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 mt-4">
         {/* Sticky Sidebar on Desktop */}
         <aside className="hidden md:block md:col-span-3">
-          <div className="sticky top-24 self-start space-y-8 bg-[#FAF6F0]/65 p-6 rounded-3xl border border-brand-warm-tan/20 shadow-sm">
+          <div className="sticky top-24 self-start space-y-8 bg-[#FFFFFF]/65 p-6 rounded-3xl border border-brand-warm-tan/20 shadow-sm">
             <div>
               <h3 className="font-serif text-sm tracking-widest text-brand-dark uppercase font-semibold border-b border-brand-warm-tan/20 pb-2 mb-4">
                 Apothecary Shop
@@ -303,7 +303,7 @@ export const MainStore: React.FC<MainStoreProps> = ({ initialFilter = 'All', isC
                       }}
                       className={`flex items-center gap-3 px-3.5 py-3 text-[10px] uppercase tracking-[0.16em] font-semibold rounded-xl relative transition-colors duration-300 text-left focus:outline-none w-full cursor-pointer ${
                         isActive
-                          ? 'text-[#FAF6F0] font-bold z-10 bg-transparent'
+                          ? 'text-[#FFFFFF] font-bold z-10 bg-transparent'
                           : 'text-brand-dark/70 hover:text-brand-dark hover:bg-brand-rose/5'
                       }`}
                     >
@@ -334,7 +334,7 @@ export const MainStore: React.FC<MainStoreProps> = ({ initialFilter = 'All', isC
                   placeholder="Type keyword..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-8 pr-8 py-2.5 rounded-xl bg-[#FAF6F0] border border-brand-warm-tan/20 text-xs text-brand-dark placeholder-brand-dark/40 focus:outline-none focus:ring-1 focus:ring-brand-rose focus:border-brand-rose transition-all"
+                  className="w-full pl-8 pr-8 py-2.5 rounded-xl bg-[#FFFFFF] border border-brand-warm-tan/20 text-xs text-brand-dark placeholder-brand-dark/40 focus:outline-none focus:ring-1 focus:ring-brand-rose focus:border-brand-rose transition-all"
                 />
                 <Search className="absolute left-2.5 top-3 w-3.5 h-3.5 text-brand-dark/30" />
                 {searchQuery && (
@@ -369,7 +369,7 @@ export const MainStore: React.FC<MainStoreProps> = ({ initialFilter = 'All', isC
                 <h2 className="font-serif text-lg tracking-wide text-brand-dark font-medium">
                   Digital Curriculum & Guides
                 </h2>
-                <span className="font-sans text-[9px] text-[#6C5347]/50 uppercase tracking-widest">
+                <span className="font-sans text-[9px] text-[#585858]/50 uppercase tracking-widest">
                   {filteredEBooks.length} Available
                 </span>
               </div>
@@ -405,7 +405,7 @@ export const MainStore: React.FC<MainStoreProps> = ({ initialFilter = 'All', isC
                 <h2 className="font-serif text-lg tracking-wide text-brand-dark font-medium">
                   Botanical Elixirs & Accessories
                 </h2>
-                <span className="font-sans text-[9px] text-[#6C5347]/50 uppercase tracking-widest">
+                <span className="font-sans text-[9px] text-[#585858]/50 uppercase tracking-widest">
                   {filteredProducts.length} Available
                 </span>
               </div>
@@ -438,7 +438,7 @@ export const MainStore: React.FC<MainStoreProps> = ({ initialFilter = 'All', isC
           {filteredEBooks.length === 0 && filteredProducts.length === 0 && (
             <div className="py-20 text-center bg-brand-beige/20 rounded-2xl border border-dashed border-brand-warm-tan/30">
               <AlertCircle className="w-8 h-8 text-brand-rose/60 mx-auto mb-3" />
-              <p className="font-serif text-base text-[#6C5347] font-medium">No results match your criteria.</p>
+              <p className="font-serif text-base text-[#585858] font-medium">No results match your criteria.</p>
               <p className="font-sans text-xs text-brand-dark/50 mt-1">Try resetting the search query or changing filters.</p>
               <button
                 onClick={() => {
@@ -476,7 +476,7 @@ export const MainStore: React.FC<MainStoreProps> = ({ initialFilter = 'All', isC
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: prefersReducedMotion ? 0 : 15 }}
               transition={{ type: "spring", duration: 0.35 }}
-              className="relative bg-[#FAF6F0] border border-[#E5D5C8]/80 rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh] z-10"
+              className="relative bg-[#FFFFFF] border border-[#D8D8D8]/80 rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh] z-10"
             >
               {/* Close Button */}
               <button
@@ -499,7 +499,7 @@ export const MainStore: React.FC<MainStoreProps> = ({ initialFilter = 'All', isC
                     />
                     
                     {/* Category Overlay Pill */}
-                    <span className="absolute bottom-4 left-4 bg-brand-dark text-[#FAF6F0] text-[9px] uppercase tracking-widest font-black px-3.5 py-1.5 shadow-sm rounded-lg">
+                    <span className="absolute bottom-4 left-4 bg-brand-dark text-[#FFFFFF] text-[9px] uppercase tracking-widest font-black px-3.5 py-1.5 shadow-sm rounded-lg">
                       {selectedProduct.category}
                     </span>
 
@@ -540,25 +540,25 @@ export const MainStore: React.FC<MainStoreProps> = ({ initialFilter = 'All', isC
                       </p>
                     </div>
 
-                    <div className="space-y-4 border-t border-[#E5D5C8]/30 pt-4">
+                    <div className="space-y-4 border-t border-[#D8D8D8]/30 pt-4">
                       {/* Description */}
                       <div className="space-y-1">
                         <h4 className="font-serif text-[11px] uppercase font-bold tracking-wider text-brand-chocolate">
                           Description Overview
                         </h4>
-                        <p className="font-sans text-xs text-[#8C6D62] leading-relaxed">
+                        <p className="font-sans text-xs text-[#737373] leading-relaxed">
                           {selectedProduct.description}
                         </p>
                       </div>
 
                       {/* Ingredients */}
                       {selectedProduct.ingredients && selectedProduct.ingredients.length > 0 && (
-                        <div className="p-4 bg-[#FAF7F2] border border-[#E5D5C8]/45 rounded-2xl">
+                        <div className="p-4 bg-[#FFFFFF] border border-[#D8D8D8]/45 rounded-2xl">
                           <h4 className="font-serif text-xs font-bold uppercase tracking-wider text-brand-chocolate mb-2 flex items-center gap-1.5">
                             <Droplet className="w-3.5 h-3.5 text-brand-rose" />
                             <span>Featured Botanical Ingredients</span>
                           </h4>
-                          <ul className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[10.5px] text-[#8C6D62]">
+                          <ul className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[10.5px] text-[#737373]">
                             {selectedProduct.ingredients.map((ing, i) => (
                               <li key={i} className="flex items-center gap-1.5">
                                 <span className="w-1 h-1 bg-brand-rose rounded-full"></span>
@@ -575,7 +575,7 @@ export const MainStore: React.FC<MainStoreProps> = ({ initialFilter = 'All', isC
                           <h4 className="font-serif text-[11px] uppercase font-bold tracking-wider text-brand-chocolate">
                             Professional Practice & Use
                           </h4>
-                          <ol className="space-y-1.5 text-[11px] text-[#8C6D62] list-decimal list-inside leading-relaxed">
+                          <ol className="space-y-1.5 text-[11px] text-[#737373] list-decimal list-inside leading-relaxed">
                             {selectedProduct.howToUse.slice(0, 2).map((step, i) => (
                               <li key={i} className="pl-0.5">{step}</li>
                             ))}
@@ -586,7 +586,7 @@ export const MainStore: React.FC<MainStoreProps> = ({ initialFilter = 'All', isC
                   </div>
 
                   {/* Rating */}
-                  <div className="flex items-center gap-2 border-t border-[#E5D5C8]/30 pt-4">
+                  <div className="flex items-center gap-2 border-t border-[#D8D8D8]/30 pt-4">
                     <div className="flex text-amber-500">
                       {[...Array(5)].map((_, i) => (
                         <Star key={i} className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
@@ -600,7 +600,7 @@ export const MainStore: React.FC<MainStoreProps> = ({ initialFilter = 'All', isC
               </div>
 
               {/* Bottom Add to Cart action banner */}
-              <div className="p-4 bg-[#FAF7F2] border-t border-[#E5D5C8]/50 flex items-center justify-between gap-4 z-20">
+              <div className="p-4 bg-[#FFFFFF] border-t border-[#D8D8D8]/50 flex items-center justify-between gap-4 z-20">
                 <span className="font-sans text-base sm:text-lg font-black text-brand-dark">${selectedProduct.price.toFixed(2)}</span>
                 <div className="flex items-center gap-2">
                   <motion.button
@@ -622,7 +622,7 @@ export const MainStore: React.FC<MainStoreProps> = ({ initialFilter = 'All', isC
                     }}
                     whileHover={{ scale: prefersReducedMotion ? 1 : 1.05 }}
                     whileTap={{ scale: prefersReducedMotion ? 1 : 0.95 }}
-                    className="p-2.5 rounded-full bg-white hover:bg-brand-rose hover:text-white text-brand-dark border border-[#E5D5C8]/60 flex items-center justify-center focus:outline-none transition-colors cursor-pointer"
+                    className="p-2.5 rounded-full bg-white hover:bg-brand-rose hover:text-white text-brand-dark border border-[#D8D8D8]/60 flex items-center justify-center focus:outline-none transition-colors cursor-pointer"
                     aria-label="Wishlist product"
                   >
                     <Heart className={`w-4 h-4 ${wishlist.some(item => item.id === selectedProduct.id) ? 'fill-brand-rose text-brand-rose' : ''}`} />
@@ -638,7 +638,7 @@ export const MainStore: React.FC<MainStoreProps> = ({ initialFilter = 'All', isC
                     }}
                     whileHover={{ scale: prefersReducedMotion ? 1 : 1.05 }}
                     whileTap={{ scale: prefersReducedMotion ? 1 : 0.95 }}
-                    className="p-2.5 rounded-full bg-white hover:bg-brand-rose hover:text-white text-brand-dark border border-[#E5D5C8]/60 flex items-center justify-center focus:outline-none transition-colors cursor-pointer"
+                    className="p-2.5 rounded-full bg-white hover:bg-brand-rose hover:text-white text-brand-dark border border-[#D8D8D8]/60 flex items-center justify-center focus:outline-none transition-colors cursor-pointer"
                     aria-label="Share product"
                     title="Share product link"
                   >
@@ -698,7 +698,7 @@ export const MainStore: React.FC<MainStoreProps> = ({ initialFilter = 'All', isC
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: prefersReducedMotion ? 0 : 15 }}
               transition={{ type: "spring", duration: 0.35 }}
-              className="relative bg-[#FAF6F0] border border-[#E5D5C8]/80 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh] z-10"
+              className="relative bg-[#FFFFFF] border border-[#D8D8D8]/80 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh] z-10"
             >
               {/* Close */}
               <button
@@ -799,7 +799,7 @@ export const MainStore: React.FC<MainStoreProps> = ({ initialFilter = 'All', isC
               </div>
 
               {/* Bottom Add to Cart action banner */}
-              <div className="p-4 bg-[#FAF7F2] border-t border-[#E5D5C8]/50 flex items-center justify-between gap-4">
+              <div className="p-4 bg-[#FFFFFF] border-t border-[#D8D8D8]/50 flex items-center justify-between gap-4">
                 <span className="font-sans text-lg font-bold text-brand-chocolate">${selectedEBook.price.toFixed(2)}</span>
                 <div className="flex items-center gap-2">
                   <motion.button
