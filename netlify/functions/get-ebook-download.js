@@ -31,6 +31,11 @@ const { createClient } = require('@supabase/supabase-js');
 // frontend bundle — so it defaults here. Only SUPABASE_SERVICE_ROLE_KEY,
 // which bypasses every RLS policy, has to be set in Netlify.
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ljsbwaxoiidjjmvwchah.supabase.co';
+// Supabase's dashboard has called this key both "service_role key" and, more
+// recently, "secret key" — accept either variable name so a reasonable choice in
+// the Netlify UI does not silently break the function.
+const SUPABASE_SECRET =
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
 
 const BUCKET = 'ebooks';
 const DEFAULT_TTL_SECONDS = 24 * 60 * 60;      // 24 hours
@@ -58,11 +63,11 @@ exports.handler = async (event) => {
     return json(405, { error: 'Method not allowed.' });
   }
 
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    console.error('[get-ebook-download] SUPABASE_SERVICE_ROLE_KEY is not set.');
+  if (!SUPABASE_SECRET) {
+    console.error('[get-ebook-download] No Supabase secret key is set.');
     return json(500, {
       error: 'Downloads are not configured. Please contact support.',
-      missing: ['SUPABASE_SERVICE_ROLE_KEY'],
+      missing: ['SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SECRET_KEY)'],
     });
   }
 
@@ -90,7 +95,7 @@ exports.handler = async (event) => {
 
   const supabase = createClient(
     SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    SUPABASE_SECRET,
     { auth: { persistSession: false, autoRefreshToken: false } }
   );
 

@@ -25,6 +25,11 @@ const { createClient } = require('@supabase/supabase-js');
 // frontend bundle — so it defaults here. Only the two real secrets
 // (STRIPE_WEBHOOK_SECRET, SUPABASE_SERVICE_ROLE_KEY) must be set in Netlify.
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ljsbwaxoiidjjmvwchah.supabase.co';
+// Supabase's dashboard has called this key both "service_role key" and, more
+// recently, "secret key" — accept either variable name so a reasonable choice in
+// the Netlify UI does not silently break the function.
+const SUPABASE_SECRET =
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -82,8 +87,9 @@ exports.handler = async (event) => {
   const missing = [
     'STRIPE_SECRET_KEY',
     'STRIPE_WEBHOOK_SECRET',
-    'SUPABASE_SERVICE_ROLE_KEY',
   ].filter((k) => !process.env[k]);
+
+  if (!SUPABASE_SECRET) missing.push('SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SECRET_KEY)');
 
   if (missing.length) {
     console.error('[stripe-webhook] Missing environment variables:', missing.join(', '));
@@ -129,7 +135,7 @@ exports.handler = async (event) => {
   // ── 3) Record the order ──────────────────────────────────────────────────
   const supabase = createClient(
     SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    SUPABASE_SECRET,
     { auth: { persistSession: false, autoRefreshToken: false } }
   );
 
