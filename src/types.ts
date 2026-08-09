@@ -132,6 +132,8 @@ export interface Order {
   status: 'Pending' | 'Fulfilled';
   customerPhone?: string;
   shippingAddress?: string;
+  /** Present on orders loaded from Supabase; the key used to persist updates. */
+  stripeSessionId?: string;
 }
 
 export interface ContactRequest {

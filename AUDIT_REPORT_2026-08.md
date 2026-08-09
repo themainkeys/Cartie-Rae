@@ -91,15 +91,20 @@ locally, gets a "Sync failed" toast, and the public site never updates.
 
 **Fix:** write the migration for all three. I can generate it.
 
-### H3 — Production is missing two required secrets
+### H3 — Production is missing one required secret
 
 Probing the live functions returns, verbatim:
 
 ```
-stripe-webhook      → 500 {"missing":["STRIPE_WEBHOOK_SECRET","SUPABASE_SERVICE_ROLE_KEY"]}
-get-ebook-download  → 500 {"missing":["SUPABASE_SERVICE_ROLE_KEY"]}
-create-checkout-session → 400 (working — STRIPE_SECRET_KEY is set)
+stripe-webhook          → 500 {"missing":["STRIPE_WEBHOOK_SECRET"]}
+get-ebook-download      → 400 "A valid Stripe session id is required."  (configured)
+create-checkout-session → 400 "A valid customer email is required."     (configured)
 ```
+
+The Supabase key was present all along under the name `SUPABASE_SECRET_KEY`, while the
+functions read `SUPABASE_SERVICE_ROLE_KEY` — a silent name mismatch. The functions now
+accept either name, which resolved `get-ebook-download`. Only the Stripe webhook
+secret remains, and it cannot exist until the endpoint is registered in Stripe.
 
 Checkout works; **recording the sale does not.** On a live key that means money can
 be taken with no order row, no eBook delivery, and no record for the studio. The

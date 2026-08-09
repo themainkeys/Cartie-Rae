@@ -47,10 +47,24 @@ create index if not exists orders_created_at_idx     on public.orders (created_a
 
 alter table public.orders enable row level security;
 
--- Deliberately NO policies: anon/authenticated get zero rows.
--- The webhook and download functions use the service_role key.
+-- The public gets nothing. The webhook and download functions use the
+-- service_role key, which bypasses RLS entirely.
 drop policy if exists "orders public read"   on public.orders;
 drop policy if exists "orders public insert" on public.orders;
+
+-- Signed-in admins read their store's orders — without this the admin Orders
+-- Ledger authenticates fine and then renders zero rows.
+drop policy if exists "orders admin read" on public.orders;
+create policy "orders admin read" on public.orders
+  for select to authenticated
+  using ( exists (select 1 from public.admin_users a where a.id = auth.uid()) );
+
+-- ...and may mark them dispatched.
+drop policy if exists "orders admin update" on public.orders;
+create policy "orders admin update" on public.orders
+  for update to authenticated
+  using      ( exists (select 1 from public.admin_users a where a.id = auth.uid()) )
+  with check ( exists (select 1 from public.admin_users a where a.id = auth.uid()) );
 
 -- ── 2) eBook id -> storage path mapping ─────────────────────────────────────
 create table if not exists public.ebook_files (
@@ -64,11 +78,13 @@ alter table public.ebook_files enable row level security;
 -- Again: no policies. Only the service_role key may read this.
 
 -- Seed the three eBooks currently in src/data/initialData.ts.
+-- The ebook_id MUST match the cart item id exactly ('ebook-1', not 'eb1') —
+-- get-ebook-download looks these up by the id stored on the order.
 -- Upload the matching PDFs to the "ebooks" bucket under these exact paths.
 insert into public.ebook_files (ebook_id, storage_path, title) values
-  ('eb1', '4c_growth_blueprint_cartiae_rae.pdf', 'The 4C Growth Blueprint'),
-  ('eb2', 'wash_day_mastery_cartiae_rae.pdf',    'Wash Day Mastery'),
-  ('eb3', 'protective_styles_playbook.pdf',      'Protective Styles Playbook')
+  ('ebook-1', '4c_growth_blueprint_cartiae_rae.pdf', 'The 4C Growth Blueprint'),
+  ('ebook-2', 'wash_day_mastery_cartiae_rae.pdf',    'Wash Day Mastery'),
+  ('ebook-3', 'protective_styles_playbook.pdf',      'The Protective Style Playbook')
 on conflict (ebook_id) do update
   set storage_path = excluded.storage_path,
       title        = excluded.title;

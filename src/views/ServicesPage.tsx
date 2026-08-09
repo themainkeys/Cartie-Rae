@@ -72,7 +72,16 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({ openCart }) => {
                     if (parent && !parent.querySelector('.img-fallback')) {
                       const fb = document.createElement('div');
                       fb.className = 'img-fallback w-full h-full flex items-center justify-center bg-gradient-to-br from-brand-beige to-brand-warm-tan/40';
-                      fb.innerHTML = `<span style="font-size:10px;color:#737373;font-family:serif;letter-spacing:0.05em;text-transform:uppercase">${service.name}</span>`;
+                      // Build the node rather than interpolating into innerHTML —
+                      // service.name is admin-editable content and would otherwise
+                      // execute as markup for every visitor.
+                      const label = document.createElement('span');
+                      label.setAttribute(
+                        'style',
+                        'font-size:10px;color:#737373;font-family:serif;letter-spacing:0.05em;text-transform:uppercase'
+                      );
+                      label.textContent = service.name;
+                      fb.appendChild(label);
                       parent.appendChild(fb);
                     }
                   }}

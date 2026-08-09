@@ -10,10 +10,73 @@
  */
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const { createClient } = require('@supabase/supabase-js');
+
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ljsbwaxoiidjjmvwchah.supabase.co';
+const SUPABASE_SECRET =
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-const ALLOWED_TYPES = ['product', 'ebook', 'service'];
+/**
+ * Loads the published catalog and builds an id -> {name, price, type} map.
+ *
+ * This is the ONLY source of prices. The browser sends ids and quantities; it
+ * does not get to say what anything costs. Without this, a customer could edit
+ * the request in devtools and buy a $200 product for the Stripe minimum.
+ *
+ * Returns null if the catalog cannot be read — callers must then refuse the sale
+ * rather than fall back to client-supplied prices.
+ */
+async function loadCatalog() {
+  if (!SUPABASE_SECRET) return null;
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SECRET, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  const { data, error } = await supabase
+    .from('site_snapshots')
+    .select('data')
+    .eq('id', 'main')
+    .maybeSingle();
+
+  if (error || !data?.data) {
+    console.error('[create-checkout-session] Catalog load failed:', error?.message || 'no snapshot row');
+    return null;
+  }
+
+  const snap = data.data;
+  const catalog = new Map();
+
+  const add = (list, type) => {
+    if (!Array.isArray(list)) return;
+    for (const entry of list) {
+      if (!entry || typeof entry.id !== 'string') continue;
+      const price = Number(entry.price);
+      if (!Number.isFinite(price) || price <= 0) continue;
+      catalog.set(entry.id, { name: String(entry.name || entry.id), price, type });
+    }
+  };
+
+  add(snap.products, 'product');
+  add(snap.ebooks, 'ebook');
+  add(snap.services, 'service');
+
+  // Discount codes are resolved server-side too — the client sends a code string,
+  // never a percentage.
+  const codes = new Map();
+  if (Array.isArray(snap.discountCodes)) {
+    for (const c of snap.discountCodes) {
+      if (!c || typeof c.code !== 'string') continue;
+      const pct = Number(c.discountPercent);
+      if (!Number.isFinite(pct) || pct < 0 || pct > 100) continue;
+      codes.set(c.code.trim().toUpperCase(), pct);
+    }
+  }
+
+  return catalog.size > 0 ? { catalog, codes } : null;
+}
 
 const ITEM_DESCRIPTIONS = {
   ebook: 'Instant Digital Delivery — PDF eBook Guide',
@@ -22,26 +85,20 @@ const ITEM_DESCRIPTIONS = {
 };
 
 /**
- * Validates and sanitises each cart item received from the client.
- * Returns an error string if any item is invalid, null otherwise.
+ * Validates the shape of the cart received from the client.
+ *
+ * Only `id` and `quantity` are trusted here — name, type and price are all
+ * resolved from the server-side catalog afterwards, so there is nothing to
+ * validate about the values the client sent for them.
  */
 function validateCartItems(items) {
   if (!Array.isArray(items) || items.length === 0) {
     return 'Cart is empty or malformed.';
   }
   for (const item of items) {
-    if (!item.id || typeof item.id !== 'string') return 'Item is missing a valid id.';
-    if (!item.name || typeof item.name !== 'string' || item.name.trim().length === 0) {
-      return `Item "${item.id}" has no name.`;
-    }
-    if (!ALLOWED_TYPES.includes(item.type)) {
-      return `Item "${item.name}" has an unrecognised type: ${item.type}.`;
-    }
-    if (typeof item.price !== 'number' || item.price <= 0 || item.price > 10000) {
-      return `Item "${item.name}" has an invalid price: ${item.price}.`;
-    }
+    if (!item || !item.id || typeof item.id !== 'string') return 'Item is missing a valid id.';
     if (!Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 99) {
-      return `Item "${item.name}" has an invalid quantity: ${item.quantity}.`;
+      return `Item "${item.id}" has an invalid quantity: ${item.quantity}.`;
     }
   }
   return null;
@@ -109,10 +166,42 @@ exports.handler = async (event) => {
     };
   }
 
-  // ── Detect item types ──────────────────────────────────────────────────
-  const containsPhysical = cart.some((i) => i.type === 'product');
-  const containsDigital  = cart.some((i) => i.type === 'ebook');
-  const containsService  = cart.some((i) => i.type === 'service');
+  // ── Resolve every item against the server-side catalog ─────────────────
+  // Fail CLOSED: if the catalog is unavailable we refuse the sale rather than
+  // fall back to prices the browser supplied.
+  const priceBook = await loadCatalog();
+  if (!priceBook) {
+    return {
+      statusCode: 503,
+      body: JSON.stringify({
+        error: 'The store catalog is temporarily unavailable, so checkout is paused. Please try again shortly.',
+      }),
+    };
+  }
+
+  const resolved = [];
+  for (const item of cart) {
+    const entry = priceBook.catalog.get(item.id);
+    if (!entry) {
+      console.warn(`[create-checkout-session] Unknown item id rejected: ${item.id}`);
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'One of the items in your cart is no longer available.' }),
+      };
+    }
+    resolved.push({
+      id: item.id,
+      quantity: item.quantity,
+      name: entry.name,     // server-owned
+      price: entry.price,   // server-owned
+      type: entry.type,     // server-owned
+    });
+  }
+
+  // ── Detect item types (from the catalog, not the client) ───────────────
+  const containsPhysical = resolved.some((i) => i.type === 'product');
+  const containsDigital  = resolved.some((i) => i.type === 'ebook');
+  const containsService  = resolved.some((i) => i.type === 'service');
 
   // Physical orders require shipping address collected by frontend
   if (containsPhysical && (!shippingAddress || shippingAddress.trim().length < 5)) {
@@ -123,11 +212,16 @@ exports.handler = async (event) => {
   }
 
   // ── Build Stripe line items ────────────────────────────────────────────
-  const discountFactor = appliedDiscount && appliedDiscount.discountPercent > 0
-    ? 1 - appliedDiscount.discountPercent / 100
-    : 1;
+  // The client may send a discount CODE; the percentage behind it is looked up
+  // server-side. An unknown code is simply worth nothing rather than an error,
+  // so a stale code in localStorage cannot block a checkout.
+  const submittedCode = typeof appliedDiscount?.code === 'string'
+    ? appliedDiscount.code.trim().toUpperCase()
+    : '';
+  const discountPercent = submittedCode ? (priceBook.codes.get(submittedCode) ?? 0) : 0;
+  const discountFactor = 1 - discountPercent / 100;
 
-  const lineItems = cart.map((item) => {
+  const lineItems = resolved.map((item) => {
     const unitAmountCents = Math.round(item.price * discountFactor * 100);
     return {
       price_data: {
@@ -161,8 +255,9 @@ exports.handler = async (event) => {
       customerEmail:          customerEmail.trim().toLowerCase(),
       customerPhone:          customerPhone  || '',
       shippingAddress:        shippingAddress || '',
-      appliedPromoCode:       appliedDiscount?.code || '',
-      appliedDiscountPercent: appliedDiscount?.discountPercent?.toString() || '0',
+      // Record the code and the percentage WE resolved, not what the client claimed.
+      appliedPromoCode:       discountPercent > 0 ? submittedCode : '',
+      appliedDiscountPercent: discountPercent.toString(),
       containsDigital:        containsDigital.toString(),
       containsService:        containsService.toString(),
       containsPhysical:       containsPhysical.toString(),

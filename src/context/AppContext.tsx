@@ -516,6 +516,64 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [isAdminLoggedIn]);
 
+  // --- Fetch real orders from Supabase ---
+  // Paid orders are written ONLY by the verified stripe-webhook. Without this
+  // the Orders Ledger renders local state and never shows a real sale.
+  useEffect(() => {
+    if (isSupabaseConfigured && isAdminLoggedIn) {
+      const fetchOrders = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('orders')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+          if (error) {
+            console.error('Error fetching orders:', error);
+            triggerToast('❌ Failed to fetch orders from database.', 'error');
+          } else if (data) {
+            const mapped: Order[] = data.map(row => {
+              const items: CartItem[] = (Array.isArray(row.items) ? row.items : []).map((i: any) => ({
+                id: i.id,
+                type: i.type,
+                name: i.name,
+                // The webhook stores the per-unit amount it read back from Stripe.
+                price: Number(i.unit_amount) || 0,
+                quantity: Number(i.quantity) || 1,
+                image: '',
+              }));
+              const total = Number(row.total) || 0;
+              const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+              return {
+                id: row.stripe_session_id?.slice(-10)?.toUpperCase() || row.id,
+                stripeSessionId: row.stripe_session_id,
+                customerName: row.customer_name,
+                customerEmail: row.customer_email,
+                customerPhone: row.customer_phone || undefined,
+                shippingAddress: row.shipping_address || undefined,
+                items,
+                subtotal,
+                // Derive the discount from the two figures we actually stored,
+                // never from the percentage the browser once claimed.
+                discountAmount: Math.max(0, Number((subtotal - total).toFixed(2))),
+                total,
+                discountCodeApplied: row.discount_code || undefined,
+                date: row.created_at?.split('T')[0],
+                status: row.status === 'fulfilled' ? 'Fulfilled' : 'Pending',
+              };
+            });
+            setOrders(mapped);
+          }
+        } catch (err) {
+          console.error('Error fetching orders:', err);
+        }
+      };
+      fetchOrders();
+    } else if (isSupabaseConfigured && !isAdminLoggedIn) {
+      setOrders([]);
+    }
+  }, [isAdminLoggedIn]);
+
   // --- Load Cloud Snapshot on Mount (so cellphones get exact computer site) ---
   useEffect(() => {
     if (!hasSupabaseCredentials) return;
@@ -1120,7 +1178,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const fulfillOrder = (id: string) => {
+    const target = orders.find(o => o.id === id);
     setOrders(prev => prev.map(order => order.id === id ? { ...order, status: 'Fulfilled' } : order));
+
+    // Orders loaded from Supabase must persist the change, or "Mark Dispatched"
+    // silently reverts on the next refresh.
+    if (isSupabaseConfigured && target?.stripeSessionId) {
+      supabase
+        .from('orders')
+        .update({ status: 'fulfilled' })
+        .eq('stripe_session_id', target.stripeSessionId)
+        .then(({ error }) => {
+          if (error) {
+            console.error('Error marking order fulfilled:', error);
+            triggerToast('❌ Could not save the dispatch status.', 'error');
+            setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'Pending' } : o));
+          }
+        });
+    }
   };
 
   // --- Admin Auth ---
