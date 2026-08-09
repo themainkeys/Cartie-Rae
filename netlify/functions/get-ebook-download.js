@@ -87,8 +87,8 @@ exports.handler = async (event) => {
   let order;
   try {
     order = await db.selectOne('orders', {
-      columns: 'id,customer_email,customer_name,items,status',
-      eq: { stripe_session_id: sessionId },
+      columns: 'id,customer_email,customer_name,payment_status',
+      eq: { stripe_checkout_session_id: sessionId },
     });
   } catch (err) {
     console.error('[get-ebook-download] Order lookup failed:', err.message);
@@ -110,7 +110,7 @@ exports.handler = async (event) => {
     });
   }
 
-  if (order.status !== 'paid') {
+  if (order.payment_status !== 'paid') {
     return json(403, { error: 'This order is not marked as paid.' });
   }
 
@@ -123,11 +123,26 @@ exports.handler = async (event) => {
   }
 
   // ── 3) Resolve the eBooks in the order to their real storage paths ───────
+  // Line items live in their own table, not on the order row.
+  let lineItems;
+  try {
+    lineItems = await db.select('order_items', {
+      columns: 'product_id,item_type',
+      eq: { order_id: order.id },
+    });
+  } catch (err) {
+    console.error('[get-ebook-download] order_items lookup failed:', err.message);
+    return json(500, {
+      error: 'Could not prepare your downloads. Please contact support.',
+      code: err.code || null,
+    });
+  }
+
   const ebookIds = [
     ...new Set(
-      (Array.isArray(order.items) ? order.items : [])
-        .filter((i) => i && i.type === 'ebook' && typeof i.id === 'string')
-        .map((i) => i.id)
+      lineItems
+        .filter((i) => i && i.item_type === 'ebook' && typeof i.product_id === 'string')
+        .map((i) => i.product_id)
     ),
   ];
 

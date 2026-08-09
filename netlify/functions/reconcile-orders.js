@@ -23,7 +23,7 @@
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const db = require('./lib/supabaseRest');
-const { fetchItems, buildOrderRow } = require('./lib/buildOrder');
+const { fetchItems, recordOrder } = require('./lib/buildOrder');
 
 const MAX_SESSIONS = 500; // hard ceiling so one call cannot run away
 
@@ -73,8 +73,8 @@ exports.handler = async (event) => {
 
   try {
     // ── 1) Which sessions do we already have? ──────────────────────────────
-    const existingRows = await db.select('orders', { columns: 'stripe_session_id' });
-    const known = new Set(existingRows.map((r) => r.stripe_session_id));
+    const existingRows = await db.select('orders', { columns: 'stripe_checkout_session_id' });
+    const known = new Set(existingRows.map((r) => r.stripe_checkout_session_id));
 
     // ── 2) Walk Stripe's recent sessions ───────────────────────────────────
     for await (const session of stripe.checkout.sessions.list({
@@ -97,13 +97,12 @@ exports.handler = async (event) => {
 
       try {
         const items = await fetchItems(stripe, session.id);
-        const order = buildOrderRow(session, items);
-        if (!order) {
+        const recorded = await recordOrder(session, items);
+        if (!recorded) {
           console.error(`[reconcile-orders] ${session.id} has no customer email; skipped.`);
           result.failed++;
           continue;
         }
-        await db.upsert('orders', order, 'stripe_session_id');
         result.recorded++;
         console.log(`[reconcile-orders] Backfilled ${session.id}.`);
       } catch (err) {

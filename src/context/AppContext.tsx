@@ -554,43 +554,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const fetchOrders = async () => {
         await reconcile();
         try {
+          // Line items live in order_items; pull them in the same round trip.
           const { data, error } = await supabase
             .from('orders')
-            .select('*')
+            .select('*, order_items(product_id, item_type, quantity, unit_price, line_total, metadata)')
             .order('created_at', { ascending: false });
 
           if (error) {
             console.error('Error fetching orders:', error);
             triggerToast('❌ Failed to fetch orders from database.', 'error');
           } else if (data) {
+            // Money is stored as INTEGER CENTS. Divide once, here, so the rest
+            // of the UI keeps working in the decimal amounts it expects.
+            const fromCents = (v: any) => (Number(v) || 0) / 100;
+
             const mapped: Order[] = data.map(row => {
-              const items: CartItem[] = (Array.isArray(row.items) ? row.items : []).map((i: any) => ({
-                id: i.id,
-                type: i.type,
-                name: i.name,
-                // The webhook stores the per-unit amount it read back from Stripe.
-                price: Number(i.unit_amount) || 0,
+              const items: CartItem[] = (row.order_items || []).map((i: any) => ({
+                id: i.product_id,
+                type: i.item_type,
+                // order_items has no name column — it is kept in metadata.
+                name: i.metadata?.name || i.product_id,
+                price: fromCents(i.unit_price),
                 quantity: Number(i.quantity) || 1,
                 image: '',
               }));
-              const total = Number(row.total) || 0;
-              const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+
               return {
-                id: row.stripe_session_id?.slice(-10)?.toUpperCase() || row.id,
-                stripeSessionId: row.stripe_session_id,
+                id: row.stripe_checkout_session_id?.slice(-10)?.toUpperCase() || row.id,
+                stripeSessionId: row.stripe_checkout_session_id,
                 customerName: row.customer_name,
                 customerEmail: row.customer_email,
                 customerPhone: row.customer_phone || undefined,
                 shippingAddress: row.shipping_address || undefined,
                 items,
-                subtotal,
-                // Derive the discount from the two figures we actually stored,
-                // never from the percentage the browser once claimed.
-                discountAmount: Math.max(0, Number((subtotal - total).toFixed(2))),
-                total,
-                discountCodeApplied: row.discount_code || undefined,
-                date: row.created_at?.split('T')[0],
-                status: row.status === 'fulfilled' ? 'Fulfilled' : 'Pending',
+                subtotal: fromCents(row.subtotal),
+                discountAmount: fromCents(row.discount_total),
+                total: fromCents(row.total),
+                discountCodeApplied: row.applied_promo_code || undefined,
+                date: (row.paid_at || row.created_at)?.split('T')[0],
+                status: row.fulfillment_status === 'fulfilled' ? 'Fulfilled' : 'Pending',
               };
             });
             setOrders(mapped);
@@ -1217,8 +1219,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (isSupabaseConfigured && target?.stripeSessionId) {
       supabase
         .from('orders')
-        .update({ status: 'fulfilled' })
-        .eq('stripe_session_id', target.stripeSessionId)
+        .update({ fulfillment_status: 'fulfilled', updated_at: new Date().toISOString() })
+        .eq('stripe_checkout_session_id', target.stripeSessionId)
         .then(({ error }) => {
           if (error) {
             console.error('Error marking order fulfilled:', error);

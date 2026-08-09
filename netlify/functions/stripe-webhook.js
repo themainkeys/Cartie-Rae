@@ -20,6 +20,7 @@
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const db = require('./lib/supabaseRest');
+const { fetchItems, recordOrder } = require('./lib/buildOrder');
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -40,31 +41,6 @@ function json(statusCode, payload) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   };
-}
-
-/**
- * Pulls the purchased line items back out of Stripe (the cart is not carried in
- * session metadata — Stripe caps metadata at 500 chars per value). Expanding the
- * product gives us back the itemId/itemType we stamped in create-checkout-session.
- */
-async function fetchItems(sessionId) {
-  const lineItems = await stripe.checkout.sessions.listLineItems(sessionId, {
-    limit: 100,
-    expand: ['data.price.product'],
-  });
-
-  return lineItems.data.map((li) => {
-    const product = li.price?.product;
-    const meta = (product && typeof product === 'object' && product.metadata) || {};
-    return {
-      id: meta.itemId || null,
-      type: meta.itemType || null,
-      name: li.description || (typeof product === 'object' ? product.name : '') || '',
-      quantity: li.quantity || 1,
-      unit_amount: (li.price?.unit_amount ?? 0) / 100,
-      currency: li.price?.currency || 'usd',
-    };
-  });
 }
 
 // ── Handler ────────────────────────────────────────────────────────────────
@@ -123,50 +99,17 @@ exports.handler = async (event) => {
   }
 
   // ── 3) Record the order ──────────────────────────────────────────────────
-  const meta = session.metadata || {};
-
   try {
-    const items = await fetchItems(session.id);
+    const items = await fetchItems(stripe, session.id);
+    const result = await recordOrder(session, items, stripeEvent.id);
 
-    const order = {
-      stripe_session_id: session.id,
-      stripe_payment_intent:
-        typeof session.payment_intent === 'string'
-          ? session.payment_intent
-          : session.payment_intent?.id || null,
-      customer_name: meta.customerName || session.customer_details?.name || 'Unknown',
-      customer_email: (
-        meta.customerEmail ||
-        session.customer_details?.email ||
-        session.customer_email ||
-        ''
-      ).trim().toLowerCase(),
-      customer_phone: meta.customerPhone || session.customer_details?.phone || null,
-      shipping_address: meta.shippingAddress || null,
-      items,
-      total: (session.amount_total ?? 0) / 100,
-      currency: session.currency || 'usd',
-      discount_code: meta.appliedPromoCode || null,
-      discount_percent: Number(meta.appliedDiscountPercent) || 0,
-      // Trust the line items we just read back from Stripe over the client-set
-      // metadata flags, falling back to metadata for older sessions.
-      contains_digital:  items.some((i) => i.type === 'ebook')   || meta.containsDigital  === 'true',
-      contains_service:  items.some((i) => i.type === 'service') || meta.containsService  === 'true',
-      contains_physical: items.some((i) => i.type === 'product') || meta.containsPhysical === 'true',
-      status: 'paid',
-    };
-
-    if (!order.customer_email) {
+    if (!result) {
       console.error(`[stripe-webhook] Session ${session.id} has no customer email; cannot deliver.`);
       return json(500, { error: 'Order is missing a customer email.' });
     }
 
-    // Stripe retries and can deliver the same event more than once, so upsert on
-    // the unique session id rather than insert — replaying an event is a no-op.
-    await db.upsert('orders', order, 'stripe_session_id');
-
     console.log(
-      `[stripe-webhook] Recorded order for ${session.id} (${items.length} items, digital=${order.contains_digital}).`
+      `[stripe-webhook] Recorded order for ${session.id} (${items.length} items).`
     );
     return json(200, { received: true, recorded: true });
   } catch (err) {

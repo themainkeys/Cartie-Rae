@@ -145,6 +145,58 @@ async function createSignedUrl(bucket, path, expiresIn, downloadName) {
 }
 
 /**
+ * UPSERT returning the stored row — needed when a generated id (orders.id) is
+ * required to write child rows.
+ */
+async function upsertReturning(table, row, onConflict) {
+  const { url, key } = config();
+  if (!key) throw new Error('Supabase secret key is not configured.');
+
+  const params = onConflict ? `?on_conflict=${encodeURIComponent(onConflict)}` : '';
+  const res = await fetch(`${url}/rest/v1/${table}${params}`, {
+    method: 'POST',
+    headers: headers(key, {
+      Prefer: 'resolution=merge-duplicates,return=representation',
+    }),
+    body: JSON.stringify(row),
+  });
+
+  if (!res.ok) throw await restError(`upsert ${table}`, res);
+  const rows = await res.json();
+  return Array.isArray(rows) ? rows[0] : rows;
+}
+
+/** INSERT one or many rows. */
+async function insert(table, rows) {
+  const { url, key } = config();
+  if (!key) throw new Error('Supabase secret key is not configured.');
+
+  const res = await fetch(`${url}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: headers(key, { Prefer: 'return=minimal' }),
+    body: JSON.stringify(rows),
+  });
+
+  if (!res.ok) throw await restError(`insert ${table}`, res);
+}
+
+/** DELETE rows matching simple equality filters. */
+async function remove(table, eq = {}) {
+  const { url, key } = config();
+  if (!key) throw new Error('Supabase secret key is not configured.');
+
+  const params = new URLSearchParams();
+  for (const [col, val] of Object.entries(eq)) params.append(col, `eq.${val}`);
+
+  const res = await fetch(`${url}/rest/v1/${table}?${params}`, {
+    method: 'DELETE',
+    headers: headers(key, { Prefer: 'return=minimal' }),
+  });
+
+  if (!res.ok) throw await restError(`delete ${table}`, res);
+}
+
+/**
  * Verifies a Supabase access token belongs to a signed-in admin.
  *
  * Two steps, both server-side: exchange the token for a user via GoTrue, then
@@ -173,6 +225,9 @@ module.exports = {
   select,
   selectOne,
   upsert,
+  upsertReturning,
+  insert,
+  remove,
   createSignedUrl,
   verifyAdminToken,
 };

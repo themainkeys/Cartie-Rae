@@ -14,7 +14,7 @@
  * itself says `payment_status === 'paid'`. A forged or unpaid id gets nothing.
  * Amounts and line items come from Stripe's copy, never from the client.
  *
- * Safe to run alongside the webhook: both upsert on stripe_session_id, so
+ * Safe to run alongside the webhook: both upsert on stripe_checkout_session_id, so
  * whichever arrives second is a no-op. When Stripe access is available, add the
  * webhook and this becomes a redundant fast path rather than dead code.
  *
@@ -27,7 +27,7 @@
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const db = require('./lib/supabaseRest');
-const { fetchItems, buildOrderRow } = require('./lib/buildOrder');
+const { fetchItems, recordOrder } = require('./lib/buildOrder');
 
 function json(statusCode, payload) {
   return {
@@ -82,36 +82,20 @@ exports.handler = async (event) => {
     });
   }
 
-  // ── 2) Short-circuit if the webhook already recorded it ──────────────────
-  try {
-    const existing = await db.selectOne('orders', {
-      columns: 'id',
-      eq: { stripe_session_id: sessionId },
-    });
-    if (existing) {
-      return json(200, { recorded: true, alreadyRecorded: true });
-    }
-  } catch (err) {
-    // Non-fatal: fall through to the upsert, which is idempotent anyway.
-    console.warn('[confirm-order] Existing-order check failed:', err.message);
-  }
-
-  // ── 3) Record it ─────────────────────────────────────────────────────────
+  // ── 2) Record it (idempotent: re-running is a no-op) ─────────────────────
   try {
     const items = await fetchItems(stripe, sessionId);
-    const order = buildOrderRow(session, items);
+    const result = await recordOrder(session, items);
 
-    if (!order) {
+    if (!result) {
       console.error(`[confirm-order] Session ${sessionId} has no customer email; cannot deliver.`);
       return json(500, { error: 'This order is missing a customer email.' });
     }
 
-    await db.upsert('orders', order, 'stripe_session_id');
-
     console.log(
-      `[confirm-order] Recorded order for ${sessionId} (${items.length} items, digital=${order.contains_digital}).`
+      `[confirm-order] Recorded order for ${sessionId} (${items.length} items).`
     );
-    return json(200, { recorded: true, alreadyRecorded: false });
+    return json(200, { recorded: true, alreadyRecorded: result.alreadyRecorded });
   } catch (err) {
     console.error('[confirm-order] Failed to record order:', err.message);
     return json(500, { error: 'Could not record your order. Please contact support.' });
