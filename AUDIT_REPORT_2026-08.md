@@ -27,7 +27,19 @@
 
 ## CRITICAL
 
-### C1 — The browser sets the price it pays
+### C1 — The browser sets the price it pays — **FIXED**
+
+> **Resolved 2026-08-09, verified against the live endpoint.** Prices and discount
+> percentages are now resolved server-side from `site_snapshots`; the client sends
+> only ids and quantities. Verified by posting a tampered cart
+> (`price: 0.50`, `name: "HACKED"`, plus a fabricated `discountPercent: 99`) to the
+> production function and rendering the resulting Stripe page: it shows
+> **$24.99** and **"The 4C Growth Blueprint"**. An unknown item id is rejected with
+> *"One of the items in your cart is no longer available."* The function fails
+> **closed** — if the catalog cannot be read it returns 503 rather than falling back
+> to client prices.
+>
+> The original finding is preserved below for the record.
 
 **`netlify/functions/create-checkout-session.js:130-147`**
 
@@ -60,7 +72,14 @@ Until that lands, the exposure is bounded by how many people know the endpoint e
 
 ## HIGH
 
-### H1 — Real orders will never appear in the admin
+### H1 — Real orders will never appear in the admin — **FIXED (needs SQL)**
+
+> **Resolved in code 2026-08-09.** `AppContext` now fetches `public.orders` when an
+> admin is logged in, and "Mark Dispatched" persists via an `update` instead of
+> only mutating local state. Two supporting pieces ship in
+> `supabase/orders_ebooks_setup.sql` and must be run: an `orders admin read`
+> policy (without it the ledger authenticates and renders zero rows) and an
+> `orders admin update` policy.
 
 The Stripe webhook writes verified orders to `public.orders`. But **no frontend code
 ever reads that table** — `grep "from('orders')" src` returns nothing. The Orders
@@ -77,7 +96,14 @@ gap visible rather than causing it.
 `AppContext.tsx:469` — fetch `orders` from Supabase when an admin is logged in.
 Roughly 20 lines.
 
-### H2 — Three tables are used but never created
+### H2 — Three tables are used but never created — **migration written; partly disproved**
+
+> **Correction, 2026-08-09.** `site_snapshots` **does exist and has data** — proven
+> when the new server-side pricing successfully loaded the catalog from it in
+> production. My original claim that it was missing was wrong; only the *migration*
+> was missing from the repo. `videos` and `gallery_items` remain unverified.
+> `supabase/site_content_setup.sql` now creates all three idempotently with RLS
+> (public read, admin write) and seeds the catalog, so it is safe to run either way.
 
 | Table | Used at | Defined in `supabase/*.sql`? |
 |---|---|---|
@@ -149,7 +175,10 @@ not the primary store. Implications:
   `AppContext.tsx:574`, which tells you this has already been hit — base64 images
   overflow it quickly.
 
-### M3 — XSS via admin-controlled content
+### M3 — XSS via admin-controlled content — **FIXED**
+
+> **Resolved 2026-08-09.** The fallback label is now built with
+> `createElement` + `textContent` instead of interpolated `innerHTML`.
 
 **`src/views/ServicesPage.tsx:75`**
 
@@ -204,6 +233,43 @@ labeled — demo mode is hard-disabled whenever Supabase is configured
 | Two invented customer orders in the ledger | Gated off when connected |
 | Fabricated like counts + comments on all 17 videos | Gated off when connected |
 | Invented product/eBook testimonials | Stripped when connected |
+
+---
+
+---
+
+## Discovered while fixing: the Functions runtime has no WebSocket
+
+Adding `@supabase/supabase-js` to a Netlify Function crashes it at `createClient()`:
+
+```
+Node.js 20 detected without native WebSocket support
+```
+
+The full client always constructs a Realtime client, which needs a WebSocket that
+Node 20 lacks natively. **This briefly took live checkout down** and is worth
+recording, because the obvious fix does not work: the Functions runtime version is
+set by `AWS_LAMBDA_JS_RUNTIME`, **not** by `NODE_VERSION` in `netlify.toml`, so
+bumping the build image changes nothing.
+
+All three functions now talk to PostgREST and Storage directly via `fetch`
+(`netlify/functions/lib/supabaseRest.js`). No WebSocket, no realtime, no
+dependency — and a smaller function bundle. Anyone reintroducing `supabase-js`
+into a function will hit this again.
+
+---
+
+## Remaining work — what is still blocked
+
+| # | Item | Blocked on |
+|---|---|---|
+| 1 | `STRIPE_WEBHOOK_SECRET` | Registering the endpoint in Stripe; the value does not exist until then |
+| 2 | Run `supabase/orders_ebooks_setup.sql` | Dashboard access. `orders` does not exist yet — confirmed by `get-ebook-download` failing its lookup in production |
+| 3 | Run `supabase/site_content_setup.sql` | Dashboard access |
+| 4 | Upload the three eBook PDFs to the private `ebooks` bucket | Dashboard access + the files |
+| 5 | M1 (roles), M2 (localStorage architecture) | Deliberate scheduling, not urgent |
+
+Everything else in this report is done and deployed.
 
 ---
 
