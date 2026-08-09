@@ -65,10 +65,23 @@ async function select(table, { columns = '*', eq = {}, inList = {}, order, limit
   if (limit) params.append('limit', String(limit));
 
   const res = await fetch(`${url}/rest/v1/${table}?${params}`, { headers: headers(key) });
-  if (!res.ok) {
-    throw new Error(`select ${table} failed (${res.status}): ${await res.text()}`);
-  }
+  if (!res.ok) throw await restError(`select ${table}`, res);
   return res.json();
+}
+
+/**
+ * Builds an Error carrying PostgREST's status and machine-readable code
+ * (e.g. PGRST205 "table not found in schema cache"). Callers may surface the
+ * CODE for diagnosis — never the message, which can describe the schema.
+ */
+async function restError(what, res) {
+  const text = await res.text();
+  let code = null;
+  try { code = JSON.parse(text).code || null; } catch { /* not JSON */ }
+  const err = new Error(`${what} failed (${res.status}${code ? ` ${code}` : ''}): ${text}`);
+  err.status = res.status;
+  err.code = code;
+  return err;
 }
 
 /** SELECT returning the first row or null. */
@@ -131,4 +144,35 @@ async function createSignedUrl(bucket, path, expiresIn, downloadName) {
     : absolute;
 }
 
-module.exports = { hasCredentials, select, selectOne, upsert, createSignedUrl };
+/**
+ * Verifies a Supabase access token belongs to a signed-in admin.
+ *
+ * Two steps, both server-side: exchange the token for a user via GoTrue, then
+ * confirm that user has a row in admin_users. The browser cannot fake either.
+ *
+ * @returns {Promise<{id: string, email: string}|null>} the admin, or null
+ */
+async function verifyAdminToken(accessToken) {
+  const { url, key } = config();
+  if (!key || !accessToken) return null;
+
+  const res = await fetch(`${url}/auth/v1/user`, {
+    headers: { apikey: key, Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) return null;
+
+  const user = await res.json();
+  if (!user?.id) return null;
+
+  const admin = await selectOne('admin_users', { columns: 'id', eq: { id: user.id } });
+  return admin ? { id: user.id, email: user.email } : null;
+}
+
+module.exports = {
+  hasCredentials,
+  select,
+  selectOne,
+  upsert,
+  createSignedUrl,
+  verifyAdminToken,
+};

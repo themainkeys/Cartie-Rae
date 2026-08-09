@@ -89,6 +89,37 @@ export interface EbookDownloadResult {
 }
 
 const DOWNLOAD_ENDPOINT = '/.netlify/functions/get-ebook-download';
+const CONFIRM_ENDPOINT = '/.netlify/functions/confirm-order';
+
+/**
+ * Asks the backend to verify the payment with Stripe and record the order.
+ *
+ * This is what makes the store work without a Stripe webhook: the session id is
+ * passed through, and the server retrieves that session from Stripe and records
+ * it only if Stripe says it was paid. The browser cannot assert a payment.
+ *
+ * Best-effort by design — if it fails, the download call below still retries,
+ * and reconcile-orders backfills anything missed.
+ */
+export async function confirmOrder(sessionId: string): Promise<boolean> {
+  if (!sessionId) return false;
+  try {
+    const response = await fetch(CONFIRM_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      console.warn('[ebookDelivery] confirmOrder failed:', data.error || response.status);
+      return false;
+    }
+    return Boolean(data.recorded);
+  } catch (err) {
+    console.warn('[ebookDelivery] confirmOrder error:', err instanceof Error ? err.message : err);
+    return false;
+  }
+}
 
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 

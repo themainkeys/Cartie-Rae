@@ -92,7 +92,13 @@ exports.handler = async (event) => {
     });
   } catch (err) {
     console.error('[get-ebook-download] Order lookup failed:', err.message);
-    return json(500, { error: 'Could not verify your purchase. Please contact support.' });
+    return json(500, {
+      error: 'Could not verify your purchase. Please contact support.',
+      // Status + PostgREST code only, so a misconfiguration is diagnosable from
+      // outside without describing the schema.
+      code: err.code || null,
+      status: err.status || null,
+    });
   }
 
   // The webhook may not have landed yet (Stripe delivers it within seconds, but

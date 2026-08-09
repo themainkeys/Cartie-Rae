@@ -521,7 +521,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // the Orders Ledger renders local state and never shows a real sale.
   useEffect(() => {
     if (isSupabaseConfigured && isAdminLoggedIn) {
+      /**
+       * Without a Stripe webhook, an order is recorded when the buyer returns to
+       * the success page. Anyone who paid and closed the tab is missing. Ask the
+       * server to sweep Stripe for those before reading the ledger, so the admin
+       * sees every paid sale rather than only the well-behaved ones.
+       * Best-effort: a failure here must not stop the orders from loading.
+       */
+      const reconcile = async () => {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session?.access_token) return;
+          const res = await fetch('/.netlify/functions/reconcile-orders', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ days: 90 }),
+          });
+          if (res.ok) {
+            const summary = await res.json();
+            if (summary.recorded > 0) {
+              triggerToast(`Recovered ${summary.recorded} unrecorded order(s) from Stripe.`, 'info');
+            }
+          }
+        } catch (err) {
+          console.warn('[orders] Reconciliation skipped:', err);
+        }
+      };
+
       const fetchOrders = async () => {
+        await reconcile();
         try {
           const { data, error } = await supabase
             .from('orders')

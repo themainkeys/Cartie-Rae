@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { CheckCircle, Download, Clock, ShoppingBag, Sparkles, Loader2, AlertCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useApp } from '../context/AppContext';
-import { fetchEbookDownloads, EbookDownloadResult } from '../services/ebookDelivery';
+import { fetchEbookDownloads, confirmOrder, EbookDownloadResult } from '../services/ebookDelivery';
 
 /**
  * CheckoutSuccess — displayed at /checkout/success after a completed Stripe payment.
@@ -28,10 +28,17 @@ export const CheckoutSuccess: React.FC<CheckoutSuccessProps> = ({ openCart, setA
     // Clean the URL without a page reload so the session_id doesn't persist on refresh
     window.history.replaceState({}, '', '/checkout/success');
 
-    // Ask the backend for signed eBook links. It verifies the purchase against
-    // the order the Stripe webhook recorded, and retries while that is in flight.
+    // Record the order, then fetch signed eBook links.
+    //
+    // confirmOrder is what lets this work without a Stripe webhook: the server
+    // retrieves the session from Stripe and records it only if Stripe says it
+    // was paid. We await it so the order exists before asking for downloads,
+    // but ignore its result — fetchEbookDownloads retries on its own, and the
+    // webhook (once configured) or reconcile-orders covers anything missed.
     if (id) {
-      fetchEbookDownloads(id).then(setDelivery);
+      confirmOrder(id).finally(() => {
+        fetchEbookDownloads(id).then(setDelivery);
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
