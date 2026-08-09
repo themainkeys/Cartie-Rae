@@ -3,7 +3,11 @@
   publish   = "dist"
 
 [build.environment]
-  NODE_VERSION = "20"
+  # 22, not 20: @supabase/supabase-js constructs a Realtime client that needs a
+  # WebSocket implementation. Node 20 has none natively and the functions throw
+  # "Node.js 20 detected without native WebSocket support" at createClient().
+  # Node 22 ships native WebSocket, so no "ws" polyfill is needed.
+  NODE_VERSION = "22"
 
 # Netlify Functions directory
 [functions]
