@@ -10,11 +10,7 @@
  */
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const { createClient } = require('@supabase/supabase-js');
-
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ljsbwaxoiidjjmvwchah.supabase.co';
-const SUPABASE_SECRET =
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
+const db = require('./lib/supabaseRest');
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -29,24 +25,22 @@ const SUPABASE_SECRET =
  * rather than fall back to client-supplied prices.
  */
 async function loadCatalog() {
-  if (!SUPABASE_SECRET) return null;
+  if (!db.hasCredentials()) return null;
 
-  const supabase = createClient(SUPABASE_URL, SUPABASE_SECRET, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-
-  const { data, error } = await supabase
-    .from('site_snapshots')
-    .select('data')
-    .eq('id', 'main')
-    .maybeSingle();
-
-  if (error || !data?.data) {
-    console.error('[create-checkout-session] Catalog load failed:', error?.message || 'no snapshot row');
+  let row;
+  try {
+    row = await db.selectOne('site_snapshots', { columns: 'data', eq: { id: 'main' } });
+  } catch (err) {
+    console.error('[create-checkout-session] Catalog load failed:', err.message);
     return null;
   }
 
-  const snap = data.data;
+  if (!row?.data) {
+    console.error('[create-checkout-session] No site_snapshots row with id=main.');
+    return null;
+  }
+
+  const snap = row.data;
   const catalog = new Map();
 
   const add = (list, type) => {
