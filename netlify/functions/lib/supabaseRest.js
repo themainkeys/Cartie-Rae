@@ -49,12 +49,18 @@ function hasCredentials() {
  * SELECT with simple equality filters.
  * @returns {Promise<Array>} rows (empty array when nothing matches)
  */
-async function select(table, { columns = '*', eq = {}, order, limit } = {}) {
+async function select(table, { columns = '*', eq = {}, inList = {}, order, limit } = {}) {
   const { url, key } = config();
   if (!key) throw new Error('Supabase secret key is not configured.');
 
   const params = new URLSearchParams({ select: columns });
   for (const [col, val] of Object.entries(eq)) params.append(col, `eq.${val}`);
+  // PostgREST list filter: ?col=in.(a,b,c) — values are quoted so ids containing
+  // a comma or parenthesis cannot break out of the list.
+  for (const [col, vals] of Object.entries(inList)) {
+    const quoted = vals.map((v) => `"${String(v).replace(/"/g, '\\"')}"`).join(',');
+    params.append(col, `in.(${quoted})`);
+  }
   if (order) params.append('order', order);
   if (limit) params.append('limit', String(limit));
 

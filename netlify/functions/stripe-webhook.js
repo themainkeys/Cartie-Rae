@@ -19,17 +19,7 @@
  */
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const { createClient } = require('@supabase/supabase-js');
-
-// The project URL is NOT a secret — it is already compiled into the public
-// frontend bundle — so it defaults here. Only the two real secrets
-// (STRIPE_WEBHOOK_SECRET, SUPABASE_SERVICE_ROLE_KEY) must be set in Netlify.
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ljsbwaxoiidjjmvwchah.supabase.co';
-// Supabase's dashboard has called this key both "service_role key" and, more
-// recently, "secret key" — accept either variable name so a reasonable choice in
-// the Netlify UI does not silently break the function.
-const SUPABASE_SECRET =
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
+const db = require('./lib/supabaseRest');
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -89,7 +79,7 @@ exports.handler = async (event) => {
     'STRIPE_WEBHOOK_SECRET',
   ].filter((k) => !process.env[k]);
 
-  if (!SUPABASE_SECRET) missing.push('SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SECRET_KEY)');
+  if (!db.hasCredentials()) missing.push('SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SECRET_KEY)');
 
   if (missing.length) {
     console.error('[stripe-webhook] Missing environment variables:', missing.join(', '));
@@ -133,12 +123,6 @@ exports.handler = async (event) => {
   }
 
   // ── 3) Record the order ──────────────────────────────────────────────────
-  const supabase = createClient(
-    SUPABASE_URL,
-    SUPABASE_SECRET,
-    { auth: { persistSession: false, autoRefreshToken: false } }
-  );
-
   const meta = session.metadata || {};
 
   try {
@@ -179,15 +163,7 @@ exports.handler = async (event) => {
 
     // Stripe retries and can deliver the same event more than once, so upsert on
     // the unique session id rather than insert — replaying an event is a no-op.
-    const { error } = await supabase
-      .from('orders')
-      .upsert(order, { onConflict: 'stripe_session_id' });
-
-    if (error) {
-      // 500 so Stripe retries with backoff.
-      console.error('[stripe-webhook] Supabase upsert failed:', error.message);
-      return json(500, { error: 'Failed to record order.' });
-    }
+    await db.upsert('orders', order, 'stripe_session_id');
 
     console.log(
       `[stripe-webhook] Recorded order for ${session.id} (${items.length} items, digital=${order.contains_digital}).`

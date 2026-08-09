@@ -25,17 +25,7 @@
  *                                (server-side only; never expose to the frontend)
  */
 
-const { createClient } = require('@supabase/supabase-js');
-
-// The project URL is NOT a secret — it is already compiled into the public
-// frontend bundle — so it defaults here. Only SUPABASE_SERVICE_ROLE_KEY,
-// which bypasses every RLS policy, has to be set in Netlify.
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ljsbwaxoiidjjmvwchah.supabase.co';
-// Supabase's dashboard has called this key both "service_role key" and, more
-// recently, "secret key" — accept either variable name so a reasonable choice in
-// the Netlify UI does not silently break the function.
-const SUPABASE_SECRET =
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
+const db = require('./lib/supabaseRest');
 
 const BUCKET = 'ebooks';
 const DEFAULT_TTL_SECONDS = 24 * 60 * 60;      // 24 hours
@@ -63,7 +53,7 @@ exports.handler = async (event) => {
     return json(405, { error: 'Method not allowed.' });
   }
 
-  if (!SUPABASE_SECRET) {
+  if (!db.hasCredentials()) {
     console.error('[get-ebook-download] No Supabase secret key is set.');
     return json(500, {
       error: 'Downloads are not configured. Please contact support.',
@@ -93,21 +83,15 @@ exports.handler = async (event) => {
     return json(400, { error: 'A valid Stripe session id is required.' });
   }
 
-  const supabase = createClient(
-    SUPABASE_URL,
-    SUPABASE_SECRET,
-    { auth: { persistSession: false, autoRefreshToken: false } }
-  );
-
   // ── 1) The order must exist and be paid ──────────────────────────────────
-  const { data: order, error: orderError } = await supabase
-    .from('orders')
-    .select('id, customer_email, customer_name, items, status')
-    .eq('stripe_session_id', sessionId)
-    .maybeSingle();
-
-  if (orderError) {
-    console.error('[get-ebook-download] Order lookup failed:', orderError.message);
+  let order;
+  try {
+    order = await db.selectOne('orders', {
+      columns: 'id,customer_email,customer_name,items,status',
+      eq: { stripe_session_id: sessionId },
+    });
+  } catch (err) {
+    console.error('[get-ebook-download] Order lookup failed:', err.message);
     return json(500, { error: 'Could not verify your purchase. Please contact support.' });
   }
 
@@ -145,13 +129,14 @@ exports.handler = async (event) => {
     return json(200, { orderId: order.id, downloads: [] });
   }
 
-  const { data: files, error: filesError } = await supabase
-    .from('ebook_files')
-    .select('ebook_id, storage_path, title')
-    .in('ebook_id', ebookIds);
-
-  if (filesError) {
-    console.error('[get-ebook-download] ebook_files lookup failed:', filesError.message);
+  let files;
+  try {
+    files = await db.select('ebook_files', {
+      columns: 'ebook_id,storage_path,title',
+      inList: { ebook_id: ebookIds },
+    });
+  } catch (err) {
+    console.error('[get-ebook-download] ebook_files lookup failed:', err.message);
     return json(500, { error: 'Could not prepare your downloads. Please contact support.' });
   }
 
@@ -168,27 +153,22 @@ exports.handler = async (event) => {
 
   const downloads = [];
   for (const file of files) {
-    const { data, error } = await supabase
-      .storage
-      .from(BUCKET)
-      .createSignedUrl(file.storage_path, ttl, {
-        download: file.storage_path.split('/').pop(),
-      });
-
-    if (error || !data?.signedUrl) {
-      console.error(
-        `[get-ebook-download] Could not sign "${file.storage_path}":`,
-        error?.message || 'no URL returned'
+    try {
+      const url = await db.createSignedUrl(
+        BUCKET,
+        file.storage_path,
+        ttl,
+        file.storage_path.split('/').pop()
       );
-      continue;
+      downloads.push({
+        ebookId: file.ebook_id,
+        title: file.title || file.ebook_id,
+        url,
+        expiresAt,
+      });
+    } catch (err) {
+      console.error(`[get-ebook-download] Could not sign "${file.storage_path}":`, err.message);
     }
-
-    downloads.push({
-      ebookId: file.ebook_id,
-      title: file.title || file.ebook_id,
-      url: data.signedUrl,
-      expiresAt,
-    });
   }
 
   if (downloads.length === 0) {
