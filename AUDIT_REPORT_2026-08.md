@@ -1,6 +1,6 @@
 # Cartiae Rae — Full Audit
 
-**Date:** 2026-08-14
+**Date:** 2026-08-14 (revised — cleanup migration applied)
 **Scope:** Whole application — payments, auth, data architecture, deployment state, content integrity.
 **Codebase:** 45 source files, ~14,050 LOC. Live at `cartiaerae.netlify.app`.
 **Method:** Static review of the repository, plus live probing of the deployed
@@ -21,11 +21,11 @@ against production, not inferred from the code.
 | | Finding | State |
 |---|---|---|
 | **C1** | Browser set the price it paid | **Fixed — verified in production** |
-| **H1** | Real orders never reached the admin | **Fixed in code** — needs the cleanup migration |
+| **H1** | Real orders never reached the admin | **Fixed** — migration applied; awaiting a real order to display |
 | **H2** | Tables used but never created | **Resolved** — migrations written; `site_snapshots` already existed |
 | **H3** | Production missing required secrets | **1 of 3 left** — `STRIPE_WEBHOOK_SECRET`, now optional |
 | **H4** | Order recording impossible without Stripe access | **Fixed** — webhook-free path built |
-| **H5** | Duplicate columns added to `orders`; dollars into cent columns | **Fixed in code** — needs the cleanup migration |
+| **H5** | Duplicate columns added to `orders`; dollars into cent columns | **Fixed — migration applied, schema verified** |
 | **M1** | Admin roles stored but never enforced | Open — by design for now |
 | **M2** | `localStorage` is the catalog source of truth | Open — architectural |
 | **M3** | XSS via admin-controlled content | **Fixed** |
@@ -85,7 +85,11 @@ does not.
 **`confirm-order`** — when the buyer lands on the success page, the server
 retrieves that session from Stripe and records it only if Stripe itself reports
 `payment_status: 'paid'`. The browser never asserts a payment.
-*Verified:* a forged session id returns `"That checkout session could not be found."`
+*Verified* against a **real** Stripe session, not just a forged id: creating a
+genuine unpaid session and passing it to `confirm-order` returns
+`"This checkout has not been paid."` with `paymentStatus: "unpaid"`. That
+exercises the real Stripe retrieval path and confirms an unpaid checkout is
+refused. A forged id separately returns `"That checkout session could not be found."`
 
 **`reconcile-orders`** — sweeps recent paid Stripe sessions and backfills any
 missing, covering buyers who pay and close the tab. Runs automatically when an
@@ -102,7 +106,7 @@ pair is best-effort plus a sweep, so an order can be minutes late rather than
 instant. Acceptable for a studio storefront, but the webhook is still worth
 adding when Stripe access exists — it needs no code change, only the secret.
 
-### H5 — Duplicate columns and dollars written into cent columns — FIXED IN CODE
+### H5 — Duplicate columns and dollars written into cent columns — FIXED
 
 `public.orders` already existed with a complete, well-designed schema:
 `stripe_checkout_session_id`, separate `payment_status` and `fulfillment_status`,
@@ -127,8 +131,9 @@ have silently rounded `24.99` to `25` on every order. No bad data was ever
 written, because the column mismatch made the writes fail first.
 
 **Now:** all code writes the original columns, in cents, with line items going to
-`order_items`. `supabase/orders_schema_cleanup.sql` drops the duplicates — guarded
-so it raises rather than dropping any column that somehow holds data.
+`order_items`. `supabase/orders_schema_cleanup.sql` has been **applied**, and the
+schema re-read afterwards confirms all six duplicates are gone — `orders` is back
+to its 27 original columns with one unambiguous source of truth per fact.
 
 *Schema confirmed by probing PostgREST directly*, including the types:
 
@@ -137,7 +142,7 @@ order_items.unit_price -> invalid input syntax for type integer
 orders.total           -> invalid input syntax for type integer
 ```
 
-### H1 — Real orders never reached the admin — FIXED IN CODE
+### H1 — Real orders never reached the admin — FIXED
 
 The recorders write verified orders to `public.orders`, but no frontend code read
 that table — the Orders Ledger rendered React state seeded from `localStorage`.
@@ -148,10 +153,14 @@ empty ledger forever.
 to decimals for display, and "Mark Dispatched" persists to `fulfillment_status`
 instead of only mutating local state.
 
-**Still required:** the RLS policies in the cleanup migration. Note that
-`order_items` needs its **own** read policy — the embedded select returns an
-*empty array rather than an error* when a policy is missing, so orders would
-appear with no line items and no visible cause.
+The RLS policies are now in place, including a separate one for `order_items`.
+That second policy is easy to miss and worth recording: the embedded select
+returns an *empty array rather than an error* when a policy is absent, so orders
+would render with no line items and no visible cause.
+
+**Not yet demonstrated:** no paid order exists, so the ledger has not been seen
+displaying a real sale. The path is built and each link tested; the end-to-end
+proof needs a genuine purchase.
 
 ### H2 — Tables used but never created — RESOLVED
 
@@ -292,9 +301,9 @@ previews still look alive):
 
 | # | Item | Blocked on | Priority |
 |---|---|---|---|
-| 1 | Run `supabase/orders_schema_cleanup.sql` | Dashboard access | **High** — orders and line items stay invisible without its RLS policies |
-| 2 | Upload the three eBook PDFs to the private `ebooks` bucket | The files | High — buyers cannot receive what they paid for |
-| 3 | Place a real test purchase end to end | The above | High — nothing has been proven with a genuine paid order yet |
+| 1 | ~~Run `supabase/orders_schema_cleanup.sql`~~ | — | **Done** — applied and verified |
+| 2 | Upload the three eBook PDFs to the private `ebooks` bucket | The files | **High** — buyers cannot receive what they paid for |
+| 3 | Place a real test purchase end to end | Item 2 | **High** — the one link never exercised with a genuine payment |
 | 4 | Register the Stripe webhook | Stripe access | Medium — an upgrade, no longer a blocker |
 | 5 | M1 (role enforcement) | Decision | Low until a second admin exists |
 | 6 | M2 (localStorage architecture) | Scheduling | Low, but growing |
