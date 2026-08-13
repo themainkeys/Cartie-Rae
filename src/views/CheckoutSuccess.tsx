@@ -20,7 +20,12 @@ export const CheckoutSuccess: React.FC<CheckoutSuccessProps> = ({ openCart, setA
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const id = params.get('session_id');
+    // Keep the session id for this tab. The URL is cleaned below so it does not
+    // linger in history, but download links are never emailed — so a refresh
+    // must still be able to fetch them rather than losing them for good.
+    const fromUrl = params.get('session_id');
+    if (fromUrl) sessionStorage.setItem('cartiae_last_checkout', fromUrl);
+    const id = fromUrl || sessionStorage.getItem('cartiae_last_checkout');
     setSessionId(id);
     // Payment succeeded → empty the cart so the paid items can't be re-purchased.
     // (Authoritative order recording happens server-side via the Stripe webhook.)
@@ -71,7 +76,7 @@ export const CheckoutSuccess: React.FC<CheckoutSuccessProps> = ({ openCart, setA
               Payment Confirmed
             </h1>
             <p className="font-sans text-sm text-zinc-500 leading-relaxed">
-              Thank you for your purchase. A confirmation and receipt have been sent to your email.
+              Thank you for your purchase. Your payment has been confirmed.
             </p>
             {sessionId && (
               <p className="font-mono text-[10px] text-zinc-400 bg-zinc-50 border border-zinc-100 rounded-lg px-3 py-1.5 inline-block mt-1 select-all">
@@ -107,7 +112,7 @@ export const CheckoutSuccess: React.FC<CheckoutSuccessProps> = ({ openCart, setA
                   <div>
                     <p className="text-[11px] font-bold text-emerald-800">Your eBooks</p>
                     <p className="text-[10.5px] text-emerald-700 mt-0.5 leading-relaxed">
-                      These secure links are valid for 24 hours. A copy has also been sent to your email.
+                      Download them now — these secure links are valid for 24 hours and are not sent by email.
                     </p>
                   </div>
                 </div>
@@ -139,7 +144,7 @@ export const CheckoutSuccess: React.FC<CheckoutSuccessProps> = ({ openCart, setA
                   <p className="text-[11px] font-bold text-amber-800">eBooks</p>
                   <p className="text-[10.5px] text-amber-700 mt-0.5 leading-relaxed">
                     {delivery.status === 'pending'
-                      ? 'Your payment went through and we are still confirming it. Your download links will arrive by email within a few minutes.'
+                      ? 'Your payment went through and we are still confirming it. Refresh this page in a moment and your download links will appear here.'
                       : delivery.error}
                   </p>
                 </div>
