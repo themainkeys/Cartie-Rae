@@ -44,7 +44,7 @@ export const AdminPortal: React.FC = () => {
   const [catalogSub, setCatalogSub] = useState<'inventory' | 'discounts'>('inventory');
   const [designSub, setDesignSub] = useState<'cms' | 'assets' | 'settings'>('cms');
 
-  // Global dirty-state aggregation ΓÇö each manager reports up via onDirtyChange
+  // Global dirty-state aggregation — each manager reports up via onDirtyChange
   const [inventoryDirty, setInventoryDirty] = useState(false);
   const [cmsDirty, setCmsDirty] = useState(false);
   const [videoDirty, setVideoDirty] = useState(false);
@@ -55,7 +55,7 @@ export const AdminPortal: React.FC = () => {
   const totalSales = orders.reduce((acc, o) => acc + o.total, 0);
   const pendingOrdersCount = orders.filter(o => o.status === 'Pending').length;
 
-  // ΓöÇΓöÇ Auth handlers ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  // ── Auth handlers ────────────────────────────────────────────────────────
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
@@ -88,16 +88,16 @@ export const AdminPortal: React.FC = () => {
 
   const handleSaveAll = () => {
     syncSiteToCloud();
-    triggerToast('Γ£ô Changes saved ΓÇö live on storefront!', 'success');
+    triggerToast('✓ Changes saved — live on storefront!', 'success');
   };
 
-  // ΓöÇΓöÇ Render ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  // ── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
 
-      {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
+      {/* ═══════════════════════════════════════ */}
       {/* ≡ƒöÆ ADMIN LOGIN PANEL                    */}
-      {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
+      {/* ═══════════════════════════════════════ */}
       {!isAdminLoggedIn ? (
         <div className="max-w-md mx-auto bg-gradient-to-b from-white to-[#FFFFFF] border border-[#D8D8D8]/75 rounded-3xl p-6 sm:p-10 shadow-[0_12px_40px_rgba(50,50,50,0.06)] text-center mt-12 relative overflow-hidden">
           {/* Accent line */}
@@ -108,7 +108,7 @@ export const AdminPortal: React.FC = () => {
           </div>
 
           {isSupabaseConfigured ? (
-            /* ΓöÇΓöÇ PRODUCTION: Supabase Auth ΓöÇΓöÇ */
+            /* ── PRODUCTION: Supabase Auth ── */
             <>
               <h1 className="font-serif text-2xl font-extrabold text-brand-dark tracking-tight mb-2">Cartiae Rae Admin Login</h1>
               <p className="font-sans text-xs text-[#737373] leading-relaxed max-w-xs mx-auto mb-8">
@@ -173,14 +173,14 @@ export const AdminPortal: React.FC = () => {
               </div>
             </>
           ) : (
-            /* ΓöÇΓöÇ DEMO MODE: no password, clearly labeled ΓöÇΓöÇ */
+            /* ── DEMO MODE: no password, clearly labeled ── */
             <>
-              <h1 className="font-serif text-2xl font-extrabold text-brand-dark tracking-tight mb-2">Admin Console ΓÇö Demo Mode</h1>
+              <h1 className="font-serif text-2xl font-extrabold text-brand-dark tracking-tight mb-2">Admin Console — Demo Mode</h1>
 
               <div className="text-left bg-amber-50 border border-amber-200 rounded-xl p-3.5 mb-6 flex gap-2.5">
                 <Lock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                 <p className="text-[10.5px] text-amber-800 leading-relaxed">
-                  <span className="font-bold uppercase tracking-wide">Not secure ΓÇö demo only.</span> Supabase Auth is not
+                  <span className="font-bold uppercase tracking-wide">Not secure — demo only.</span> Supabase Auth is not
                   configured. Click below to preview the admin console without a password.
                   Real security requires server-side authentication.
                 </p>
@@ -205,12 +205,12 @@ export const AdminPortal: React.FC = () => {
 
       ) : (
 
-        /* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */
+        /* ═══════════════════════════════════════════ */
         /* ≡ƒ¢á∩╕Å  AUTHENTICATED ADMIN CMS CONSOLE         */
-        /* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */
+        /* ═══════════════════════════════════════════ */
         <div className="space-y-8 animate-fade-in">
 
-          {/* ΓöÇΓöÇ Header ΓöÇΓöÇ */}
+          {/* ── Header ── */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#D8D8D8]/40 pb-5 gap-4">
             <div>
               <div className="flex items-center flex-wrap gap-1.5 text-brand-rose text-xs font-extrabold uppercase tracking-widest pl-0.5">
@@ -273,7 +273,7 @@ export const AdminPortal: React.FC = () => {
             </div>
           </div>
 
-          {/* ΓöÇΓöÇ Floating unsaved-changes bar ΓöÇΓöÇ */}
+          {/* ── Floating unsaved-changes bar ── */}
           <AnimatePresence>
             {hasUnsavedChanges && (
               <motion.div
@@ -296,7 +296,7 @@ export const AdminPortal: React.FC = () => {
             )}
           </AnimatePresence>
 
-          {/* ΓöÇΓöÇ Quick-stats row ΓöÇΓöÇ */}
+          {/* ── Quick-stats row ── */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {[
               { label: 'Total Revenue', value: totalSales, prefix: '$', decimals: 2, note: 'All-time orders' },
@@ -314,7 +314,7 @@ export const AdminPortal: React.FC = () => {
             ))}
           </div>
 
-          {/* ΓöÇΓöÇ Main Navigation ΓöÇΓöÇ */}
+          {/* ── Main Navigation ── */}
           <div className="flex border-b border-brand-warm-tan/20 pb-2.5 overflow-x-auto gap-6 sm:gap-8 scrollbar-none scroll-smooth">
             {([
               { id: 'overview', label: 'Overview Dashboard', Icon: TrendingUp },
@@ -343,9 +343,9 @@ export const AdminPortal: React.FC = () => {
             ))}
           </div>
 
-          {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
-          {/* TAB 1: OVERVIEW ΓÇö sub-tab pill bar         */}
-          {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
+          {/* ══════════════════════════════════════════ */}
+          {/* TAB 1: OVERVIEW — sub-tab pill bar         */}
+          {/* ══════════════════════════════════════════ */}
           {activeTab === 'overview' && (
             <div className="flex flex-wrap gap-1.5 p-1 bg-[#D8D8D8]/25 border border-[#D8D8D8]/45 rounded-xl w-fit">
               {([
@@ -373,14 +373,14 @@ export const AdminPortal: React.FC = () => {
             </div>
           )}
 
-          {/* Overview Dashboard ΓÇö renders all 3 sub-tabs internally */}
+          {/* Overview Dashboard — renders all 3 sub-tabs internally */}
           {activeTab === 'overview' && (
             <OverviewDashboard overviewSub={overviewSub} />
           )}
 
-          {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
-          {/* TAB 2: CATALOG ΓÇö sub-tab pill bar          */}
-          {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
+          {/* ══════════════════════════════════════════ */}
+          {/* TAB 2: CATALOG — sub-tab pill bar          */}
+          {/* ══════════════════════════════════════════ */}
           {activeTab === 'catalog' && (
             <div className="flex flex-wrap gap-1.5 p-1 bg-[#D8D8D8]/25 border border-[#D8D8D8]/45 rounded-xl w-fit">
               {([
@@ -420,16 +420,16 @@ export const AdminPortal: React.FC = () => {
             <DiscountManager />
           )}
 
-          {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
+          {/* ══════════════════════════════════════════ */}
           {/* TAB 3: CUSTOMER INQUIRIES                  */}
-          {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
+          {/* ══════════════════════════════════════════ */}
           {activeTab === 'contacts' && (
             <ContactManager />
           )}
 
-          {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
-          {/* TAB 4: STORE EDITOR ΓÇö sub-tab pill bar     */}
-          {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
+          {/* ══════════════════════════════════════════ */}
+          {/* TAB 4: STORE EDITOR — sub-tab pill bar     */}
+          {/* ══════════════════════════════════════════ */}
           {activeTab === 'design' && (
             <div className="flex flex-wrap gap-1.5 p-1 bg-[#D8D8D8]/25 border border-[#D8D8D8]/45 rounded-xl w-fit">
               {([
