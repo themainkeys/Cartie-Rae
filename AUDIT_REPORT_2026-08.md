@@ -11,8 +11,13 @@ against production, not inferred from the code.
 > flaw on a live Stripe key: the browser sent the price it wanted to pay. That is
 > fixed and verified in production. Order recording — which required Stripe
 > dashboard access the studio does not have — has been rebuilt to work without a
-> webhook. What remains is one SQL migration, one Stripe secret, and two
-> architectural items that deserve scheduling rather than urgency.
+> webhook, and the database schema it writes to is now clean and confirmed.
+>
+> What remains is operational rather than developmental: upload the eBook files,
+> then put one real purchase through end to end. That last step is the only link
+> in the chain never exercised with a genuine payment. Beyond it sit two
+> architectural items — unenforced admin roles and `localStorage` as the catalog's
+> source of truth — that deserve deliberate scheduling rather than urgency.
 
 ---
 
